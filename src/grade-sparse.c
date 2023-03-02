@@ -1,4 +1,4 @@
-#include "algebra.h"
+#include "grade-sparse.h"
 
 /* sparse_multivector grade_selection(sparse_multivector a, unsigned int grade){ */
 /*     if(grade < a.graded_mvector.grades_size){ */
@@ -7,6 +7,63 @@
 /*     } */
 /*     return a; */
 /* } */
+
+
+blades *graded_product(graded_multivectors mvs){
+    if(mvs.size < 2){
+        // return error
+    }
+    blades a = mvs.data[0];
+    blades b = mvs.data[1];
+    graded_map m = mvs.m;
+    size_t m_size = mvs.size;
+    grade_info ginfo = mvs.ginfo;
+
+    blades dense_y = initialize_blades(ginfo);
+    unsigned int *grade_size = (unsigned int *)malloc(ginfo.max_grade*sizeof(unsigned int));
+
+    for(size_t i = 0; i < a.size; i++){
+        for(size_t j = 0; j < b.size; j++){ // iterate over grades
+            sparse mv_a = a.data[i];
+            sparse mv_b = b.data[j];
+            for(size_t k = 0; k < a.data[i].size; k++){
+                for(size_t l = 0; l < b.data[j].size; l++){ // iterate over basis vectors
+                    int sign = m.sign[mv_a.bitmap[k]][mv_b.bitmap[l]];
+                    if(sign == 0)
+                        continue;
+                    unsigned int grade = m.grade[mv_a.bitmap[k]][mv_b.bitmap[l]];
+                    unsigned int bitmap = m.bitmap[mv_a.bitmap[k]][mv_b.bitmap[l]];
+                    float value = mv_a.value[k]*mv_b.value[l];
+
+                    // write bitmap once to memory
+                    if(dense_y.data[grade].bitmap[bitmap-grade] == -1){
+                        dense_y.bitmap[bitmap] = bitmap;
+                        sparse_size++;// increment size of sparse
+                    }
+                    dense_y.value[bitmap] += value*sign;
+                }
+            }
+        }
+    }
+}
+
+
+set_dense_value(blades y, int bitmap, int grade, grade_info ginfo){
+
+}
+
+blades initialize_blades(grade_info ginfo){
+    blades y;
+    y.data = (sparse*)malloc(ginfo.max_grade*sizeof(sparse));
+    y.grades = (unsigned int*)malloc(ginfo.max_grade*sizeof(unsigned int));
+    y.size = ginfo.max_grade;
+    for(size_t i = 0; i < ginfo.max_grade; i++){
+        y.data[i] = initialize_sparse(ginfo.grade_size[i]);
+        y.grades[i] = i;
+    }
+    return y;
+}
+
 
 sparse_multivector geometric_product(multivectors data) {
     if(data.mvs_size < 2){
