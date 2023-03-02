@@ -5,11 +5,11 @@ void free_map(map m){
     for(size_t i = 0; i < m.size; i++){
         free(m.sign[i]);
         free(m.bitmap[i]);
-        free(m.grade[i]);
+        /* free(m.grade[i]); */
     }
     free(m.sign);
     free(m.bitmap);
-    free(m.grade);
+    /* free(m.grade); */
 }
 
 
@@ -17,7 +17,8 @@ void print_map(map m){
      for(size_t i = 0; i < m.size; i++ ){
         for(size_t j = 0; j < m.size; j++ ){
             printf(" (%zu,%zu) | ", i, j);
-            printf("(%d,%d,%d)\n", m.sign[i][j], m.grade[i][j], m.bitmap[i][j]);
+            /* printf("(%d,%d,%d)\n", m.sign[i][j], m.grade[i][j], m.bitmap[i][j]); */
+            printf("(%d,%d)\n", m.sign[i][j], m.bitmap[i][j]);
         }
         printf("\n");
     }
@@ -62,7 +63,7 @@ map cayley_table(size_t p, size_t q, size_t r){
     }
     algebra_map.sign = sign;
     algebra_map.bitmap = bitmap;
-    algebra_map.grade = g;
+    /* algebra_map.grade = g; */
     algebra_map.size = n;
     return algebra_map;
 }
