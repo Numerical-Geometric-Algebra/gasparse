@@ -1,4 +1,4 @@
-#include "algebra.h"
+#include "grade-sparse.h"
 
 /* sparse_multivector grade_selection(sparse_multivector a, unsigned int grade){ */
 /*     if(grade < a.graded_mvector.grades_size){ */
@@ -7,6 +7,20 @@
 /*     } */
 /*     return a; */
 /* } */
+
+
+blades graded_product(graded_multivectors mvs){
+    size_t size = mvs.size;
+    if(size < 2){
+        // return error or something
+    }
+    blades a = mvs.data[0];
+    blades b = mvs.data[1];
+    map m = mvs.m;
+    blades y = initialize_blades(size);
+
+}
+
 
 sparse_multivector geometric_product(multivectors data) {
     if(data.mvs_size < 2){
