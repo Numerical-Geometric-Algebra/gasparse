@@ -32,17 +32,43 @@ unsigned int grade(unsigned int v){
     return ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24; // count
 }
 
+void free_grade_map(grade_map m){
+    free(m.grade);
+    free(m.position);
+    free(m.grade_size);
+}
+
+// Determines the position of the bitmap on the corresponding grade
+grade_map bitmap_grade_map(size_t size){
+    grade_map m;
+    unsigned int max_grade = grade(size-1);
+    unsigned int *g_pos = (unsigned int*)malloc((max_grade + 1)*sizeof(unsigned int));
+    m.grade = (unsigned int*)malloc(size*sizeof(unsigned int));
+    m.position = (unsigned int*)malloc(size*sizeof(unsigned int));
+    for(size_t i = 0; i <= max_grade; i++)
+        g_pos[i] = 0;
+
+    for(size_t i = 0; i < size; i++){
+        m.grade[i] = grade(i);
+        m.position[i] = g_pos[m.grade[i]]++; // assign value then increment
+    }
+    m.size = size;
+    m.grade_size = g_pos;
+    m.max_grade = max_grade;
+    return m;
+}
+
 map cayley_table(size_t p, size_t q, size_t r){
     map algebra_map;
     size_t n = 1 << (p+q+r);
     int **sign = (int**)malloc(n*sizeof(int*));
     unsigned int **bitmap = (unsigned int**)malloc(n*sizeof(unsigned int*));
-    int **g = (int**)malloc(n*sizeof(int*));
+    /* int **g = (int**)malloc(n*sizeof(int*)); */
     // allocate memory for the whole table
     for(size_t i = 0; i < n; i++){
         sign[i] = (int*)malloc(n*sizeof(int));
         bitmap[i] = (unsigned int*)malloc(n*sizeof(unsigned int));
-        g[i] = (int*)malloc(n*sizeof(int));
+        /* g[i] = (int*)malloc(n*sizeof(int)); */
     }
 
     sign[0][0] = 1;// initialize algebra of scalars
@@ -58,7 +84,7 @@ map cayley_table(size_t p, size_t q, size_t r){
         for(size_t j = 0; j < n; j++){
             unsigned int bitmap_ij = i ^ j;
             bitmap[i][j] = bitmap_ij;
-            g[i][j] = grade(bitmap_ij);
+            /* g[i][j] = grade(bitmap_ij); */
         }
     }
     algebra_map.sign = sign;

@@ -1,6 +1,7 @@
 #include "main.h"
 #include "cayley.h"
 #include "sparse.h"
+#include "grade_sparse.h"
 
 #include <time.h>
 #include <stdio.h>
@@ -14,6 +15,17 @@ int main(){
     /* time_generator(); */
     /* print_generator_table(3,2,1); */
     compute_product();
+    /* printf("\n"); */
+    /* grade_map m = bitmap_grade_map(32); */
+    /* for(size_t i = 0; i < m.size; i++){ */
+    /*     printf("%zu,%d,%d\n",i,m.position[i],m.grade[i]); */
+    /* } */
+    /* printf("\n"); */
+    /* for(size_t i = 0; i < m.max_grade; i++){ */
+    /*     printf("%zu,%d\n",i,m.grade_size[i]); */
+    /* } */
+
+    compute_graded_product();
 }
 
 
@@ -43,6 +55,64 @@ void print_generator_table(unsigned int p,unsigned int q,unsigned int r){
 
 }
 
+void compute_graded_product(void){
+    unsigned int p=4, q=1, r=1;
+
+    sparse_multivectors mvs;
+    graded_multivectors gmvs;
+    float precision = 1e-12;
+
+    int size = 2;
+    float value1[] = {1,2,3,4};
+    float value0[] = {1,2,7,3};
+
+    int bitmap1[] = {1,2,7,9};
+    int bitmap0[] = {1,2,0,35};
+
+    // Generate the cayley table
+    map m = cayley_table(p,q,r);
+    grade_map gm = bitmap_grade_map(m.size);
+    mvs.m = m;
+    mvs.size = 2;
+    mvs.precision = precision;
+    mvs.data = (sparse*)malloc(mvs.size*sizeof(sparse));
+    mvs.data[0].bitmap = bitmap0;
+    mvs.data[1].bitmap = bitmap1;
+    mvs.data[0].value = value0;
+    mvs.data[1].value = value1;
+    mvs.data[0].size = size;
+    mvs.data[1].size = size;
+
+    /* sparse y = geometric_product(mvs); */
+    blades x0 = sparse_to_graded(mvs.data[0],gm);
+    blades x1 = sparse_to_graded(mvs.data[1],gm);
+    gmvs.size = 2;
+    gmvs.data = (blades*)malloc(gmvs.size*sizeof(blades));
+    gmvs.data[0] = x0;
+    gmvs.data[1] = x1;
+    gmvs.gm = gm;
+    gmvs.m = m;
+    gmvs.precision = precision;
+
+    blades y = graded_product(gmvs);
+
+    for(size_t i = 0; i < y.size; i++){
+        for(size_t j = 0; j < y.data[i].size; j++){
+            printf("(%d,%d,%.0f)\n",y.grade[i],y.data[i].bitmap[j],y.data[i].value[j]);
+        }
+        printf("\n");
+    }
+    free_blades(x0);
+    free_blades(x1);
+    free_blades(y);
+    free_grade_map(gm);
+    free(mvs.data);
+    free(gmvs.data);
+    free_map(m);
+
+}
+
+
 void compute_product(void){
     unsigned int p=4, q=1, r=1;
 
@@ -51,10 +121,10 @@ void compute_product(void){
 
     int size = 2;
     float value1[] = {1,2,3,4};
-    float value0[] = {5,9,7,3};
+    float value0[] = {1,2,7,3};
 
-    int bitmap1[] = {32,4,7,9};
-    int bitmap0[] = {33,2,0,33};
+    int bitmap1[] = {1,2,7,9};
+    int bitmap0[] = {1,2,0,35};
 
     // Generate the cayley table
     map m = cayley_table(p,q,r);

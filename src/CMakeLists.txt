@@ -1,5 +1,5 @@
-set(HEADERS_CXX_FILES main.h cayley.h sparse.h)
-set(SOURCES_CXX_FILES main.c cayley.c sparse.c)
+set(HEADERS_CXX_FILES main.h cayley.h sparse.h grade_sparse.h)
+set(SOURCES_CXX_FILES main.c cayley.c sparse.c grade_sparse.c)
 
 target_sources(${PROJECT_NAME} PUBLIC
                ${HEADERS_CXX_FILES}
