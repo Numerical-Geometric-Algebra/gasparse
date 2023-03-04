@@ -6,8 +6,55 @@ int comp_abs(float v,float p){
     return r < p;
 }
 
+sparse sparse_copy(sparse mv){
+    sparse mv_copy;
+    mv_copy.bitmap = (int*)malloc(mv.size*sizeof(int));
+    mv_copy.value = (float*)malloc(mv.size*sizeof(float));
+    mv_copy.size = mv.size;
+    for(unsigned int i = 0; i < mv.size; i++){
+        mv_copy.bitmap[i] = mv.bitmap[i];
+        mv_copy.value[i] = mv.value[i];
+    }
+    return mv_copy;
+}
 
-sparse geometric_product(sparse_multivectors mvs) {
+
+sparse sparse_grade_project(
+    sparse mv,
+    unsigned int *grade,
+    unsigned int *project_grade,
+    size_t grade_size,
+    size_t project_size){
+
+    // computes a bool array which each index indicates the selected grade
+    unsigned int *g = get_grade_bool(project_grade,project_size,grade_size);
+    sparse projected_mv;
+
+    unsigned int proj_size = 0;
+    for(unsigned int i = 0; i < mv.size; i++)
+        if(g[grade[mv.bitmap[i]]])
+            proj_size++;
+
+    projected_mv = initialize_sparse(proj_size--);
+
+    // copies the values of the selected grades
+    for(unsigned int i = 0; i < mv.size; i++){
+        if(g[grade[mv.bitmap[i]]]){
+            projected_mv.value[proj_size] = mv.value[i];
+            projected_mv.bitmap[proj_size] = mv.bitmap[i];
+            proj_size--;
+            if(proj_size < 0)
+                break;
+        }
+    }
+
+    free(g);
+    return projected_mv;
+}
+
+
+// computes the geometric product between two sparse multivectors
+sparse sparse_product(sparse_multivectors mvs) {
     if(mvs.size < 2){
         // return error or something
     }
@@ -67,8 +114,7 @@ sparse geometric_product(sparse_multivectors mvs) {
         }
     }
     sparse_y.size = sparse_size;
-    free(dense_y.bitmap);
-    free(dense_y.value);
+    free_sparse(dense_y);
 
     return sparse_y;
 }
@@ -85,3 +131,7 @@ sparse initialize_sparse(unsigned int size){
     return y;
 }
 
+void free_sparse(sparse mv){
+    free(mv.bitmap);
+    free(mv.value);
+}

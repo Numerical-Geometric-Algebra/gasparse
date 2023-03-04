@@ -23,8 +23,12 @@ map cayley_table(size_t,size_t,size_t);
 void sub_algebra(unsigned int,int**,int);
 void free_map(map);
 void print_map(map);
+map init_map(size_t);
 unsigned int grade(unsigned int);
 grade_map bitmap_grade_map(size_t);
 void free_grade_map(grade_map);
+
+unsigned int* get_grade_bool(unsigned int *,size_t,size_t);
+map invert_map(map);
 
 #endif // CAYLEY_H_

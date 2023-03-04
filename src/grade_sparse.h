@@ -23,4 +23,7 @@ blades graded_product(graded_multivectors);
 unsigned int *initialize_grade_size(grade_map);
 blades sparse_to_graded(sparse,grade_map);
 void free_blades(blades y);
+
+blades grade_sparse_grade_project(blades,unsigned int *,size_t,size_t);
+
 #endif // GRADE_SPARSE_H_

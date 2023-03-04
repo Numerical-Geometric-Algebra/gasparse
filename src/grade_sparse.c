@@ -1,5 +1,33 @@
 #include "grade_sparse.h"
 
+blades grade_sparse_grade_project(blades mv,
+    unsigned int *project_grade,
+    size_t grade_size,
+    size_t project_size){
+
+    // computes a bool array which each index indicates the selected grade
+    unsigned int *g = get_grade_bool(project_grade,project_size,grade_size);
+    blades projected_mv;
+
+    size_t projected_size = 0;
+
+    for(unsigned int i = 0; i < mv.size; i++)
+        if(g[mv.grade[i]])
+            projected_size++;
+
+    projected_mv = initialize_blades_empty(projected_size--);
+
+    for(unsigned int i = 0; i < mv.size; i++){
+        if(g[mv.grade[i]]){
+            projected_mv.data[projected_size] = sparse_copy(mv.data[i]);
+            projected_mv.grade[projected_size--] = mv.grade[i];
+        }
+    }
+    free(g);
+    return projected_mv;
+}
+
+
 // takes a sparse representation of a multivector and converts it to grade sparse
 blades sparse_to_graded(sparse mv, grade_map gm){
     blades sparse_mv;

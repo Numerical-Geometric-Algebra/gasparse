@@ -5,11 +5,9 @@ void free_map(map m){
     for(size_t i = 0; i < m.size; i++){
         free(m.sign[i]);
         free(m.bitmap[i]);
-        /* free(m.grade[i]); */
     }
     free(m.sign);
     free(m.bitmap);
-    /* free(m.grade); */
 }
 
 
@@ -17,7 +15,6 @@ void print_map(map m){
      for(size_t i = 0; i < m.size; i++ ){
         for(size_t j = 0; j < m.size; j++ ){
             printf(" (%zu,%zu) | ", i, j);
-            /* printf("(%d,%d,%d)\n", m.sign[i][j], m.grade[i][j], m.bitmap[i][j]); */
             printf("(%d,%d)\n", m.sign[i][j], m.bitmap[i][j]);
         }
         printf("\n");
@@ -58,40 +55,44 @@ grade_map bitmap_grade_map(size_t size){
     return m;
 }
 
-map cayley_table(size_t p, size_t q, size_t r){
-    map algebra_map;
-    size_t n = 1 << (p+q+r);
+map init_map(size_t n){
+    map m;
     int **sign = (int**)malloc(n*sizeof(int*));
     unsigned int **bitmap = (unsigned int**)malloc(n*sizeof(unsigned int*));
-    /* int **g = (int**)malloc(n*sizeof(int*)); */
-    // allocate memory for the whole table
+
     for(size_t i = 0; i < n; i++){
         sign[i] = (int*)malloc(n*sizeof(int));
         bitmap[i] = (unsigned int*)malloc(n*sizeof(unsigned int));
-        /* g[i] = (int*)malloc(n*sizeof(int)); */
     }
+    m.bitmap = bitmap;
+    m.sign = sign;
+    m.size = n;
+    return m;
+}
 
-    sign[0][0] = 1;// initialize algebra of scalars
+map cayley_table(size_t p, size_t q, size_t r){
+    map m;
+    size_t n = 1 << (p+q+r);
+    // allocate memory for the whole table
+    m = init_map(n);
+
+    m.sign[0][0] = 1;// initialize algebra of scalars
     for(size_t i = 0; i < p; i++)//loop through the identity-square basis vectors
-        sub_algebra(i,sign,1);
+        sub_algebra(i,m.sign,1);
     for(size_t i = p; i < p+q; i++)//loop through the negative-square basis vectors
-        sub_algebra(i,sign,-1);
+        sub_algebra(i,m.sign,-1);
     for(size_t i = p+q; i < p+q+r; i++)//loop through the zero-square basis vectors
-        sub_algebra(i,sign,0);
+        sub_algebra(i,m.sign,0);
 
     // determine each basis blade and its grade
     for(size_t i = 0; i < n; i++){
         for(size_t j = 0; j < n; j++){
             unsigned int bitmap_ij = i ^ j;
-            bitmap[i][j] = bitmap_ij;
-            /* g[i][j] = grade(bitmap_ij); */
+            m.bitmap[i][j] = bitmap_ij;
         }
     }
-    algebra_map.sign = sign;
-    algebra_map.bitmap = bitmap;
-    /* algebra_map.grade = g; */
-    algebra_map.size = n;
-    return algebra_map;
+
+    return m;
 }
 
 void sub_algebra(unsigned int k, int **s, int metric){
@@ -120,4 +121,28 @@ void sub_algebra(unsigned int k, int **s, int metric){
                 s[i][j] = 0;
         }
     }
+}
+
+unsigned int* get_grade_bool(unsigned int *grades, size_t size, size_t max_grade){
+    unsigned int *g = (unsigned int*)malloc(max_grade*sizeof(unsigned int));
+    for(size_t i = 0; i < max_grade; i++)
+        g[i] = 0;
+
+    for(size_t i = 0; i < size; i++)
+        g[grades[i]] = 1;
+
+    return g;
+}
+
+
+map invert_map(map m){
+    map m_inv = init_map(m.size);
+    for(size_t i = 0; i < m.size; i++){
+        for(size_t j = 0; j < m.size; j++){
+            m_inv.bitmap[i][m.bitmap[i][j]] = j;
+            m_inv.sign[i][m.bitmap[i][j]] = m.sign[i][j];
+        }
+    }
+    return m_inv;
+
 }

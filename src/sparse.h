@@ -18,6 +18,10 @@ typedef struct sparse_multivectors{
 
 sparse initialize_sparse(unsigned int);
 int comp_abs(float,float);
-sparse geometric_product(sparse_multivectors);
+sparse sparse_product(sparse_multivectors);
+
+sparse sparse_grade_project(sparse,unsigned int *,unsigned int *,size_t,size_t);
+void free_sparse(sparse);
+sparse sparse_copy(sparse);
 
 #endif // SPARSE_H_
