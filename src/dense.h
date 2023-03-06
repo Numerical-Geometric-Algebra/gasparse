@@ -18,7 +18,7 @@ dense initialize_dense(unsigned int);
 dense dense_product(dense_multivectors);
 dense inverse_dense_product(dense_multivectors);
 dense sparse_to_dense(sparse,unsigned int);
-map invert_map(map);
-dense dense_grade_project(dense,unsigned int *,unsigned int *,size_t,size_t);
 
+dense dense_grade_project(dense,unsigned int *,size_t,dense_grade_map);
+dense dense_general_product(dense_multivectors,project_map,dense_grade_map);
 #endif // DENSE_H_

@@ -10,7 +10,7 @@ typedef struct map{
     size_t size;
 }map;
 
-typedef struct grade_map{ // used to map bitmap to position in the grade and grade
+typedef struct grade_map{ // used to map bitmap to position and grade
     unsigned int *grade;
     unsigned int *position;
     unsigned int *grade_size; // number of basis vectors by grade
@@ -18,11 +18,26 @@ typedef struct grade_map{ // used to map bitmap to position in the grade and gra
     size_t size;
 }grade_map;
 
+// used to encode the information to compute the general product
+typedef struct project_map{
+    unsigned int *l;
+    size_t l_size; // left multivector
+    unsigned int *r;
+    size_t r_size; // right multivector
+    unsigned int *k;
+    size_t k_size; // output multivector
+}project_map;
+
+
+typedef struct dense_grade_map{
+    size_t max_grade;
+    size_t grade_size;
+    unsigned int *grade; // grade of each basis blade
+}dense_grade_map;
 
 map cayley_table(size_t,size_t,size_t);
 void sub_algebra(unsigned int,int**,int);
 void free_map(map);
-void print_map(map);
 map init_map(size_t);
 unsigned int grade(unsigned int);
 grade_map bitmap_grade_map(size_t);

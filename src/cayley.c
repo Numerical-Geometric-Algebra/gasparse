@@ -10,17 +10,6 @@ void free_map(map m){
     free(m.bitmap);
 }
 
-
-void print_map(map m){
-     for(size_t i = 0; i < m.size; i++ ){
-        for(size_t j = 0; j < m.size; j++ ){
-            printf(" (%zu,%zu) | ", i, j);
-            printf("(%d,%d)\n", m.sign[i][j], m.bitmap[i][j]);
-        }
-        printf("\n");
-    }
-}
-
 // Determines the number of one bits in an integer
 // Which is equivalent to determining the grade of a bitset
 unsigned int grade(unsigned int v){
@@ -125,12 +114,16 @@ void sub_algebra(unsigned int k, int **s, int metric){
 
 unsigned int* get_grade_bool(unsigned int *grades, size_t size, size_t max_grade){
     unsigned int *g = (unsigned int*)malloc(max_grade*sizeof(unsigned int));
-    for(size_t i = 0; i < max_grade; i++)
-        g[i] = 0;
+    if(size == 0){ // if size is 0 project to all grades
+        for(size_t i = 0; i < max_grade; i++)
+            g[i] = 1;
+    }else{
+        for(size_t i = 0; i < max_grade; i++)
+            g[i] = 0;
 
-    for(size_t i = 0; i < size; i++)
-        g[grades[i]] = 1;
-
+        for(size_t i = 0; i < size; i++)
+            g[grades[i]] = 1;
+    }
     return g;
 }
 

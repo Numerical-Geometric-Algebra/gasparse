@@ -1,9 +1,11 @@
 #include "grade_sparse.h"
 
+
+// projects multivector to each specified grade
 blades grade_sparse_grade_project(blades mv,
     unsigned int *project_grade,
-    size_t grade_size,
-    size_t project_size){
+    size_t project_size,
+    size_t grade_size){
 
     // computes a bool array which each index indicates the selected grade
     unsigned int *g = get_grade_bool(project_grade,project_size,grade_size);
@@ -25,6 +27,71 @@ blades grade_sparse_grade_project(blades mv,
     }
     free(g);
     return projected_mv;
+}
+
+blades graded_general_product(graded_multivectors mvs, project_map pm){
+    if(mvs.size < 2){
+        // return error
+    }
+    unsigned int *ga = get_grade_bool(pm.l,pm.l_size,mvs.gm.max_grade+1);
+    unsigned int *gb = get_grade_bool(pm.r,pm.r_size,mvs.gm.max_grade+1);
+    unsigned int *gy = get_grade_bool(pm.k,pm.k_size,mvs.gm.max_grade+1);
+
+    blades a = mvs.data[0];
+    blades b = mvs.data[1];
+    map m = mvs.m;
+    grade_map gm = mvs.gm;
+    blades dense_y = initialize_blades_empty(gm.max_grade + 1);
+    blades sparse_y;
+    unsigned int n_grades = 0;
+    unsigned int *grade_size = initialize_grade_size(gm);
+
+    // iterate over grades
+    for(size_t i = 0; i < a.size; i++){
+        if(!ga[a.grade[i]]) continue; // skip grade
+        for(size_t j = 0; j < b.size; j++){
+            if(!gb[b.grade[j]]) continue; // skip grade
+            sparse mv_a = a.data[i];
+            sparse mv_b = b.data[j];
+            // iterate over basis vectors
+            for(size_t k = 0; k < a.data[i].size; k++){
+                for(size_t l = 0; l < b.data[j].size; l++){
+
+                    int sign = m.sign[mv_a.bitmap[k]][mv_b.bitmap[l]];
+                    if(sign == 0) continue;
+                    unsigned int bitmap = m.bitmap[mv_a.bitmap[k]][mv_b.bitmap[l]];
+                    unsigned int grade = gm.grade[bitmap];
+                    if(!gy[grade]) continue; // skip grade
+                    unsigned int position = gm.position[bitmap];
+                    float value = mv_a.value[k]*mv_b.value[l];
+
+                    if(dense_y.data[grade].bitmap == NULL){
+                        dense_y.data[grade] = initialize_sparse(gm.grade_size[grade]);
+                        n_grades++;
+                    }
+
+                    // write bitmap once to memory
+                    if(dense_y.data[grade].bitmap[position] == -1){
+                        dense_y.data[grade].bitmap[position] = bitmap;
+                        dense_y.data[grade].value[position] = 0;
+                        grade_size[grade]++;
+                    }
+                    // compute the geometric product
+                    dense_y.data[grade].value[position] += sign*value;
+                }
+            }
+        }
+    }
+
+    graded_remove_small(dense_y,mvs.precision,grade_size);
+    sparse_y =  grade_dense_to_grade_sparse(dense_y,grade_size);
+    free(grade_size);
+    free_blades(dense_y);
+    free(ga);
+    free(gb);
+    free(gy);
+
+    return sparse_y;
 }
 
 
@@ -122,38 +189,24 @@ blades graded_product(graded_multivectors mvs){
         }
     }
 
-    // Remove if value is too small
-    for(size_t i = 0; i <= gm.max_grade; i++){
-        // Check if grade was set
-        if(dense_y.data[i].bitmap != NULL){
-            for(size_t j = 0; j < gm.grade_size[i]; j++){
-                // Check if value was set
-                if(dense_y.data[i].bitmap[j] != -1){
-                    // compare value with precision
-                    if(comp_abs(dense_y.data[i].value[j],mvs.precision)){
-                        dense_y.data[i].bitmap[j] = -1;
-                        grade_size[i]--;
+    graded_remove_small(dense_y,mvs.precision,grade_size);
+    sparse_y =  grade_dense_to_grade_sparse(dense_y,grade_size);
+    free(grade_size);
+    free_blades(dense_y);
 
-                        // remove grade if all elements have small value
-                        if(grade_size[i] <= 0){
-                            free(dense_y.data[i].bitmap);
-                            free(dense_y.data[i].value);
-                            dense_y.data[i].bitmap = NULL;
-                            dense_y.data[i].value = NULL;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
+    return sparse_y;
+}
 
-    sparse_y = initialize_blades(grade_size,gm.max_grade + 1);
-    n_grades = 0;
-    for(size_t i = 0; i <= gm.max_grade; i++){
+// stores only the non-empyty grades and the non-empty blades
+blades grade_dense_to_grade_sparse(blades dense_y, unsigned int *grade_size){
+    unsigned int n_grades = 0;
+    blades sparse_y;
+
+    sparse_y = initialize_blades(grade_size,dense_y.size); // It also only allocates memory for non-empty grades
+    for(size_t i = 0; i < dense_y.size; i++){
         if(dense_y.data[i].bitmap != NULL){
             sparse_y.grade[n_grades] = dense_y.grade[i];
-            for(size_t j = 0; j < gm.grade_size[i]; j++){
+            for(size_t j = 0; j < dense_y.data[i].size; j++){
                 if(dense_y.data[i].bitmap[j] != -1){
                     grade_size[i]--;
                     int *bitmap = sparse_y.data[n_grades].bitmap;
@@ -165,10 +218,36 @@ blades graded_product(graded_multivectors mvs){
             n_grades++;
         }
     }
-    free(grade_size);
-    free_blades(dense_y);
-
     return sparse_y;
+}
+
+
+void graded_remove_small(blades y, float precision, unsigned int* grade_size){
+    // Remove if value is too small
+    for(size_t i = 0; i < y.size; i++){
+        // Check if grade was set
+        if(y.data[i].bitmap != NULL){
+            for(size_t j = 0; j < y.data[i].size; j++){
+                // Check if value was set
+                if(y.data[i].bitmap[j] != -1){
+                    // compare value with precision
+                    if(comp_abs(y.data[i].value[j],precision)){
+                        y.data[i].bitmap[j] = -1;
+                        grade_size[i]--;
+
+                        // remove grade if all elements have small value
+                        if(grade_size[i] <= 0){
+                            free(y.data[i].bitmap);
+                            free(y.data[i].value);
+                            y.data[i].bitmap = NULL;
+                            y.data[i].value = NULL;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 
@@ -191,6 +270,7 @@ blades initialize_blades_empty(size_t n_grades){// allocate the necessary memory
     }
     return y;
 }
+
 
 blades initialize_blades(unsigned int *grade_size, size_t n_grades){// allocate the necessary memory for each grade
     blades y;
