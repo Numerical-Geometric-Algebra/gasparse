@@ -35,13 +35,19 @@ typedef struct dense_grade_map{
     unsigned int *grade; // grade of each basis blade
 }dense_grade_map;
 
+
+int comp_abs_eq(size_t,size_t);
+
 map cayley_table(size_t,size_t,size_t);
+map inner_cayley_table(map,grade_map);
+map outer_cayley_table(map,grade_map);
 void sub_algebra(unsigned int,int**,int);
 void free_map(map);
 map init_map(size_t);
 unsigned int grade(unsigned int);
 grade_map bitmap_grade_map(size_t);
 void free_grade_map(grade_map);
+
 
 unsigned int* get_grade_bool(unsigned int *,size_t,size_t);
 map invert_map(map);

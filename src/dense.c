@@ -19,17 +19,48 @@ dense dense_grade_project(
     return projected_mv;
 }
 
-dense dense_general_product(dense_multivectors mvs, project_map pm, dense_grade_map dgm){
-    if(mvs.size < 2){
-        // return error or something
+dense dense_general_product(dense_multivectors mvs, project_map pm){
+    dense a = mvs.a;
+    dense b = mvs.b;
+    map m = mvs.m;
+    dense_grade_map dgm = mvs.dgm;
+
+    return dense_general_product_(a,b,m,pm,dgm);
+}
+
+dense dense_scalar_multiply(float scalar, dense b){
+    dense y = initialize_dense(b.size);
+    for(unsigned int i = 0; i < b.size; i++){
+        y.value[i] = b.value[i]*scalar;
     }
+    return y;
+}
+
+dense dense_add(dense a, dense b){
+    dense y = initialize_dense(a.size);
+    for(size_t i = 0; i < a.size; i++){
+        y.value[i] += a.value[i] + b.value[i];
+    }
+    return y;
+}
+
+dense dense_atomic_add(dense *mv, size_t size){
+    dense y = initialize_dense(mv[0].size);
+    for(size_t i = 0; i < size; i++){
+        for(size_t j = 0; j < mv[i].size; j++){
+            y.value[j] += mv[i].value[j];
+        }
+    }
+    return y;
+}
+
+dense dense_general_product_(dense a, dense b, map m, project_map pm, dense_grade_map dgm){
+
     unsigned int *ga = get_grade_bool(pm.l,pm.l_size,dgm.max_grade+1);
     unsigned int *gb = get_grade_bool(pm.r,pm.r_size,dgm.max_grade+1);
     unsigned int *gy = get_grade_bool(pm.k,pm.k_size,dgm.max_grade+1);
-    dense a = mvs.data[0];
-    dense b = mvs.data[1];
-    map m = mvs.m;
-    unsigned int m_size = mvs.m.size;
+
+    unsigned int m_size = m.size;
 
     int a_size = a.size;
     int b_size = b.size;
@@ -60,15 +91,18 @@ dense dense_general_product(dense_multivectors mvs, project_map pm, dense_grade_
 }
 
 
+
 // computes the geometric product between two dense multivectors
 dense dense_product(dense_multivectors mvs) {
-    if(mvs.size < 2){
-        // return error or something
-    }
-    dense a = mvs.data[0];
-    dense b = mvs.data[1];
+    dense a = mvs.a;
+    dense b = mvs.b;
     map m = mvs.m;
-    unsigned int m_size = mvs.m.size;
+    return dense_product_(a,b,m);
+}
+
+
+dense dense_product_(dense a,dense b, map m) {
+    unsigned int m_size = m.size;
 
     int a_size = a.size;
     int b_size = b.size;
@@ -92,6 +126,7 @@ dense dense_product(dense_multivectors mvs) {
     return dense_y;
 }
 
+
 dense sparse_to_dense(sparse mv, unsigned int size){
     dense dense_mv = initialize_dense(size);
 
@@ -102,11 +137,8 @@ dense sparse_to_dense(sparse mv, unsigned int size){
 
 // computes the geometric product using the dense representation
 dense inverse_dense_product(dense_multivectors mvs){
-    if(mvs.size < 2){
-        // return error or something
-    }
-    dense a = mvs.data[0];
-    dense b = mvs.data[1];
+    dense a = mvs.a;
+    dense b = mvs.b;
     map m = mvs.m;
     unsigned int m_size = mvs.m.size;
 

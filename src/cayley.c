@@ -1,5 +1,11 @@
 #include "cayley.h"
 
+// returns true if abs(v) == p
+int comp_abs_eq(size_t v,size_t p){
+    size_t r = (v < 0) ? -v : v;
+    return r == p;
+}
+
 
 void free_map(map m){
     for(size_t i = 0; i < m.size; i++){
@@ -57,6 +63,42 @@ map init_map(size_t n){
     m.sign = sign;
     m.size = n;
     return m;
+}
+
+
+// converts the cayley table for the geometric product to the inner product
+map inner_cayley_table(map m, grade_map gm){
+    map inner_m = init_map(m.size);
+    for(size_t i = 0; i < m.size; i++){
+        for(size_t j = 0; j < m.size; j++){
+            if(comp_abs_eq(gm.grade[i] - gm.grade[j],gm.grade[m.bitmap[i][j]])){
+                inner_m.bitmap[i][j] = m.bitmap[i][j];
+                inner_m.sign[i][j] = m.sign[i][j];
+            }else{
+                inner_m.sign[i][j] = 0;
+                inner_m.bitmap[i][j] = -1;
+            }
+        }
+    }
+    return inner_m;
+}
+
+
+// converts the cayley table for the geometric product to the outer product
+map outer_cayley_table(map m, grade_map gm){
+    map outer_m = init_map(m.size);
+    for(size_t i = 0; i < m.size; i++){
+        for(size_t j = 0; j < m.size; j++){
+            if(gm.grade[i] + gm.grade[j] == gm.grade[m.bitmap[i][j]]){
+                outer_m.bitmap[i][j] = m.bitmap[i][j];
+                outer_m.sign[i][j] = m.sign[i][j];
+            }else{
+                outer_m.sign[i][j] = 0;
+                outer_m.bitmap[i][j] = -1;
+            }
+        }
+    }
+    return outer_m;
 }
 
 map cayley_table(size_t p, size_t q, size_t r){

@@ -17,9 +17,11 @@ void print_all_types(sparse,dense,blades);
 void compute_product(void);
 void compute_graded_product(void);
 void grade_project(void);
-void test_all_types(void);
 
-dense project_dense_product(dense_multivectors,project_map,dense_grade_map);
-sparse project_sparse_product(sparse_multivectors,project_map,dense_grade_map);
+void test_product_all_types(void);
+void test_sum_all_types(void);
+
+dense project_dense_product(dense_multivectors,project_map);
+sparse project_sparse_product(sparse_multivectors,project_map);
 blades project_blades_product(graded_multivectors,project_map);
 #endif // MAIN_H_

@@ -30,17 +30,20 @@ blades grade_sparse_grade_project(blades mv,
 }
 
 blades graded_general_product(graded_multivectors mvs, project_map pm){
-    if(mvs.size < 2){
-        // return error
-    }
-    unsigned int *ga = get_grade_bool(pm.l,pm.l_size,mvs.gm.max_grade+1);
-    unsigned int *gb = get_grade_bool(pm.r,pm.r_size,mvs.gm.max_grade+1);
-    unsigned int *gy = get_grade_bool(pm.k,pm.k_size,mvs.gm.max_grade+1);
-
-    blades a = mvs.data[0];
-    blades b = mvs.data[1];
+    blades a = mvs.a;
+    blades b = mvs.b;
     map m = mvs.m;
     grade_map gm = mvs.gm;
+    float precision = mvs.precision;
+    return graded_general_product_(a,b,m,gm,pm,precision);
+}
+
+blades graded_general_product_(blades a, blades b, map m, grade_map gm, project_map pm, float precision){
+
+    unsigned int *ga = get_grade_bool(pm.l,pm.l_size,gm.max_grade+1);
+    unsigned int *gb = get_grade_bool(pm.r,pm.r_size,gm.max_grade+1);
+    unsigned int *gy = get_grade_bool(pm.k,pm.k_size,gm.max_grade+1);
+
     blades dense_y = initialize_blades_empty(gm.max_grade + 1);
     blades sparse_y;
     unsigned int n_grades = 0;
@@ -83,8 +86,8 @@ blades graded_general_product(graded_multivectors mvs, project_map pm){
         }
     }
 
-    graded_remove_small(dense_y,mvs.precision,grade_size);
-    sparse_y =  grade_dense_to_grade_sparse(dense_y,grade_size);
+    graded_remove_small(dense_y,precision,grade_size);
+    sparse_y = grade_dense_to_grade_sparse(dense_y,grade_size);
     free(grade_size);
     free_blades(dense_y);
     free(ga);
@@ -144,13 +147,17 @@ blades sparse_to_graded(sparse mv, grade_map gm){
 
 
 blades graded_product(graded_multivectors mvs){
-    if(mvs.size < 2){
-        // return error
-    }
-    blades a = mvs.data[0];
-    blades b = mvs.data[1];
+
+    blades a = mvs.a;
+    blades b = mvs.b;
     map m = mvs.m;
     grade_map gm = mvs.gm;
+    float precision = mvs.precision;
+    return graded_product_(a,b,m,gm,precision);
+}
+
+blades graded_product_(blades a, blades b, map m, grade_map gm, float precision){
+
     blades dense_y = initialize_blades_empty(gm.max_grade + 1);
     blades sparse_y;
     unsigned int n_grades = 0;
@@ -189,13 +196,161 @@ blades graded_product(graded_multivectors mvs){
         }
     }
 
-    graded_remove_small(dense_y,mvs.precision,grade_size);
+    graded_remove_small(dense_y,precision,grade_size);
     sparse_y =  grade_dense_to_grade_sparse(dense_y,grade_size);
     free(grade_size);
     free_blades(dense_y);
 
     return sparse_y;
 }
+
+// multiply all the elements of a multivector by a scalar
+blades graded_scalar_multiply(float scalar, blades b){
+    unsigned int *grade_size = (unsigned int*)malloc(b.size*sizeof(unsigned int));
+    for(size_t i = 0; i < b.size; i++)
+        grade_size[i] = b.data[i].size;
+
+    blades y = initialize_blades(grade_size,b.size);
+    for(size_t i = 0; i < b.size; i++){
+        for(size_t j = 0; j < b.data[i].size; j++){
+            y.data[i].value[j] = b.data[i].value[j]*scalar;
+            y.data[i].bitmap[j] = b.data[i].bitmap[j];
+        }
+    }
+    free(grade_size);
+    return y;
+}
+
+blades graded_add_append(blades a, blades b){
+    blades y = initialize_blades_empty(a.size + b.size);
+
+    for(size_t i = 0; i < a.size; i++){
+        y.data[i] = sparse_copy(a.data[i]);
+        y.grade[i] = a.grade[i];
+    }
+    for(size_t i = 0; i < b.size; i++){
+        y.data[i+a.size] = sparse_copy(b.data[i]);
+        y.grade[i+a.size] = b.grade[i];
+    }
+    return y;
+}
+
+blades graded_atomic_add_append(blades *mv, size_t size){
+    size_t y_size = 0;
+    for(size_t i = 0; i < size; i++)
+        y_size += mv[i].size;
+
+    blades y = initialize_blades_empty(y_size);
+
+    for(size_t i = 0; i < mv[0].size; i++){
+        y.data[i] = sparse_copy(mv[0].data[i]);
+        y.grade[i] = mv[0].grade[i];
+    }
+
+    size_t p = 0;
+    for(size_t j = 1; j < size; j++){
+        p += mv[j-1].size;
+        for(size_t i = 0; i < mv[j].size; i++){
+            y.data[i+p] = sparse_copy(mv[j].data[i]);
+            y.grade[i+p] = mv[j].grade[i];
+        }
+    }
+    return y;
+}
+
+blades graded_add_add(graded_multivectors mvs){
+    blades a = mvs.a;
+    blades b = mvs.b;
+    grade_map gm = mvs.gm;
+    float precision = mvs.precision;
+    return graded_add_add_(a,b,gm,precision);
+}
+
+blades graded_add_add_(blades a, blades b, grade_map gm, float precision){
+    unsigned int *grade_size = initialize_grade_size(gm);
+    blades dense_y = initialize_blades_empty(gm.max_grade + 1);
+    blades sparse_y;
+    unsigned int n_grades = 0;
+
+    for(size_t i = 0; i < a.size; i++){
+        for(size_t j = 0; j < a.data[i].size; j++){
+            unsigned int position = gm.position[a.data[i].bitmap[j]];
+            unsigned int grade = a.grade[i];
+            if(dense_y.data[grade].bitmap == NULL){
+                dense_y.data[grade] = initialize_sparse(gm.grade_size[grade]);
+                n_grades++;
+            }
+            // write bitmap once to memory
+            if(dense_y.data[grade].bitmap[position] == -1){
+                dense_y.data[grade].bitmap[position] = a.data[i].bitmap[j];
+                dense_y.data[grade].value[position] = 0;
+                grade_size[grade]++;
+            }
+            dense_y.data[grade].value[position] += a.data[i].value[j];
+        }
+    }
+
+    for(size_t i = 0; i < b.size; i++){
+        for(size_t j = 0; j < b.data[i].size; j++){
+            unsigned int position = gm.position[b.data[i].bitmap[j]];
+            unsigned int grade = b.grade[i];
+            if(dense_y.data[grade].bitmap == NULL){
+                dense_y.data[grade] = initialize_sparse(gm.grade_size[grade]);
+                n_grades++;
+            }
+            // write bitmap once to memory
+            if(dense_y.data[grade].bitmap[position] == -1){
+                dense_y.data[grade].bitmap[position] = b.data[i].bitmap[j];
+                dense_y.data[grade].value[position] = 0;
+                grade_size[grade]++;
+            }
+            dense_y.data[grade].value[position] += b.data[i].value[j];
+        }
+    }
+
+
+    graded_remove_small(dense_y,precision,grade_size);
+    sparse_y = grade_dense_to_grade_sparse(dense_y,grade_size);
+
+    free(grade_size);
+    free_blades(dense_y);
+    return sparse_y;
+}
+
+blades graded_atomic_add_add_(blades *mv, size_t size, grade_map gm, float precision){
+    unsigned int *grade_size = initialize_grade_size(gm);
+    blades dense_y = initialize_blades_empty(gm.max_grade + 1);
+    blades sparse_y;
+    unsigned int n_grades = 0;
+
+    for(size_t k = 0; k < size; k++){
+        for(size_t i = 0; i < mv[k].size; i++){
+            for(size_t j = 0; j < mv[k].data[i].size; j++){
+                unsigned int position = gm.position[mv[k].data[i].bitmap[j]];
+                unsigned int grade = mv[k].grade[i];
+                if(dense_y.data[grade].bitmap == NULL){
+                    dense_y.data[grade] = initialize_sparse(gm.grade_size[grade]);
+                    n_grades++;
+                }
+                // write bitmap once to memory
+                if(dense_y.data[grade].bitmap[position] == -1){
+                    dense_y.data[grade].bitmap[position] = mv[k].data[i].bitmap[j];
+                    dense_y.data[grade].value[position] = 0;
+                    grade_size[grade]++;
+                }
+                dense_y.data[grade].value[position] += mv[k].data[i].value[j];
+            }
+        }
+    }
+
+    graded_remove_small(dense_y,precision,grade_size);
+    sparse_y = grade_dense_to_grade_sparse(dense_y,grade_size);
+
+    free(grade_size);
+    free_blades(dense_y);
+    return sparse_y;
+}
+
 
 // stores only the non-empyty grades and the non-empty blades
 blades grade_dense_to_grade_sparse(blades dense_y, unsigned int *grade_size){
