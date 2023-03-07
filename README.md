@@ -1,9 +1,3 @@
----
-title: sparse-multivectors
-created: '2023-03-03T10:13:01.051Z'
-modified: '2023-03-07T20:04:57.474Z'
----
-
 # sparse-multivectors
 
 Creating a python library to do computations using sparse representation of multivectors.
