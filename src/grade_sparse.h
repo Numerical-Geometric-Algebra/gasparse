@@ -17,17 +17,6 @@ typedef struct graded_multivectors{
 }graded_multivectors;
 
 
-typedef struct graded_tensor_multivectors{
-    blades **data;
-    size_t **shapes;
-    size_t *shape_size;
-    size_t size; // size of the shape size
-    map m;
-    grade_map gm;
-    float precision;
-}graded_tensor_multivectors;
-
-
 blades initialize_blades_empty(size_t);
 blades initialize_blades(unsigned int *,size_t);
 blades graded_product(graded_multivectors);
@@ -42,9 +31,9 @@ blades graded_general_product(graded_multivectors,project_map);
 blades graded_general_product_(blades,blades,map,grade_map,project_map,float);
 blades grade_sparse_grade_project(blades,unsigned int *,size_t,size_t);
 
-blades graded_atomic_add_add_(blades *,size_t,grade_map,float);
+blades graded_atomic_add_add_(blades **,size_t,grade_map,float);
 blades graded_add_add_(blades,blades,grade_map,float);
-blades graded_atomic_add_append(blades *,size_t);
+blades graded_atomic_add_append(blades **,size_t);
 blades graded_add_append(blades,blades);
 
 blades graded_add_add(graded_multivectors);

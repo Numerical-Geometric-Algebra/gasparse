@@ -216,6 +216,7 @@ blades graded_scalar_multiply(float scalar, blades b){
             y.data[i].value[j] = b.data[i].value[j]*scalar;
             y.data[i].bitmap[j] = b.data[i].bitmap[j];
         }
+        y.grade[i] = b.grade[i];
     }
     free(grade_size);
     return y;
@@ -235,24 +236,24 @@ blades graded_add_append(blades a, blades b){
     return y;
 }
 
-blades graded_atomic_add_append(blades *mv, size_t size){
+blades graded_atomic_add_append(blades **mv, size_t size){
     size_t y_size = 0;
     for(size_t i = 0; i < size; i++)
-        y_size += mv[i].size;
+        y_size += mv[i]->size;
 
     blades y = initialize_blades_empty(y_size);
 
-    for(size_t i = 0; i < mv[0].size; i++){
-        y.data[i] = sparse_copy(mv[0].data[i]);
-        y.grade[i] = mv[0].grade[i];
+    for(size_t i = 0; i < mv[0]->size; i++){
+        y.data[i] = sparse_copy(mv[0]->data[i]);
+        y.grade[i] = mv[0]->grade[i];
     }
 
     size_t p = 0;
     for(size_t j = 1; j < size; j++){
-        p += mv[j-1].size;
-        for(size_t i = 0; i < mv[j].size; i++){
-            y.data[i+p] = sparse_copy(mv[j].data[i]);
-            y.grade[i+p] = mv[j].grade[i];
+        p += mv[j-1]->size;
+        for(size_t i = 0; i < mv[j]->size; i++){
+            y.data[i+p] = sparse_copy(mv[j]->data[i]);
+            y.grade[i+p] = mv[j]->grade[i];
         }
     }
     return y;
@@ -317,28 +318,28 @@ blades graded_add_add_(blades a, blades b, grade_map gm, float precision){
     return sparse_y;
 }
 
-blades graded_atomic_add_add_(blades *mv, size_t size, grade_map gm, float precision){
+blades graded_atomic_add_add_(blades **mv, size_t size, grade_map gm, float precision){
     unsigned int *grade_size = initialize_grade_size(gm);
     blades dense_y = initialize_blades_empty(gm.max_grade + 1);
     blades sparse_y;
     unsigned int n_grades = 0;
 
     for(size_t k = 0; k < size; k++){
-        for(size_t i = 0; i < mv[k].size; i++){
-            for(size_t j = 0; j < mv[k].data[i].size; j++){
-                unsigned int position = gm.position[mv[k].data[i].bitmap[j]];
-                unsigned int grade = mv[k].grade[i];
+        for(size_t i = 0; i < mv[k]->size; i++){
+            for(size_t j = 0; j < mv[k]->data[i].size; j++){
+                unsigned int position = gm.position[mv[k]->data[i].bitmap[j]];
+                unsigned int grade = mv[k]->grade[i];
                 if(dense_y.data[grade].bitmap == NULL){
                     dense_y.data[grade] = initialize_sparse(gm.grade_size[grade]);
                     n_grades++;
                 }
                 // write bitmap once to memory
                 if(dense_y.data[grade].bitmap[position] == -1){
-                    dense_y.data[grade].bitmap[position] = mv[k].data[i].bitmap[j];
+                    dense_y.data[grade].bitmap[position] = mv[k]->data[i].bitmap[j];
                     dense_y.data[grade].value[position] = 0;
                     grade_size[grade]++;
                 }
-                dense_y.data[grade].value[position] += mv[k].data[i].value[j];
+                dense_y.data[grade].value[position] += mv[k]->data[i].value[j];
             }
         }
     }

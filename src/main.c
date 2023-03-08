@@ -4,21 +4,42 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 #define MAX_METRIC_SIZE 32
 
 int main(){
     /* test_product_all_types(); */
-    test_sum_all_types();
+    /* test_sum_all_types(); */
+    /* test_scalar_multiply_all_types(); */
+    /* test_parse(); */
+    test_matrix_mult();
 }
 
+
+void test_parse(void){
+    /* labels l = parse_subscripts("abbcbc",6,6); */
+    /* labels l = parse_subscripts("ab...bc",7,6); */
+    /* free(l.op_labels); */
+    size_t ndims[] = {3,4,3,3};
+    char args[] = "a...b,acda,aaa->def";
+    symbols s = parse_all(args,strlen(args),ndims,4);
+
+    for(size_t i = 0; i < s.size_; i++){
+        for(size_t j = 0; j< s.size[i]; j++){
+            printf("%d,",s.subscripts[i][j]);
+        }printf("\n");
+    }
+
+    free_symbols(s);
+}
 
 void time_generator(void){
     clock_t start, end;
     double cpu_time_used;
     size_t p,q,r;
 
-    // For metric with more than 14 basis vector the cpu runs out of memory
+    // For metric with more than 14 basis vectors the cpu runs out of memory
     for(size_t n = 1; n <= 14; n++){
         p = n; q = 0; r = 0;
         start = clock();
@@ -36,6 +57,53 @@ void print_generator_table(unsigned int p,unsigned int q,unsigned int r){
     map m = cayley_table(p,q,r);
     print_map(m);
     free_map(m);
+}
+
+void test_scalar_multiply_all_types(void){
+    unsigned int p = 4, q = 1, r = 1;
+
+    float precision = 1e-12;
+    int size = 3;
+    float scalar = 8.763;
+
+    float value_l[] = {1,4,6,8,2,3};
+    int bitmap_l[] =  {1,4,0,3,7,6};
+
+    float value_r[] = {-1,7, 33,2,4,9};
+    int bitmap_r[] =  { 1,12,4, 32,5,27};
+
+    map m = cayley_table(p,q,r);
+    grade_map gm = bitmap_grade_map(m.size);
+    sparse a = {bitmap_l,value_l,size},b = {bitmap_r,value_r,size};
+
+    dense_grade_map dgm = {gm.max_grade,gm.size,gm.grade};
+    sparse_multivectors mvs = {a,b,m,precision,dgm};
+
+    blades xl = sparse_to_graded(a,gm);
+    blades xr = sparse_to_graded(b,gm);
+    dense dense_xl = sparse_to_dense(mvs.a,m.size);
+    dense dense_xr = sparse_to_dense(mvs.b,m.size);
+
+    graded_multivectors gmvs = {xl,xr,m,gm,precision};
+    dense_multivectors dmvs = {dense_xl,dense_xr,m,dgm};
+
+    sparse sparse_y = sparse_scalar_multiply(scalar,mvs.a);
+    blades blades_y = graded_scalar_multiply(scalar,gmvs.a);
+    dense dense_y = dense_scalar_multiply(scalar,dmvs.a);
+
+    printf("scalar multiply:\n");
+    print_all_types(sparse_y,dense_y,blades_y);
+
+    free_blades(blades_y);
+    free_sparse(sparse_y);
+    free(dense_y.value);
+
+    free(dense_xl.value);
+    free(dense_xr.value);
+    free_blades(xl);
+    free_blades(xr);
+    free_map(m);
+    free_grade_map(gm);
 }
 
 
@@ -88,9 +156,17 @@ void test_sum_all_types(void){
     free_sparse(sparse_y);
     free(dense_y.value);
 
-    sparse s_mv[2] = {mvs.a,mvs.b};
-    blades b_mv[2] = {gmvs.a,gmvs.b};
-    dense  d_mv[2] = {dmvs.a,dmvs.b};
+    sparse **s_mv = (sparse**)malloc(2*sizeof(sparse*));
+    s_mv[0] = &mvs.a;
+    s_mv[1] = &mvs.b;
+
+    blades **b_mv = (blades**)malloc(2*sizeof(blades*));
+    b_mv[0] = &gmvs.a;
+    b_mv[1] = &gmvs.b;
+
+    dense **d_mv = (dense**)malloc(2*sizeof(dense*));
+    d_mv[0] = &dmvs.a;
+    d_mv[1] = &dmvs.b;
 
     sparse_y = sparse_atomic_add_append(s_mv,2);
     blades_y = graded_atomic_add_append(b_mv,2);
@@ -110,6 +186,10 @@ void test_sum_all_types(void){
     printf("atomic_add_add:\n");
     print_all_types(sparse_y,dense_y,blades_y);
 
+
+    free(s_mv);
+    free(b_mv);
+    free(d_mv);
     free_blades(blades_y);
     free_sparse(sparse_y);
     free(dense_y.value);
@@ -122,6 +202,79 @@ void test_sum_all_types(void){
     free_grade_map(gm);
 }
 
+
+void test_matrix_mult(void){
+    unsigned int p = 4, q = 1, r = 1;
+
+    float precision = 1e-12;
+    int size = 1;
+
+    float value_11[] = {1,4,6,8,2,3};
+    int bitmap_11[] = {0,4,7,3,7,6};
+
+    float value_12[] = {1,4,8,8,2,3};
+    int bitmap_12[] = {1,4,5,3,7,6};
+
+    float value_21[] = {1,4,6,8,21,3};
+    int bitmap_21[] = {2,4,5,3,7,6};
+
+    float value_22[] = {1,4,6,8,2,3};
+    int bitmap_22[] = {3,4,5,3,32,6};
+
+    float value_1[] = {1,7,33,2,4,9};
+    int bitmap_1[] = {0,12,2,32,12,27};
+
+    float value_2[] = {1,12,33,2,4,9};
+    int bitmap_2[] = {1,5,2,32,17,27};
+
+    map m = cayley_table(p,q,r);
+    grade_map gm = bitmap_grade_map(m.size);
+    sparse a[] = {{bitmap_11,value_11,size},{bitmap_12,value_12,size},
+                  {bitmap_21,value_21,size},{bitmap_22,value_22,size}};
+    sparse b[] = {{bitmap_1,value_1,size},{bitmap_2,value_2,size}};
+
+
+    blades x[4]; // 2x2 matrix
+    blades y[2]; // 2 vector
+    for(size_t i = 0; i < 4; i++)
+        x[i] = sparse_to_graded(a[i],gm);
+
+    for(size_t i = 0; i < 2; i++)
+        y[i] = sparse_to_graded(b[i],gm);
+
+    blades **data = (blades**)malloc(2*sizeof(blades*));
+    size_t **shapes = (size_t**)malloc(2*sizeof(size_t*));
+    data[0] = x; data[1] = y;
+
+
+    shapes[0] = (size_t*)malloc(2*sizeof(size_t));
+    shapes[0][0] = 2;
+    shapes[0][1] = 2;
+
+    graded_tensor_multivectors tmvs = {data,shapes,NULL,1,m,gm,precision};
+
+    graded_tensor out = vector_matrix_mult(tmvs);
+
+    for(size_t i = 0; i < 2; i++)
+        print_blades(out.data[i],"");
+
+
+    for(size_t i = 0; i < 4; i++)
+        free_blades(x[i]);
+
+    free(shapes[0]);
+    for(size_t i = 0; i < 2; i++){
+        free_blades(y[i]);
+        free_blades(out.data[i]);
+    }
+    free(data);
+    free(out.data);
+    free(out.shapes);
+    free(shapes);
+    free_map(m);
+    free_grade_map(gm);
+
+}
 
 
 void test_product_all_types(void){
@@ -203,21 +356,21 @@ void print_all_types(sparse sparse_y, dense dense_y, blades blades_y){
 void print_dense(dense y, int non_zero,char *s){
     for(size_t i = 0; i < y.size; i++ ){
         if(non_zero || y.value[i] != 0){
-            printf("%s(%zu,%.0f)\n",s,i,y.value[i]);
+            printf("%s(%zu,%f)\n",s,i,y.value[i]);
         }
     }
 }
 
 void print_sparse(sparse y,char *s){
     for(size_t i = 0; i < y.size; i++ )
-        printf("%s(%d,%.0f)\n",s,y.bitmap[i],y.value[i]);
+        printf("%s(%d,%f)\n",s,y.bitmap[i],y.value[i]);
 }
 
 void print_blades(blades y,char *s){
     for(size_t i = 0; i < y.size; i++){
         printf("%sGrade %d:\n",s, y.grade[i]);
         for(size_t j = 0; j < y.data[i].size; j++){
-            printf("%s\t(%d,%.0f)\n",s,y.data[i].bitmap[j],y.data[i].value[j]);
+            printf("%s\t(%d,%f)\n",s,y.data[i].bitmap[j],y.data[i].value[j]);
         }
         printf("\n");
     }

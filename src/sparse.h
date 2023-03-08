@@ -16,16 +16,6 @@ typedef struct sparse_multivectors{
     dense_grade_map dgm;
 }sparse_multivectors;
 
-typedef struct sparse_tensor_multivectors{
-    sparse **data;
-    size_t **shapes;
-    size_t *shape_size;
-    size_t size; // size of the shape_size
-    map m;
-    float precision;
-    dense_grade_map dgm;
-}sparse_tensor_multivectors;
-
 
 sparse initialize_sparse(unsigned int);
 int comp_abs(float,float);
@@ -41,9 +31,9 @@ void free_sparse(sparse);
 sparse sparse_copy(sparse);
 
 sparse sparse_add_append(sparse,sparse);
-sparse sparse_atomic_add_append(sparse*,size_t);
+sparse sparse_atomic_add_append(sparse**,size_t);
 sparse sparse_add_add_(sparse,sparse,unsigned int,float);
-sparse sparse_atomic_add_add_(sparse *,size_t,size_t,float);
+sparse sparse_atomic_add_add_(sparse **,size_t,size_t,float);
 
 sparse sparse_add_add(sparse_multivectors);
 #endif // SPARSE_H_

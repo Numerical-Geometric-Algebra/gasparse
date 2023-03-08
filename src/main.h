@@ -4,6 +4,7 @@
 #include "sparse.h"
 #include "grade_sparse.h"
 #include "dense.h"
+#include "einsum.h"
 
 void time_generator(void);
 void print_generator_table(unsigned int,unsigned int,unsigned int);
@@ -20,6 +21,9 @@ void grade_project(void);
 
 void test_product_all_types(void);
 void test_sum_all_types(void);
+void test_scalar_multiply_all_types(void);
+void test_parse(void);
+void test_matrix_mult(void);
 
 dense project_dense_product(dense_multivectors,project_map);
 sparse project_sparse_product(sparse_multivectors,project_map);

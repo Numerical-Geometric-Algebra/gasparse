@@ -44,11 +44,11 @@ dense dense_add(dense a, dense b){
     return y;
 }
 
-dense dense_atomic_add(dense *mv, size_t size){
-    dense y = initialize_dense(mv[0].size);
+dense dense_atomic_add(dense **mv, size_t size){
+    dense y = initialize_dense(mv[0]->size);
     for(size_t i = 0; i < size; i++){
-        for(size_t j = 0; j < mv[i].size; j++){
-            y.value[j] += mv[i].value[j];
+        for(size_t j = 0; j < mv[i]->size; j++){
+            y.value[j] += mv[i]->value[j];
         }
     }
     return y;

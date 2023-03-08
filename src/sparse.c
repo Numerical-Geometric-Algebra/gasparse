@@ -135,23 +135,23 @@ sparse sparse_add_append(sparse a, sparse b){
 
 
 // appends a bunch of multivectors together
-sparse sparse_atomic_add_append(sparse *mv, size_t mv_size){
+sparse sparse_atomic_add_append(sparse **mv, size_t mv_size){
     size_t size_y = 0;
     for(size_t i =0; i < mv_size; i++)
-        size_y += mv[i].size;
+        size_y += mv[i]->size;
     sparse y = initialize_sparse(size_y);
 
-    for(size_t j = 0; j < mv[0].size; j++){
-        y.value[j] = mv[0].value[j];
-        y.bitmap[j] = mv[0].bitmap[j];
+    for(size_t j = 0; j < mv[0]->size; j++){
+        y.value[j] = mv[0]->value[j];
+        y.bitmap[j] = mv[0]->bitmap[j];
     }
 
     size_t p = 0;
     for(size_t i = 1; i < mv_size; i++){
-        p += mv[i-1].size;
-        for(size_t j = 0; j < mv[i].size; j++){
-            y.value[j+p] = mv[i].value[j];
-            y.bitmap[j+p] = mv[i].bitmap[j];
+        p += mv[i-1]->size;
+        for(size_t j = 0; j < mv[i]->size; j++){
+            y.value[j+p] = mv[i]->value[j];
+            y.bitmap[j+p] = mv[i]->bitmap[j];
         }
     }
 
@@ -194,19 +194,19 @@ sparse sparse_add_add_(sparse a, sparse b, unsigned int size, float precision){
 
 
 // adds a bunch of multivectors together
-sparse sparse_atomic_add_add_(sparse *mv, size_t mv_size, size_t size, float precision){
+sparse sparse_atomic_add_add_(sparse **mv, size_t mv_size, size_t size, float precision){
     sparse dense_y = initialize_sparse(size);
     sparse sparse_y;
     /* printf("dense_y size: %d",dense_y.size); */
     unsigned int sparse_size = 0;
     for(size_t i = 0; i < mv_size; i++){
-        for(size_t j = 0; j < mv[i].size; j++){
-            int bitmap = mv[i].bitmap[j];
+        for(size_t j = 0; j < mv[i]->size; j++){
+            int bitmap = mv[i]->bitmap[j];
             if(dense_y.bitmap[bitmap] == -1){
                 dense_y.bitmap[bitmap] = bitmap;
                 sparse_size++;
             }
-            dense_y.value[bitmap] += mv[i].value[j];
+            dense_y.value[bitmap] += mv[i]->value[j];
         }
     }
 
