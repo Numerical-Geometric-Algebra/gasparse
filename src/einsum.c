@@ -136,6 +136,54 @@ void free_symbols(symbols s){
 }
 
 
+graded_tensor einsum(graded_tensor_multivectors tmvs, symbols sym){
+    size_t **strides = (size_t**)malloc(tmvs.size*sizeof(size_t*));
+    for(size_t j = 0; j < sym.size_; j++)
+        strides[j] = (size_t*)malloc(sym.size[j]*sizeof(size_t));
+
+
+}
+
+graded_tensor initialize_graded_out_tensor(symbols sym, size_t **shapes, size_t *shape_size, size_t size){
+    size_t out_sub_size = sym.size[sym.size_-1];
+    char *out_sub = sym.subscripts[sym.size_-1];
+    size_t *out_shapes = (size_t*)malloc(out_sub_size*sizeof(size_t));
+    graded_tensor out_tensor = {NULL,NULL,0};
+
+    for(size_t i = 0; i < out_sub_size; i++)
+        out_shapes[i] = 0;
+
+    for(size_t i = 0; i < out_sub_size; i++){
+        for(size_t j = 0; j < sym.size_-1; j++){
+            for(size_t k = 0; k < sym.size[j]; k++){
+                if(out_sub[i] == sym.subscripts[j][k]){
+                    if(out_shapes[i] != 0){
+                        out_shapes[i] = shapes[j][k];
+                    }else{
+                        // check if shapes are equal
+                        if(out_shapes[i] != shapes[j][k]){
+                            return out_tensor;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    size_t out_size = 1;
+
+    for(size_t i = 0; i < out_sub_size; i++)
+        out_size *= out_shapes[i];
+
+    out_tensor.data = (blades*)malloc(out_size*sizeof(blades));
+    out_tensor.shapes = out_shapes;
+    out_tensor.shape_size = out_sub_size;
+
+    return out_tensor;
+
+}
+
 graded_tensor vector_matrix_mult(graded_tensor_multivectors tmvs){
     blades *matrix = tmvs.data[0];
     blades *vector = tmvs.data[1];

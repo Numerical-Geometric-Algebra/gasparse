@@ -12,8 +12,8 @@ int main(){
     /* test_product_all_types(); */
     /* test_sum_all_types(); */
     /* test_scalar_multiply_all_types(); */
-    /* test_parse(); */
-    test_matrix_mult();
+    test_parse();
+    /* test_matrix_mult(); */
 }
 
 
@@ -21,9 +21,9 @@ void test_parse(void){
     /* labels l = parse_subscripts("abbcbc",6,6); */
     /* labels l = parse_subscripts("ab...bc",7,6); */
     /* free(l.op_labels); */
-    size_t ndims[] = {3,4,3,3};
-    char args[] = "a...b,acda,aaa->def";
-    symbols s = parse_all(args,strlen(args),ndims,4);
+    size_t ndims[] = {2,2,2};
+    char args[] = "ik,kj->ij";
+    symbols s = parse_all(args,strlen(args),ndims,3);
 
     for(size_t i = 0; i < s.size_; i++){
         for(size_t j = 0; j< s.size[i]; j++){

@@ -28,7 +28,7 @@ typedef struct graded_tensor_multivectors{
     blades **data;
     size_t **shapes;
     size_t *shape_size;
-    size_t size; // size of the shape size
+    size_t size; // size of the shape size (number of multivector tensors)
     map m;
     grade_map gm;
     float precision;
