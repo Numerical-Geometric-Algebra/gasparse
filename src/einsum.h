@@ -51,12 +51,23 @@ typedef struct graded_tensor{
     size_t shape_size;
 }graded_tensor;
 
+typedef struct tensor_strides{
+    size_t **strides; // strides for each symbol for each tensor
+    size_t *n_strides;
+    size_t n_tensors;
+    size_t n_symbols;
+}tensor_strides;
+
 labels parse_subscripts(char*,size_t,size_t);
 symbols parse_args(char*,size_t);
 void free_symbols(symbols);
 symbols parse_all(char*,size_t,size_t*,size_t);
 
 
+int iterator(void**,size_t**,size_t,size_t*,size_t*,size_t);
+void einsum_sum_prods(tensor_strides,graded_tensor_multivectors);
+void einsum_no_sum_prods(tensor_strides,graded_tensor_multivectors);
+void sum_of_products(graded_tensor_multivectors,size_t *,size_t,size_t);
 graded_tensor vector_matrix_mult(graded_tensor_multivectors);
 
 #endif // EINSUM_H_
