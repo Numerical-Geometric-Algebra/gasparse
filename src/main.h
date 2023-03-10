@@ -24,6 +24,7 @@ void test_sum_all_types(void);
 void test_scalar_multiply_all_types(void);
 void test_parse(void);
 void test_matrix_mult(void);
+void test_einsum(void);
 
 dense project_dense_product(dense_multivectors,project_map);
 sparse project_sparse_product(sparse_multivectors,project_map);

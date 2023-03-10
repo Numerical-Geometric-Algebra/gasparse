@@ -28,6 +28,7 @@ typedef struct graded_tensor_multivectors{
     blades **data;
     size_t **shapes;
     size_t *shape_size;
+    size_t *data_size; // total size of each tensor
     size_t size; // size of the shape size (number of multivector tensors)
     map m;
     grade_map gm;
@@ -58,16 +59,40 @@ typedef struct tensor_strides{
     size_t n_symbols;
 }tensor_strides;
 
+typedef struct iterator{
+    tensor_strides ts;
+    void **data;
+    size_t *index;
+    size_t sizeof_data;
+}iterator;
+
+typedef struct symbol_shape{
+    size_t size;
+    char *symbols; // list of symbols
+    size_t *shape; // shape of each symbol
+}symbol_shape;
+
 labels parse_subscripts(char*,size_t,size_t);
 symbols parse_args(char*,size_t);
 void free_symbols(symbols);
 symbols parse_all(char*,size_t,size_t*,size_t);
 
 
-int iterator(void**,size_t**,size_t,size_t*,size_t*,size_t);
+void free_tensors_holder(graded_tensor_multivectors);
+size_t get_nbr_inner_iters(iterator);
+iterator init_iterator(tensor_strides,void**,size_t);
+int outter_iterator(iterator);
+int inner_iterator(iterator);
 void einsum_sum_prods(tensor_strides,graded_tensor_multivectors);
 void einsum_no_sum_prods(tensor_strides,graded_tensor_multivectors);
-void sum_of_products(graded_tensor_multivectors,size_t *,size_t,size_t);
+void sum_of_products(graded_tensor_multivectors,iterator);
 graded_tensor vector_matrix_mult(graded_tensor_multivectors);
+
+
+
+int main_einsum(graded_tensor_multivectors,symbols);
+symbol_shape get_all_symbols(symbols,size_t**,size_t*,size_t);
+graded_tensor_multivectors append_out_tensor(symbol_shape,char*,size_t,graded_tensor_multivectors);
+tensor_strides compute_strides(size_t**,symbols,symbol_shape);
 
 #endif // EINSUM_H_
