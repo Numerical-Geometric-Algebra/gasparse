@@ -462,3 +462,53 @@ void free_blades(blades y){
     free(y.data);
     free(y.grade);
 }
+
+
+
+void graded_assign__(void *data, void *temp){
+    blades *graded_data = data;
+    blades *graded_temp = temp;
+    *graded_data = *graded_temp;
+}
+
+void graded_init__(void *data, size_t size){
+    blades *graded_data = data;
+    for(size_t i = 0; i < size; i++){
+        graded_data[i].grade = NULL;
+        graded_data[i].data = NULL;
+        graded_data[i].size = 0;
+    }
+}
+
+void *graded_product__(void *a, void *b, void *extra){
+    graded_extra *gextra = extra;
+    blades *ga = a;
+    blades *gb = b;
+    blades *out = (blades*)malloc(sizeof(blades));
+    *out = graded_product_(*ga,*gb,gextra->m,gextra->gm,gextra->precision);
+    return (void*)out;
+}
+
+void *graded_add_add__(void *a, void *b, void *extra){
+    graded_extra *gextra = extra;
+    blades *ga = a;
+    blades *gb = b;
+    blades *out = (blades*)malloc(sizeof(blades));
+    *out = graded_add_add_(*ga,*gb,gextra->gm,gextra->precision);
+    return (void*)out;
+}
+
+void *graded_atomic_add__(void *data, size_t size, void *extra){
+    graded_extra *gextra = extra;
+    blades **gdata = data;
+    blades *out = (blades*)malloc(sizeof(blades));
+    *out = graded_atomic_add_add_(gdata,size,gextra->gm,gextra->precision);
+    return (void*)out;
+}
+
+void graded_free__(void *data, size_t size){
+    blades *gdata = data;
+    for(size_t i = 0; i < size; i++){
+        free_blades(gdata[i]);
+    }
+}

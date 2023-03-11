@@ -135,6 +135,97 @@ void free_symbols(symbols s){
     free(s.subscripts);
 }
 
+int general_main_einsum(
+    general_tensor_multivectors tmvs,
+    general_extra extra,
+    operator_functions opfs,
+    symbols s,
+    general_tensor* out){
+
+    symbol_shape sp = get_all_symbols(s, tmvs.shapes, tmvs.shape_size, tmvs.size); // check symbol-shape consistency
+    if(sp.size == 0)
+        return 0;
+
+    general_tensor_multivectors new_tmvs =
+        general_append_out_tensor(sp,s.subscripts[s.size_-1],s.size[s.size_-1],tmvs);
+    opfs.init(new_tmvs.data[new_tmvs.size-1],new_tmvs.data_size[new_tmvs.size-1]);
+
+    tensor_strides ts = compute_strides(new_tmvs.shapes,s,sp);
+
+    general_einsum_sum_prods(ts,new_tmvs,opfs,extra);
+
+    out->data = new_tmvs.data[new_tmvs.size-1];
+    out->shapes = new_tmvs.shapes[new_tmvs.size-1];
+    out->shape_size = new_tmvs.shape_size[new_tmvs.size-1];
+    out->data_size = new_tmvs.data_size[new_tmvs.size-1];
+
+    free(new_tmvs.data);
+    free(new_tmvs.shapes);
+    free(new_tmvs.shape_size);
+    free(new_tmvs.data_size);
+    free_symbol_shape(sp);
+    free_tensor_strides(ts);
+
+    return 1;
+}
+
+
+void general_einsum_sum_prods(
+    tensor_strides ts,
+    general_tensor_multivectors tmvs,
+    operator_functions opfs,
+    general_extra extra){
+
+    iterator iter = init_iterator(ts,tmvs.data,tmvs.type_size);
+    do{
+        general_sum_of_products(tmvs,opfs,extra,iter);
+    }while(outter_iterator(iter));
+
+    free(iter.index);
+}
+
+
+void general_sum_of_products(
+    general_tensor_multivectors tmvs,
+    operator_functions opfs,
+    general_extra extra,
+    iterator iter){
+
+    size_t n_iter = get_nbr_inner_iters(iter);
+    void **sum_mvs = (void*)malloc(n_iter*sizeof(void*));
+    size_t j = 0;
+    do{
+        void *temp = tmvs.data[0];
+        void *temp_;
+        for(size_t i = 1; i < tmvs.size-1; i++){ // left multiply the multivectors
+            temp_ = temp;
+            temp = opfs.product(temp,tmvs.data[i],extra.extra); // compute the geometric product
+            if(i > 1){ // free old alocated memory by the product
+                opfs.free(temp_,1);
+                free(temp_);
+            }
+        }
+        sum_mvs[j] = temp;
+        j++;
+    }while(inner_iterator(iter));
+
+    void *added = opfs.atomic_add(sum_mvs,j,extra.extra); // adds j multivectors
+    void *data_ = tmvs.data[tmvs.size-1];
+    void *temp_add = opfs.add(data_,added,extra.extra);
+    opfs.assign(data_,temp_add); // copies the contents of temp to the output tensor
+
+    for(size_t i = 0; i < j; i++){
+        opfs.free(sum_mvs[i],1);
+        free(sum_mvs[i]);
+    }
+
+    opfs.free(added,1);
+    free(added);
+    free(temp_add);
+    free(sum_mvs);
+}
+
+
 int main_einsum(graded_tensor_multivectors tmvs, symbols s, graded_tensor *out_tensor){
     symbol_shape sp = get_all_symbols(s, tmvs.shapes, tmvs.shape_size, tmvs.size); // check symbol-shape consistency
     if(sp.size == 0)
@@ -170,6 +261,45 @@ void free_tensors_holder(graded_tensor_multivectors tmvs){
     free(tmvs.shape_size);
     free(tmvs.data_size);
 }
+
+general_tensor_multivectors general_append_out_tensor(symbol_shape sp, char *symbols, size_t n_symbols, general_tensor_multivectors tmvs){
+   size_t *shape = (size_t*)malloc(n_symbols*sizeof(size_t)); // shape of the output tensor per symbol
+
+    for(size_t i = 0; i < sp.size; i++){
+        for(size_t j = 0; j < n_symbols; j++){
+            if(symbols[j] == sp.symbols[i]){
+                shape[j] = sp.shape[i];
+            }
+        }
+    }
+
+    size_t size = 1;
+    for(size_t i = 0; i < n_symbols; i++)
+        size *= shape[i];
+
+    void *out_data = (void*)malloc(size*tmvs.type_size);
+    void **data = (void*)malloc((tmvs.size+1)*sizeof(void*));
+    size_t **shapes = (size_t**)malloc((tmvs.size+1)*sizeof(size_t*));
+    size_t *shape_size = (size_t*)malloc((tmvs.size+1)*sizeof(size_t));
+    size_t *data_size = (size_t*)malloc((tmvs.size+1)*sizeof(size_t));
+    for (size_t i = 0; i < tmvs.size; i++) {
+        data[i] = tmvs.data[i];
+        shapes[i] = tmvs.shapes[i];
+        shape_size[i] = tmvs.shape_size[i];
+        data_size[i] = tmvs.data_size[i];
+    }
+    // initialize output tensor to empty
+    data[tmvs.size] = out_data;
+    shapes[tmvs.size] = shape;
+    shape_size[tmvs.size] = n_symbols;
+    data_size[tmvs.size] = size;
+
+    general_tensor_multivectors new_tmvs =
+        {data,shapes,shape_size,data_size,tmvs.size+1,tmvs.type_size};
+    return new_tmvs;
+}
+
+
 
 graded_tensor_multivectors append_out_tensor(symbol_shape sp, char *symbols, size_t n_symbols, graded_tensor_multivectors tmvs){
    size_t *shape = (size_t*)malloc(n_symbols*sizeof(size_t)); // shape of the output tensor per symbol
@@ -207,8 +337,6 @@ graded_tensor_multivectors append_out_tensor(symbol_shape sp, char *symbols, siz
     shapes[tmvs.size] = shape;
     shape_size[tmvs.size] = n_symbols;
     data_size[tmvs.size] = size;
-    for(size_t i = 0; i < size; i++)
-        out_data[i].grade = NULL;
 
     graded_tensor_multivectors new_tmvs =
         {data,shapes,shape_size,data_size,tmvs.size+1,tmvs.m,tmvs.gm,tmvs.precision};
@@ -216,7 +344,7 @@ graded_tensor_multivectors append_out_tensor(symbol_shape sp, char *symbols, siz
 }
 
 tensor_strides compute_strides(size_t **shapes, symbols sym, symbol_shape sp){
-    size_t **strides; //= (size_t**)malloc(sym.size_*sizeof(size_t*));
+    size_t **strides;
     char *symbols;
     size_t symbols_size = 0;
     size_t *shape;
@@ -258,6 +386,7 @@ tensor_strides compute_strides(size_t **shapes, symbols sym, symbol_shape sp){
     ts.n_strides = sp.shape;
     return ts;
 }
+
 
 
 

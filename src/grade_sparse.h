@@ -16,6 +16,12 @@ typedef struct graded_multivectors{
     float precision;
 }graded_multivectors;
 
+typedef struct graded_extra{
+    map m;
+    grade_map gm;
+    float precision;
+}graded_extra;
+
 
 blades initialize_blades_empty(size_t);
 blades initialize_blades(unsigned int *,size_t);
@@ -38,4 +44,11 @@ blades graded_add_append(blades,blades);
 
 blades graded_add_add(graded_multivectors);
 
+// functions to use in einsum
+void graded_assign__(void*,void*);
+void graded_init__(void*,size_t);
+void *graded_product__(void*,void*,void*);
+void *graded_add_add__(void*,void*,void*);
+void *graded_atomic_add__(void*,size_t,void*);
+void graded_free__(void*,size_t);
 #endif // GRADE_SPARSE_H_

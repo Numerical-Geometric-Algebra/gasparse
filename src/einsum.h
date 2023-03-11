@@ -24,6 +24,39 @@ typedef struct sparse_tensor_multivectors{
     dense_grade_map dgm;
 }sparse_tensor_multivectors;
 
+
+typedef struct general_tensor{
+    void *data;
+    size_t *shapes;
+    size_t shape_size;
+    size_t data_size;
+}general_tensor;
+
+typedef struct general_tensor_multivectors{ // general
+    void **data;
+    size_t **shapes;
+    size_t *shape_size;
+    size_t *data_size; // total size of each tensor
+    size_t size; // size of the shape size (number of multivector tensors)
+    size_t type_size; // sizeof(type)
+}general_tensor_multivectors;
+
+typedef struct general_extra{
+    void *extra;
+    size_t size;
+    size_t type_size;
+}general_extra;
+
+typedef struct operator_functions{
+    void *(*atomic_add)(void *data, size_t size, void *extra);
+    void *(*add)(void *a,void *b, void *extra);
+    void *(*product)(void *a,void *b,void *extra);
+    void (*init)(void *data, size_t size);
+    void (*assign)(void *data, void *temp);
+    void (*free)(void *data, size_t size);
+}operator_functions;
+
+
 typedef struct graded_tensor_multivectors{
     blades **data;
     size_t **shapes;
@@ -95,5 +128,20 @@ int main_einsum(graded_tensor_multivectors,symbols,graded_tensor*);
 symbol_shape get_all_symbols(symbols,size_t**,size_t*,size_t);
 graded_tensor_multivectors append_out_tensor(symbol_shape,char*,size_t,graded_tensor_multivectors);
 tensor_strides compute_strides(size_t**,symbols,symbol_shape);
+
+
+int general_main_einsum(general_tensor_multivectors,general_extra,operator_functions,symbols,general_tensor*);
+general_tensor_multivectors general_append_out_tensor(symbol_shape,char*,size_t,general_tensor_multivectors);
+void general_einsum_sum_prods(
+    tensor_strides,
+    general_tensor_multivectors,
+    operator_functions,
+    general_extra);
+void general_sum_of_products(
+    general_tensor_multivectors,
+    operator_functions,
+    general_extra,
+    iterator);
+
 
 #endif // EINSUM_H_

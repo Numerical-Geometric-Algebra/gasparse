@@ -14,7 +14,8 @@ int main(){
     /* test_scalar_multiply_all_types(); */
     /* test_parse(); */
     /* test_matrix_mult(); */
-    test_einsum();
+    test_general_einsum();
+    /* test_einsum(); */
 }
 
 
@@ -268,23 +269,106 @@ blades **sparse_to_graded_tensors(sparse **data, size_t *data_size, size_t size,
     return graded_data;
 }
 
-void test_einsum(void){
+void test_general_einsum(void){
     unsigned int p = 4, q = 1, r = 1;
     float precision = 1e-12;
     size_t shape0[] = {2,3};
     size_t shape1[] = {3,2};
-    /* size_t shape2[] = {2,2}; */
+    size_t shape2[] = {3,3};
 
-    size_t tensor_size = 2;
+    size_t tensor_size = 3;
     size_t sparse_size = 1;
     size_t **shapes = (size_t**)malloc(tensor_size*sizeof(size_t*));
     size_t *data_size = (size_t*)malloc(tensor_size*sizeof(size_t*));
 
     shapes[0] = shape0;
     shapes[1] = shape1;
-    /* shapes[2] = shape2; */
+    shapes[2] = shape2;
 
-    size_t shape_size[] = {2,2};
+    size_t shape_size[] = {2,2,2}; // just 2D tensors
+
+    map m = cayley_table(p,q,r);
+    grade_map gm = bitmap_grade_map(m.size);
+
+    /* time_t t; */
+    /* srand((unsigned) time(&t)); // set random seed */
+    srand(75843);
+    sparse **data = gen_random_tensors(shapes,shape_size,tensor_size,p+q+r,sparse_size,&data_size);
+    blades **graded_data = sparse_to_graded_tensors(data,data_size,tensor_size,gm);
+
+    size_t ndims[] = {2,2,2,2};
+    /* char args[] = "ik,kj->ij"; */
+    char args[] = "ik,kl,lj->ij";
+    symbols s = parse_all(args,strlen(args),ndims,tensor_size+1);
+    /* graded_tensor_multivectors tmvs = {graded_data,shapes,shape_size,data_size,tensor_size,m,gm,precision}; */
+
+    printf("in left tensor:\n");
+    for(size_t i = 0; i < data_size[0]; i++){
+        printf("index %zu:\n",i);
+        print_blades(graded_data[0][i],"\t");
+    }
+
+    printf("in right tensor:\n");
+    for(size_t i = 0; i < data_size[1]; i++){
+        printf("index %zu:\n",i);
+        print_blades(graded_data[1][i],"\t");
+    }
+
+    general_tensor out_tensor;
+    operator_functions opf =
+        {graded_atomic_add__,
+         graded_add_add__,
+         graded_product__,
+         graded_init__,
+         graded_assign__,
+         graded_free__};
+
+    graded_extra gextra = {m,gm,precision};
+    general_tensor_multivectors gtmvs =
+        {(void**)graded_data,shapes,shape_size,data_size,tensor_size,sizeof(blades)};
+    general_extra gen_extra = {(void*)&gextra,1,sizeof(graded_extra)};
+    int error = general_main_einsum(gtmvs,gen_extra,opf,s,&out_tensor);
+
+    printf("error: %d\n",error);
+    blades *graded_out_data = out_tensor.data;
+
+    printf("out tensor:\n");
+    for(size_t i = 0; i < out_tensor.data_size; i++){
+        printf("index %zu:\n",i);
+        print_blades(graded_out_data[i],"\t");
+    }
+
+
+    free_graded_tensor_(out_tensor.data,out_tensor.data_size);
+    free(out_tensor.shapes);
+    free_sparse_tensors(data,data_size,tensor_size); // free the data allocated to the input tensors
+    free_graded_tensors(graded_data,data_size,tensor_size); // free the data allocated to the input converted tensors
+    free(shapes);
+    free(data_size);
+    free_symbols(s);
+    free_grade_map(gm);
+    free_map(m);
+
+}
+
+
+void test_einsum(void){
+    unsigned int p = 4, q = 1, r = 1;
+    float precision = 1e-12;
+    size_t shape0[] = {2,3};
+    size_t shape1[] = {3,2};
+    size_t shape2[] = {3,3};
+
+    size_t tensor_size = 3;
+    size_t sparse_size = 1;
+    size_t **shapes = (size_t**)malloc(tensor_size*sizeof(size_t*));
+    size_t *data_size = (size_t*)malloc(tensor_size*sizeof(size_t*));
+
+    shapes[0] = shape0;
+    shapes[1] = shape1;
+    shapes[2] = shape2;
+
+    size_t shape_size[] = {2,2,2}; // just 2D tensors
 
     map m = cayley_table(p,q,r);
     grade_map gm = bitmap_grade_map(m.size);
@@ -296,8 +380,9 @@ void test_einsum(void){
 
     blades **graded_data = sparse_to_graded_tensors(data,data_size,tensor_size,gm);
 
-    size_t ndims[] = {2,2,2};
-    char args[] = "ik,kj->ij";
+    size_t ndims[] = {2,2,2,2};
+    /* char args[] = "ik,kj->ij"; */
+    char args[] = "ik,kl,lj->ij";
     symbols s = parse_all(args,strlen(args),ndims,tensor_size+1);
     graded_tensor_multivectors tmvs = {graded_data,shapes,shape_size,data_size,tensor_size,m,gm,precision};
 
@@ -314,7 +399,8 @@ void test_einsum(void){
     }
 
     graded_tensor out_tensor;
-    main_einsum(tmvs,s,&out_tensor);
+    int error = main_einsum(tmvs,s,&out_tensor);
+    printf("error:%d\n",error);
 
     printf("out tensor:\n");
     for(size_t i = 0; i < out_tensor.data_size; i++){
