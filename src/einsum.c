@@ -135,7 +135,7 @@ void free_symbols(symbols s){
     free(s.subscripts);
 }
 
-int main_einsum(graded_tensor_multivectors tmvs, symbols s){
+int main_einsum(graded_tensor_multivectors tmvs, symbols s, graded_tensor *out_tensor){
     symbol_shape sp = get_all_symbols(s, tmvs.shapes, tmvs.shape_size, tmvs.size); // check symbol-shape consistency
     if(sp.size == 0)
         return 0;
@@ -144,10 +144,24 @@ int main_einsum(graded_tensor_multivectors tmvs, symbols s){
     /* free_tensors_holder(tmvs); */
     tensor_strides ts = compute_strides(new_tmvs.shapes,s,sp);
 
-    blades *out_tensor = new_tmvs.data[new_tmvs.size-1];
     einsum_sum_prods(ts,new_tmvs);
-
+    // write the output data
+    out_tensor->data = new_tmvs.data[new_tmvs.size-1];
+    out_tensor->shapes = new_tmvs.shapes[new_tmvs.size-1];
+    out_tensor->shape_size = new_tmvs.shape_size[new_tmvs.size-1];
+    out_tensor->data_size = new_tmvs.data_size[new_tmvs.size-1];
+    // free data
+    free_tensors_holder(new_tmvs);
+    free_symbol_shape(sp);
+    free_tensor_strides(ts);
     return 1;
+}
+
+void free_tensor_strides(tensor_strides ts){
+    for(size_t i = 0; i < ts.n_tensors; i++)
+        free(ts.strides[i]);
+    free(ts.strides);
+
 }
 
 void free_tensors_holder(graded_tensor_multivectors tmvs){
@@ -182,6 +196,12 @@ graded_tensor_multivectors append_out_tensor(symbol_shape sp, char *symbols, siz
         shapes[i] = tmvs.shapes[i];
         shape_size[i] = tmvs.shape_size[i];
         data_size[i] = tmvs.data_size[i];
+    }
+    // initialize output tensor to empty
+    for(size_t i = 0; i < size; i++){
+        out_data[i].grade = NULL;
+        out_data[i].data = NULL;
+        out_data[i].size = 0;
     }
     data[tmvs.size] = out_data;
     shapes[tmvs.size] = shape;
@@ -239,11 +259,15 @@ tensor_strides compute_strides(size_t **shapes, symbols sym, symbol_shape sp){
     return ts;
 }
 
+
+
 void einsum_sum_prods(tensor_strides ts, graded_tensor_multivectors tmvs){
     iterator iter = init_iterator(ts,(void**)tmvs.data,sizeof(tmvs.data[0][0]));
     do{
         sum_of_products(tmvs,iter);
     }while(outter_iterator(iter));
+
+    free(iter.index);
 }
 
 void einsum_no_sum_prods(tensor_strides ts, graded_tensor_multivectors tmvs){
@@ -396,6 +420,7 @@ void sum_of_products(graded_tensor_multivectors tmvs, iterator iter){
     free(sum_mvs);
 }
 
+/* This function determines all the different symbols and the shape of each one */
 symbol_shape get_all_symbols(symbols sym, size_t **shapes, size_t *shape_size, size_t size){
     size_t symbols_size = 0;
     char *symbols;
@@ -439,6 +464,11 @@ symbol_shape get_all_symbols(symbols sym, size_t **shapes, size_t *shape_size, s
     sp.symbols = symbols;
     sp.shape = s_shape;
     return sp;
+}
+
+void free_symbol_shape(symbol_shape sp){
+    free(sp.symbols);
+    free(sp.shape);
 }
 
 graded_tensor vector_matrix_mult(graded_tensor_multivectors tmvs){

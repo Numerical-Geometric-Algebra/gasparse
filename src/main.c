@@ -225,7 +225,7 @@ sparse **gen_random_tensors(size_t **shapes, size_t *shape_size, size_t size, in
     sparse **data = (sparse**)malloc(size*sizeof(sparse*));
     for(size_t i = 0; i < size; i++){
         int size_i = 1;
-        for(size_t j = 0; j < shape_size[i]; j++){
+        for(size_t j = 0; j < shape_size[i]; j++){ // determine the size of the data
             size_i *= shapes[i][j];
         }
         (*data_size)[i] = size_i;
@@ -250,6 +250,13 @@ void free_graded_tensors(blades **data, size_t *data_size, size_t size){
     }free(data);
 }
 
+void free_graded_tensor_(blades *data, size_t data_size){
+    for(size_t j = 0; j < data_size; j++){
+        free_blades(data[j]);
+    }
+    free(data);
+}
+
 blades **sparse_to_graded_tensors(sparse **data, size_t *data_size, size_t size, grade_map gm){
     blades **graded_data = (blades**)malloc(size*sizeof(blades*));
     for(size_t i = 0; i < size; i++){
@@ -264,34 +271,67 @@ blades **sparse_to_graded_tensors(sparse **data, size_t *data_size, size_t size,
 void test_einsum(void){
     unsigned int p = 4, q = 1, r = 1;
     float precision = 1e-12;
-    size_t shape0[] = {3,2};
-    size_t shape1[] = {2,3};
-    size_t shape2[] = {2,2};
+    size_t shape0[] = {2,3};
+    size_t shape1[] = {3,2};
+    /* size_t shape2[] = {2,2}; */
 
-    size_t **shapes = (size_t**)malloc(3*sizeof(size_t*));
-    size_t *data_size = (size_t*)malloc(3*sizeof(size_t*));
+    size_t tensor_size = 2;
+    size_t sparse_size = 1;
+    size_t **shapes = (size_t**)malloc(tensor_size*sizeof(size_t*));
+    size_t *data_size = (size_t*)malloc(tensor_size*sizeof(size_t*));
 
     shapes[0] = shape0;
     shapes[1] = shape1;
-    shapes[2] = shape2;
+    /* shapes[2] = shape2; */
 
-    size_t shape_size[] = {2,2,2};
+    size_t shape_size[] = {2,2};
 
     map m = cayley_table(p,q,r);
     grade_map gm = bitmap_grade_map(m.size);
-    sparse **data = gen_random_tensors(shapes,shape_size,3,p+q+r,5,&data_size);
-    blades **graded_data = sparse_to_graded_tensors(data,data_size,3,gm);
 
-    size_t ndims[] = {2,2,2,2};
-    char args[] = "ik,kl,lj->ij";
-    symbols s = parse_all(args,strlen(args),ndims,4);
-    graded_tensor_multivectors tmvs = {graded_data,shapes,shape_size,data_size,3,m,gm,precision};
-    /* graded_tensor_multivectors new_tmvs = init_out_tensor(s,tmvs); */
-    main_einsum(tmvs,s);
-    free_sparse_tensors(data,data_size,3); // free the data allocated to the three tensors
-    /* free_graded_tensors(graded_data,data_size,3); // free the data allocated to the three tensors */
+    /* time_t t; */
+    /* srand((unsigned) time(&t)); // set random seed */
+    srand(75843);
+    sparse **data = gen_random_tensors(shapes,shape_size,tensor_size,p+q+r,sparse_size,&data_size);
+
+    blades **graded_data = sparse_to_graded_tensors(data,data_size,tensor_size,gm);
+
+    size_t ndims[] = {2,2,2};
+    char args[] = "ik,kj->ij";
+    symbols s = parse_all(args,strlen(args),ndims,tensor_size+1);
+    graded_tensor_multivectors tmvs = {graded_data,shapes,shape_size,data_size,tensor_size,m,gm,precision};
+
+    printf("in left tensor:\n");
+    for(size_t i = 0; i < data_size[0]; i++){
+        printf("index %zu:\n",i);
+        print_blades(graded_data[0][i],"\t");
+    }
+
+    printf("in right tensor:\n");
+    for(size_t i = 0; i < data_size[1]; i++){
+        printf("index %zu:\n",i);
+        print_blades(graded_data[1][i],"\t");
+    }
+
+    graded_tensor out_tensor;
+    main_einsum(tmvs,s,&out_tensor);
+
+    printf("out tensor:\n");
+    for(size_t i = 0; i < out_tensor.data_size; i++){
+        printf("index %zu:\n",i);
+        print_blades(out_tensor.data[i],"\t");
+    }
+
+
+    free_graded_tensor_(out_tensor.data,out_tensor.data_size);
+    free(out_tensor.shapes);
+    free_sparse_tensors(data,data_size,tensor_size); // free the data allocated to the input tensors
+    free_graded_tensors(graded_data,data_size,tensor_size); // free the data allocated to the input converted tensors
     free(shapes);
     free(data_size);
+    free_symbols(s);
+    free_grade_map(gm);
+    free_map(m);
 }
 
 
