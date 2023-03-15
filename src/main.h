@@ -4,8 +4,9 @@
 #include "sparse.h"
 #include "grade_sparse.h"
 #include "dense.h"
-#include "einsum.h"
+/* #include "einsum.h" */
 #include "parser.h"
+#include "grade_einsum.h"
 
 void time_generator(void);
 void print_generator_table(unsigned int,unsigned int,unsigned int);

@@ -183,7 +183,6 @@ void einsum_sum_prods(
 
     free(iter.index);
     free(iter.depth);
-    free(iter.right);
 }
 
 void sum_of_products(
@@ -202,10 +201,7 @@ void sum_of_products(
         for(size_t i = 1; i < tmvs.size-1; i++){
 
             temp_ = temp;
-            if(iter.right[i]) // right multiply
                 temp = opfs.product(temp,tmvs.data[i],extra); // compute the geometric product
-            else // left multiply
-                temp = opfs.product(tmvs.data[i],temp,extra);
             if(i > 1){ // free old alocated memory by the product
                 opfs.free(temp_,1);
                 free(temp_);
@@ -281,12 +277,10 @@ tensor_strides compute_strides(size_t **shapes, symbols sym, symbol_shape sp){
     size_t **strides;
     char *symbols;
     size_t symbols_size = 0;
-    size_t *shape;
     tensor_strides ts = {NULL,NULL,0,0};
 
     symbols_size = sp.size;
     symbols = sp.symbols;
-    shape = sp.shape;
     // strides is of shape [n_tensors,n_symbols]
     strides = (size_t**)malloc(sym.size_*sizeof(size_t*));
     for(size_t i = 0; i < symbols_size; i++){
@@ -326,7 +320,6 @@ iterator init_iterator(tensor_strides ts, void **data, size_t sizeof_data){
     iter.ts = ts;
     iter.data = data;
     iter.sizeof_data = sizeof_data;
-    iter.right = (int*)malloc(ts.n_tensors*sizeof(int));
     iter.index = (size_t*)malloc(ts.n_symbols*sizeof(size_t));
     iter.depth = (int*)malloc(ts.n_symbols*sizeof(int));
     for(size_t k = 0; k < ts.n_symbols; k++){ // loop over each symbol
@@ -336,8 +329,6 @@ iterator init_iterator(tensor_strides ts, void **data, size_t sizeof_data){
         else // outer iterator
             iter.depth[k] = 0;
     }
-    for(size_t k = 0; k < ts.n_tensors; k++)
-        iter.right[k] = 1;
 
     return iter;
 }

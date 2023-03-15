@@ -20,11 +20,11 @@ int is_operator(char c){
     return 0;
 }
 
-int parse_expression(char *expression, size_t size){
-    expression_struct es;
-    init_expression_struct(&es);
-    recursive_parser(expression,size,&es);
-    return 1;
+expression_struct *parse_expression(char *expression, size_t size){
+    expression_struct *es = (expression_struct*)malloc(sizeof(expression_struct));
+    init_expression_struct(es);
+    recursive_parser(expression,size,es);
+    return es;
 }
 
 void init_subexpression(sub_expression *sub){
@@ -37,6 +37,8 @@ void init_expression_struct(expression_struct *es){
     es->left = NULL;
     es->right = NULL;
     es->grades = NULL;
+    es->up = NULL;
+    es->visited = 0;
     es->operator = '\0';
     init_subexpression(&(es->left_sub));
     init_subexpression(&(es->right_sub));
@@ -90,23 +92,28 @@ int recursive_parser(char *expression, size_t size, expression_struct *es){
             es->operator = *expression;
 
     beg_right = end;
-    end = recursive_parser(expression+beg+1,end-beg-1,&es_sub);
+    end = recursive_parser(expression + beg + 1,end - beg - 1,&es_sub);
     if(end == -1) return -1;
 
     if(flag){
         es->left = (expression_struct*)malloc(sizeof(expression_struct));
         *(es->left) = es_sub;
+        es->left->up = es;
         init_expression_struct(&es_sub); // reset
 
         if(es->operator != '\0')
             expression++, size--;
-        end = recursive_parser(expression+beg_right+1,size-beg_right-1,&es_sub);
-        if(end == -1) return -1;
-        es->right = (expression_struct*)malloc(sizeof(expression_struct));
-        *(es->right) = es_sub;
+        if(size - beg_right - 1 > 0){ // no more expression to parse
+            end = recursive_parser(expression + beg_right + 1, size - beg_right - 1, &es_sub);
+            if(end == -1) return -1;
+            es->right = (expression_struct*)malloc(sizeof(expression_struct));
+            *(es->right) = es_sub;
+            es->right->up = es;
+        }
     }else{
          es->right = (expression_struct*)malloc(sizeof(expression_struct));
         *(es->right) = es_sub;
+        es->right->up = es;
     }
 
     return 1;

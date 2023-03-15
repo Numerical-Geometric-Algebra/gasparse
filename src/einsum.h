@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "parser.h"
-
 typedef struct tensor{
     void *data;
     size_t *shapes;
@@ -34,7 +32,7 @@ typedef struct symbols{
 }symbols;
 
 typedef struct tensor_strides{
-    size_t **strides; // strides for each tensor for each symbol
+    size_t **strides; // n_tensors x n_symbols
     size_t *n_strides;
     size_t n_tensors;
     size_t n_symbols;
@@ -46,7 +44,6 @@ typedef struct iterator{
     size_t *index;
     int *depth;
     size_t sizeof_data;
-    int *right;
 }iterator;
 
 typedef struct symbol_shape{
@@ -62,10 +59,6 @@ typedef struct operator_functions{
     void (*init)(void *data, size_t size);
     void (*assign)(void *data, void *temp);
     void (*free)(void *data, size_t size);
-    /*void (*update_extra)(void *extra,
-                         unsigned int *left_grades, size_t left_size,
-                         unsigned int *right_grades, size_t right_size,
-                         unsigned int *out_grades, size_t out_size);*/
 }operator_functions;
 
 
