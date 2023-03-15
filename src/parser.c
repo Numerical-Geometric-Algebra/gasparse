@@ -22,9 +22,26 @@ int is_operator(char c){
 
 int parse_expression(char *expression, size_t size){
     expression_struct es;
+    init_expression_struct(&es);
     recursive_parser(expression,size,&es);
     return 1;
 }
+
+void init_subexpression(sub_expression *sub){
+    sub->grades = NULL;
+    sub->subscripts = NULL;
+    sub->symbol = '\0';
+}
+
+void init_expression_struct(expression_struct *es){
+    es->left = NULL;
+    es->right = NULL;
+    es->grades = NULL;
+    es->operator = '\0';
+    init_subexpression(&(es->left_sub));
+    init_subexpression(&(es->right_sub));
+}
+
 
 int recursive_parser(char *expression, size_t size, expression_struct *es){
     sub_expression left_sub;
@@ -37,6 +54,7 @@ int recursive_parser(char *expression, size_t size, expression_struct *es){
     int beg_right;
     es->operator = '\0';
 
+    init_expression_struct(&es_sub);
     end = parse_expression_struct(expression,size,&left_sub,&right_sub,&operator);
 
     if(end == -1) // No subexpression found
@@ -78,6 +96,8 @@ int recursive_parser(char *expression, size_t size, expression_struct *es){
     if(flag){
         es->left = (expression_struct*)malloc(sizeof(expression_struct));
         *(es->left) = es_sub;
+        init_expression_struct(&es_sub); // reset
+
         if(es->operator != '\0')
             expression++, size--;
         end = recursive_parser(expression+beg_right+1,size-beg_right-1,&es_sub);

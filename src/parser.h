@@ -8,6 +8,7 @@
 // these strides are for the output tensor only
 // if stride is 0 but shape is not iterate in the inner iterator otherwise in the outer iterator
 
+/*
 typedef struct grade_index{
     unsigned int *l;
     unsigned int *r;
@@ -32,6 +33,28 @@ typedef struct operator_iterator{
     size_t n_products;   // size of the identifier
     size_t input_size;
 }operator_iterator;
+*/
+/*
+typedef struct operation_map{
+    unsigned int *left_grades;  size_t left_size;
+    unsigned int *right_grades; size_t right_size;
+    unsigned int *out_grades;   size_t out_size;
+    char operation; // defines the signs array to be choosen
+}operation_map;*/
+
+/* typedef struct operand{ */
+/*     void *data; // this can point to a temporary variable */
+/*     unsigned int *grades; */
+/*     size_t grades_size; */
+/* }operand; */
+
+/* typedef struct operation{ */
+/*     operand *left; */
+/*     operand *right; */
+/*     struct operation *up; */
+/*     unsigned int *grades; size_t grades_size; */
+/*     char operator; */
+/* }operation; */
 
 typedef struct sub_expression{
     char *grades; // grades per grade selection
@@ -50,6 +73,8 @@ typedef struct expression_struct{
 
 int parse_expression(char*,size_t);
 
+void init_subexpression(sub_expression* sub);
+void init_expression_struct(expression_struct *es);
 int find_matching_angle_brackets(char *expression, size_t size, int *beg);
 int sub_expression_parser(char *expression, size_t size, sub_expression *m);
 int parse_expression_struct(char *expression, size_t size, sub_expression *right_sub,  sub_expression *left_sub, char *operator);

@@ -44,7 +44,9 @@ typedef struct iterator{
     tensor_strides ts;
     void **data;
     size_t *index;
+    int *depth;
     size_t sizeof_data;
+    int *right;
 }iterator;
 
 typedef struct symbol_shape{
@@ -60,7 +62,10 @@ typedef struct operator_functions{
     void (*init)(void *data, size_t size);
     void (*assign)(void *data, void *temp);
     void (*free)(void *data, size_t size);
-    void (*iterate_extra)(void *extra, operator_iterator op_iter);
+    /*void (*update_extra)(void *extra,
+                         unsigned int *left_grades, size_t left_size,
+                         unsigned int *right_grades, size_t right_size,
+                         unsigned int *out_grades, size_t out_size);*/
 }operator_functions;
 
 
@@ -72,14 +77,12 @@ void free_symbol_shape(symbol_shape);
 
 size_t get_nbr_inner_iters(iterator);
 iterator init_iterator(tensor_strides,void**,size_t);
-int outter_iterator(iterator);
-int inner_iterator(iterator);
 
+int general_iterator(iterator,int);
 void free_tensor_strides(tensor_strides);
 
 symbol_shape get_all_symbols(symbols,size_t**,size_t*,size_t);
 tensor_strides compute_strides(size_t**,symbols,symbol_shape);
-operator_functions iterate_functions(operator_functions,size_t);
 
 
 int main_einsum(

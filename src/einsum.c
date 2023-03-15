@@ -179,9 +179,11 @@ void einsum_sum_prods(
     iterator iter = init_iterator(ts,tmvs.data,tmvs.type_size);
     do{
         sum_of_products(tmvs,opfs,extra,iter);
-    }while(outter_iterator(iter));
+    }while(general_iterator(iter,0));
 
     free(iter.index);
+    free(iter.depth);
+    free(iter.right);
 }
 
 void sum_of_products(
@@ -200,7 +202,10 @@ void sum_of_products(
         for(size_t i = 1; i < tmvs.size-1; i++){
 
             temp_ = temp;
-            temp = opfs.product(temp,tmvs.data[i],extra); // compute the geometric product
+            if(iter.right[i]) // right multiply
+                temp = opfs.product(temp,tmvs.data[i],extra); // compute the geometric product
+            else // left multiply
+                temp = opfs.product(tmvs.data[i],temp,extra);
             if(i > 1){ // free old alocated memory by the product
                 opfs.free(temp_,1);
                 free(temp_);
@@ -208,7 +213,7 @@ void sum_of_products(
         }
         sum_mvs[j] = temp;
         j++;
-    }while(inner_iterator(iter));
+    }while(general_iterator(iter,1));
 
     void *added = opfs.atomic_add(sum_mvs,j,extra); // adds j multivectors
     void *data_ = tmvs.data[tmvs.size-1];
@@ -225,7 +230,6 @@ void sum_of_products(
     free(temp_add);
     free(sum_mvs);
 }
-
 
 
 void free_tensor_strides(tensor_strides ts){
@@ -317,44 +321,38 @@ tensor_strides compute_strides(size_t **shapes, symbols sym, symbol_shape sp){
     return ts;
 }
 
-
-
-
-
-/*
-void einsum_no_sum_prods(tensor_strides ts, graded_tensor_multivectors tmvs){
-    iterator iter = init_iterator(ts,(void**)tmvs.data,sizeof(tmvs.data[0][0]));
-    do{
-        blades temp = *tmvs.data[0];
-        blades temp_;
-        for(size_t i = 1; i < tmvs.size-1; i++){ // left multiply all the multivectors
-            temp_ = temp;
-            temp = graded_product_(temp,*tmvs.data[i],tmvs.m,tmvs.gm,tmvs.precision);
-            if(i > 1) free_blades(temp_); // free old alocated memory by the product;
-        }
-        *tmvs.data[tmvs.size-1] = temp;
-    }while(outter_iterator(iter));
-}*/
-
 iterator init_iterator(tensor_strides ts, void **data, size_t sizeof_data){
     iterator iter;
     iter.ts = ts;
     iter.data = data;
     iter.sizeof_data = sizeof_data;
+    iter.right = (int*)malloc(ts.n_tensors*sizeof(int));
     iter.index = (size_t*)malloc(ts.n_symbols*sizeof(size_t));
-    for(size_t k = 0; k < ts.n_symbols; k++) // loop over each symbol
+    iter.depth = (int*)malloc(ts.n_symbols*sizeof(int));
+    for(size_t k = 0; k < ts.n_symbols; k++){ // loop over each symbol
         iter.index[k] = 0;
+        if(ts.strides[ts.n_tensors-1][k] == 0) // inner iterator sum of products
+            iter.depth[k] = 1;
+        else // outer iterator
+            iter.depth[k] = 0;
+    }
+    for(size_t k = 0; k < ts.n_tensors; k++)
+        iter.right[k] = 1;
+
     return iter;
 }
 
-// iterates over the output tensor symbols
-int outter_iterator(iterator iter){
+int general_iterator(iterator iter, int depth){
     tensor_strides ts = iter.ts;
     void **data = iter.data;
     size_t *index = iter.index;
     int k = -1;
-    while(k < (int)(ts.n_symbols - 1) && ts.strides[ts.n_tensors-1][++k] == 0); // find first not hidden symbol
-    index[k]++;
+    while(k < (int)(ts.n_symbols - 1) && iter.depth[++k] != depth); // find first symbol
+    if(iter.depth[k] == depth)
+        index[k]++;
+    else // no symbols at this depth
+        return 0; // don't iterate
+
 
     if(index[k] < ts.n_strides[k]){ // first symbol not overflown
         for(size_t j = 0; j < ts.n_tensors; j++) // loop over tensors
@@ -372,9 +370,9 @@ int outter_iterator(iterator iter){
             if(i == ts.n_symbols-1) // this is the last symbol
                 return 0;
             i++;
-            while(i < ts.n_symbols && ts.strides[ts.n_tensors-1][i++] == 0); // find next not hidden symbol
-            if(i >= ts.n_symbols)// no more hidden symbols, found the last one
-                if(ts.strides[ts.n_tensors-1][i-1] == 0) // the last symbol is hidden
+            while(i < ts.n_symbols && iter.depth[i++] != depth); // find next symbol
+            if(i >= ts.n_symbols)// no more symbols, found the last one
+                if(iter.depth[i-1] != depth)
                     return 0; // stop incrementing
             index[--i]++; // increment next symbol
             if(index[i] < ts.n_strides[i]){ // symbol i not overflown
@@ -390,58 +388,12 @@ int outter_iterator(iterator iter){
     return 1; // continue incrementing
 }
 
-// iterates over the hidden output tensor symbols
-int inner_iterator(iterator iter){
-    tensor_strides ts = iter.ts;
-    void **data = iter.data;
-    size_t *index = iter.index;
-    int k = -1;
-    while(ts.strides[ts.n_tensors-1][++k] != 0); // find first hidden symbol
-    index[k]++;
-
-    if(index[k] < ts.n_strides[k]){ // first symbol not overflown
-        for(size_t j = 0; j < ts.n_tensors; j++) // loop over tensors
-            data[j] += ts.strides[j][k]*iter.sizeof_data;
-        return 1;
-    }
-
-    size_t i = k;
-    while(i < ts.n_symbols){ // loop over all symbols
-        if(index[i] >= ts.n_strides[i]){ // symbol i overflown
-            // go to the beggining
-            for(size_t j = 0; j < ts.n_tensors; j++) // loop over tensors
-                data[j] -= (ts.n_strides[i]-1)*ts.strides[j][i]*iter.sizeof_data;
-            index[i] = 0; // reset symbol i
-            if(i == ts.n_symbols-1) // this is the last symbol
-                return 0;
-            i++;
-            while(i < ts.n_symbols && ts.strides[ts.n_tensors-1][i++] != 0); // find next hidden symbol
-            if(i >= ts.n_symbols) // no more hidden symbols, found the last one
-                if(ts.strides[ts.n_tensors-1][i-1] != 0) // the last symbol is not hidden
-                    return 0; // stop incrementing
-
-            index[--i]++; // increment next symbol
-            if(index[i] < ts.n_strides[i]){ // symbol i not overflown
-                for(size_t j = 0; j < ts.n_tensors; j++) // loop over tensors
-                    data[j] += ts.strides[j][i]*iter.sizeof_data;
-                return 1;
-            }
-        }else{ // no more symbols to increment
-            return 1; // continue incrementing
-        }
-    }
-    return 1; // continue incrementing
-}
-
 size_t get_nbr_inner_iters(iterator iter){
     size_t n_iter = 1;
-
     for(size_t k = 0; k < iter.ts.n_symbols; k++)
         if(iter.ts.strides[iter.ts.n_tensors-1][k] == 0)
             n_iter *= iter.ts.n_strides[k];
-
     return n_iter;
-
 }
 
 /* This function determines all the different symbols and the shape of each one */

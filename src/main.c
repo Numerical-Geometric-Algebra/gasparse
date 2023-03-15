@@ -14,10 +14,12 @@ int main(){
     /* test_scalar_multiply_all_types(); */
     /* test_parse(); */
     /* test_matrix_mult(); */
-    /* test_general_einsum(); */
+    test_general_einsum();
     /* test_einsum(); */
-    test_parser_expression();
+    /* test_parser_expression(); */
+
 }
+
 void test_parser_expression(void){
     /* char expression[] = "a"; */
     char expression[100];
@@ -329,7 +331,7 @@ void test_general_einsum(void){
           graded_product__,
           graded_init__,
           graded_assign__,
-          graded_free__,NULL};
+          graded_free__};
 
     graded_extra gextra = {m,gm,precision};
     tensor_multivectors gtmvs =
