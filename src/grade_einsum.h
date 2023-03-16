@@ -31,21 +31,33 @@ typedef struct iterator{
     size_t sizeof_data;
 }iterator;
 
-typedef struct symbol_shape{
+
+typedef struct subscript_shape{
+    size_t size;
+    char *subscripts; // all subscripts including grade subscripts
+    size_t *shape; // for grade it will be max grade
+}subscript_shape;
+
+/*typedef struct symbol_shape{
     size_t size;
     char *symbols; // list of symbols
     char *subscripts; // list of subscripts
-    char *grades; // list of grades
+    char *grades; // list of grade subscripts
+    int *operation_order; // left or right multiplication
+    order *grade_order; // indicates left, right, output grade or none : n_symbols
     size_t *sub_shape; // shape of each subscript
     size_t max_grade; // shape of each grade
     size_t n_symbols; // number of symbols
-}symbol_shape;
+}symbol_shape;*/
 
-typedef struct symbols{
-    size_t *size;
+typedef struct subscripts_info{
+    size_t sub_size_;
+    size_t *sub_size;
     char **subscripts;
-    size_t size_;
-}symbols;
+    size_t grade_size_;
+    size_t *grade_size;
+    char **grades;
+}subscripts_info;
 
 
 
@@ -65,7 +77,7 @@ typedef struct operator_functions{
     void (*init)(void *data, size_t size);
     void (*assign)(void *data, void *temp);
     void (*free)(void *data, size_t size);
-    void (*update_extra)(void *extra, int *grades, int *grade_order, size_t size);
+    void (*update_extra)(void *extra, int *grades, int *grade_order, size_t size, char operator);
 }operator_functions;
 
 strides_info compute_strides_info(expression_struct es);

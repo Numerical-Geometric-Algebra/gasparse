@@ -79,6 +79,8 @@ strides_info compute_strides_info(expression_struct es){
     ** - all symbols
     ** - all subscripts
     ** - all grades
+    ** - subscripts are related to symbols
+    ** - grades are related to operations
      */
 
 
@@ -126,6 +128,6 @@ grades_strides compute_strides(size_t **shapes, symbols sym, symbol_shape sp){
     gs.n_operations = sym.size_;
     gs.n_symbols = symbols_size;
     gs.strides = strides;
-    gs.n_strides = sp.shape;
+    gs.n_strides = sp.sub_shape;
     return gs;
 }
