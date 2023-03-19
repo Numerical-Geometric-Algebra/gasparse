@@ -21,9 +21,17 @@ typedef struct expression_struct{
     char operator;
 }expression_struct;
 
-expression_struct *parse_expression(char*,size_t);
+expression_struct *parse_expression(char*,size_t,char**);
 
 int is_symbol(char c);
+int is_operator(char c);
+int is_grade_subscripts(char c);
+int is_subscript(char c);
+int is_constant_grade(char c);
+
+
+int separate_expression(char *expression, size_t size, char **output, char **input);
+
 void init_subexpression(sub_expression* sub);
 void init_expression_struct(expression_struct *es);
 int find_matching_angle_brackets(char *expression, size_t size, int *beg);

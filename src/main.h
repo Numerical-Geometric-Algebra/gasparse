@@ -30,6 +30,9 @@ void test_einsum(void);
 void test_general_einsum(void);
 void test_parser_expression(void);
 
+void gen_input_tensors(tensor_multivectors*,graded_extra*);
+void *graded_general_product__(void*,void*,void*,grades_struct);
+
 dense project_dense_product(dense_multivectors,project_map);
 sparse project_sparse_product(sparse_multivectors,project_map);
 blades project_blades_product(graded_multivectors,project_map);

@@ -21,13 +21,209 @@ int main(){
 }
 
 void test_parser_expression(void){
-    /* char expression[] = "a"; */
-    char expression[100];
-    printf("expression: ");
-    scanf("%s",expression);
-    expression_struct *es = parse_expression(expression,strlen(expression));
-    compute_strides_info(*es);
+    char expression[100] = "d[ij]=a[ik]b[kl]c[lj]a[ik]";
+    tensor_multivectors tmvs;
+    graded_extra extra;
+    char *output_subscripts;
+    expression_struct *es = parse_expression(expression,strlen(expression),&output_subscripts);
+
+    /* printf("expression: "); */
+    /* scanf("%s",expression); */
+    tensor out;
+    operator_functions opfs =
+        {graded_atomic_add__,
+         graded_add_add__,
+         graded_general_product__,
+         graded_init__,
+         graded_assign__,
+         graded_free__};
+
+    gen_input_tensors(&tmvs, &extra);
+
+    blades **input_data = (blades**)tmvs.data;
+    for(size_t j = 0; j < tmvs.size; j++){
+        printf("input_tensor: %zu\n",j);
+        for(size_t i = 0; i < tmvs.data_size[j]; i++){
+            printf("index %zu:\n",i);
+            print_blades(input_data[j][i],"\t");
+        }
+    }
+
+    main_einsum(tmvs,(void*)&extra,opfs,es,output_subscripts,extra.gm.max_grade,&out);
+
+    blades *output_tensor = (blades*)out.data;
+    printf("output_tensor: \n");
+    for(size_t i = 0; i < out.data_size; i++){
+        printf("index %zu:\n",i);
+        print_blades(output_tensor[i],"\t");
+    }
 }
+
+sparse *gen_random_tensor(size_t size, int bitmap_max, size_t n_values){
+    sparse *mvs = (sparse*)malloc(size*sizeof(sparse));
+    for(size_t j = 0; j < size; j++){
+        float *value = (float*)malloc(n_values*sizeof(float));
+        int *bitmap = (int*)malloc(n_values*sizeof(int));
+        for(size_t i = 0; i < n_values; i++){
+            bitmap[i] = rand() % bitmap_max;
+            value[i] = (float)rand()/(float)(RAND_MAX);
+        }
+        mvs[j].value = value;
+        mvs[j].bitmap = bitmap;
+        mvs[j].size = n_values;
+    }
+    return mvs;
+}
+
+sparse **gen_random_tensors(size_t **shapes, size_t *shape_size, size_t size, int vec_size, size_t n_values, size_t **data_size){
+    int bitmap_max = 1 << vec_size;
+    sparse **data = (sparse**)malloc(size*sizeof(sparse*));
+    for(size_t i = 0; i < size; i++){
+        int size_i = 1;
+        for(size_t j = 0; j < shape_size[i]; j++){ // determine the size of the data
+            size_i *= shapes[i][j];
+        }
+        (*data_size)[i] = size_i;
+        data[i] = gen_random_tensor(size_i,bitmap_max,n_values);
+    }
+    return data;
+}
+
+void free_sparse_tensors(sparse **data, size_t *data_size, size_t size){
+    for(size_t i = 0; i < size; i++){
+        for(size_t j = 0; j < data_size[i]; j++){
+            free_sparse(data[i][j]);
+        }free(data[i]);
+    }free(data);
+}
+
+void free_graded_tensors(blades **data, size_t *data_size, size_t size){
+    for(size_t i = 0; i < size; i++){
+        for(size_t j = 0; j < data_size[i]; j++){
+            free_blades(data[i][j]);
+        }free(data[i]);
+    }free(data);
+}
+
+void free_graded_tensor_(blades *data, size_t data_size){
+    for(size_t j = 0; j < data_size; j++){
+        free_blades(data[j]);
+    }
+    free(data);
+}
+
+blades **sparse_to_graded_tensors(sparse **data, size_t *data_size, size_t size, grade_map gm){
+    blades **graded_data = (blades**)malloc(size*sizeof(blades*));
+    for(size_t i = 0; i < size; i++){
+        graded_data[i] = (blades*)malloc(data_size[i]*sizeof(blades));
+        for(size_t j = 0; j < data_size[i]; j++){
+            graded_data[i][j] = sparse_to_graded(data[i][j],gm);
+        }
+    }
+    return graded_data;
+}
+
+
+
+void gen_input_tensors(tensor_multivectors *tmvs, graded_extra *extra){
+    unsigned int p = 4, q = 1, r = 1;
+    float precision = 1e-12;
+    size_t dim = 2;
+    size_t shape0[] = {3,2};
+    size_t shape1[] = {2,3};
+    size_t shape2[] = {3,3};
+
+    size_t tensor_size = 3;
+    size_t sparse_size = 1;
+    size_t **shapes = (size_t**)malloc(tensor_size*sizeof(size_t*));
+    size_t *data_size = (size_t*)malloc(tensor_size*sizeof(size_t));
+    size_t *shape_size__ = (size_t*)malloc(tensor_size*sizeof(size_t));
+
+    shapes[0] = (size_t*)malloc(dim*sizeof(size_t));
+    shapes[1] = (size_t*)malloc(dim*sizeof(size_t));
+    shapes[2] = (size_t*)malloc(dim*sizeof(size_t));
+
+
+    for(size_t j = 0; j < dim; j++){
+        shapes[0][j] = shape0[j];
+        shapes[1][j] = shape1[j];
+        shapes[2][j] = shape2[j];
+    }
+
+
+    size_t shape_size[] = {2,2,2}; // just 2D tensors
+    for(size_t i = 0; i < tensor_size; i++)
+        shape_size__[i] = shape_size[i];
+
+    map m = cayley_table(p,q,r);
+    grade_map gm = bitmap_grade_map(m.size);
+
+    /* time_t t; */
+    /* srand((unsigned) time(&t)); // set random seed */
+    srand(75843);
+    sparse **data = gen_random_tensors(shapes,shape_size,tensor_size,p+q+r,sparse_size,&data_size);
+    blades **graded_data = sparse_to_graded_tensors(data,data_size,tensor_size,gm);
+
+    free_sparse_tensors(data,data_size,tensor_size); // free the data allocated to the input tensors
+
+    graded_extra gextra = {m,gm,precision};
+    *extra = gextra;
+    tmvs->data = (void**)graded_data;
+    tmvs->shapes = shapes;
+    tmvs->shape_size = shape_size__;
+    tmvs->data_size = data_size;
+    tmvs->size = tensor_size;
+    tmvs->type_size = sizeof(blades);
+
+}
+
+void *graded_general_product__(void *a, void *b, void *extra, grades_struct grades){
+    project_map pm;
+    pm.r_size = grades.right_size;
+    pm.l_size = grades.left_size;
+    pm.k_size = grades.out_size;
+
+    if(pm.r_size)
+        pm.r = (unsigned int*)malloc(pm.r_size*sizeof(unsigned int));
+    else pm.r = NULL;
+
+    if(pm.l_size)
+        pm.l = (unsigned int*)malloc(pm.l_size*sizeof(unsigned int));
+    else pm.l = NULL;
+
+
+    if(pm.k_size)
+        pm.k = (unsigned int*)malloc(pm.k_size*sizeof(unsigned int));
+    else pm.k = NULL;
+
+    for(size_t i = 0; i < grades.right_size; i++)
+        pm.r[i] = *(grades.right[i]);
+
+    for(size_t i = 0; i < grades.left_size; i++)
+        pm.l[i] = *(grades.left[i]);
+
+    for(size_t i = 0; i < grades.out_size; i++)
+        pm.k[i] = *(grades.out[i]);
+
+    graded_extra *gextra = extra;
+    blades *ga = a;
+    blades *gb = b;
+
+    blades *out = (blades*)malloc(sizeof(blades));
+    *out = graded_general_product_(*ga,*gb,gextra->m,gextra->gm,pm,gextra->precision);
+    return out;
+}
+
+void print_blades(blades y, char *s){
+    for(size_t i = 0; i < y.size; i++){
+        printf("%sGrade %d:\n",s, y.grade[i]);
+        for(size_t j = 0; j < y.data[i].size; j++){
+            printf("%s\t(%d,%f)\n",s,y.data[i].bitmap[j],y.data[i].value[j]);
+        }
+        printf("\n");
+    }
+}
+
 
 /* void test_parse(void){ */
 /*     /\* labels l = parse_subscripts("abbcbc",6,6); *\/ */
@@ -215,69 +411,6 @@ void test_parser_expression(void){
 /* } */
 
 
-/* sparse *gen_random_tensor(size_t size, int bitmap_max, size_t n_values){ */
-/*     sparse *mvs = (sparse*)malloc(size*sizeof(sparse)); */
-/*     for(size_t j = 0; j < size; j++){ */
-/*         float *value = (float*)malloc(n_values*sizeof(float)); */
-/*         int *bitmap = (int*)malloc(n_values*sizeof(int)); */
-/*         for(size_t i = 0; i < n_values; i++){ */
-/*             bitmap[i] = rand() % bitmap_max; */
-/*             value[i] = (float)rand()/(float)(RAND_MAX); */
-/*         } */
-/*         mvs[j].value = value; */
-/*         mvs[j].bitmap = bitmap; */
-/*         mvs[j].size = n_values; */
-/*     } */
-/*     return mvs; */
-/* } */
-
-/* sparse **gen_random_tensors(size_t **shapes, size_t *shape_size, size_t size, int vec_size, size_t n_values, size_t **data_size){ */
-/*     int bitmap_max = 1 << vec_size; */
-/*     sparse **data = (sparse**)malloc(size*sizeof(sparse*)); */
-/*     for(size_t i = 0; i < size; i++){ */
-/*         int size_i = 1; */
-/*         for(size_t j = 0; j < shape_size[i]; j++){ // determine the size of the data */
-/*             size_i *= shapes[i][j]; */
-/*         } */
-/*         (*data_size)[i] = size_i; */
-/*         data[i] = gen_random_tensor(size_i,bitmap_max,n_values); */
-/*     } */
-/*     return data; */
-/* } */
-
-/* void free_sparse_tensors(sparse **data, size_t *data_size, size_t size){ */
-/*     for(size_t i = 0; i < size; i++){ */
-/*         for(size_t j = 0; j < data_size[i]; j++){ */
-/*             free_sparse(data[i][j]); */
-/*         }free(data[i]); */
-/*     }free(data); */
-/* } */
-
-/* void free_graded_tensors(blades **data, size_t *data_size, size_t size){ */
-/*     for(size_t i = 0; i < size; i++){ */
-/*         for(size_t j = 0; j < data_size[i]; j++){ */
-/*             free_blades(data[i][j]); */
-/*         }free(data[i]); */
-/*     }free(data); */
-/* } */
-
-/* void free_graded_tensor_(blades *data, size_t data_size){ */
-/*     for(size_t j = 0; j < data_size; j++){ */
-/*         free_blades(data[j]); */
-/*     } */
-/*     free(data); */
-/* } */
-
-/* blades **sparse_to_graded_tensors(sparse **data, size_t *data_size, size_t size, grade_map gm){ */
-/*     blades **graded_data = (blades**)malloc(size*sizeof(blades*)); */
-/*     for(size_t i = 0; i < size; i++){ */
-/*         graded_data[i] = (blades*)malloc(data_size[i]*sizeof(blades)); */
-/*         for(size_t j = 0; j < data_size[i]; j++){ */
-/*             graded_data[i][j] = sparse_to_graded(data[i][j],gm); */
-/*         } */
-/*     } */
-/*     return graded_data; */
-/* } */
 
 /* void test_general_einsum(void){ */
 /*     unsigned int p = 4, q = 1, r = 1; */
@@ -447,16 +580,6 @@ void test_parser_expression(void){
 /* void print_sparse(sparse y,char *s){ */
 /*     for(size_t i = 0; i < y.size; i++ ) */
 /*         printf("%s(%d,%f)\n",s,y.bitmap[i],y.value[i]); */
-/* } */
-
-/* void print_blades(blades y,char *s){ */
-/*     for(size_t i = 0; i < y.size; i++){ */
-/*         printf("%sGrade %d:\n",s, y.grade[i]); */
-/*         for(size_t j = 0; j < y.data[i].size; j++){ */
-/*             printf("%s\t(%d,%f)\n",s,y.data[i].bitmap[j],y.data[i].value[j]); */
-/*         } */
-/*         printf("\n"); */
-/*     } */
 /* } */
 
 /* dense project_dense_product(dense_multivectors mvs, project_map pm){ */

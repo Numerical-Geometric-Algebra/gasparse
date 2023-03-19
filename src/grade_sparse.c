@@ -489,6 +489,7 @@ void *graded_product__(void *a, void *b, void *extra){
     return (void*)out;
 }
 
+
 void *graded_add_add__(void *a, void *b, void *extra){
     graded_extra *gextra = extra;
     blades *ga = a;

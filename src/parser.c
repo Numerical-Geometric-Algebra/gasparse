@@ -11,6 +11,18 @@ int is_subscript(char c){
     return c <= 't' && c >= 'i';
 }
 
+int is_constant_grade(char c){
+    return c <= '9' && c >= '0';
+}
+
+
+int is_grade_subscripts(char c){
+    if(!is_subscript(c))
+        return c <= '9' && c >= '0';
+    else
+        return 1;
+}
+
 int is_operator(char c){
     char *operators = OPERATORS;
     for (size_t i = 0; i < strlen(operators); i++){
@@ -20,11 +32,45 @@ int is_operator(char c){
     return 0;
 }
 
-expression_struct *parse_expression(char *expression, size_t size){
+expression_struct *parse_expression(char *expression, size_t size, char **output_subscripts){
     expression_struct *es = (expression_struct*)malloc(sizeof(expression_struct));
     init_expression_struct(es);
-    recursive_parser(expression,size,es);
+    char *output_expression = NULL, *input_expression = NULL;
+    if(separate_expression(expression,size,&output_expression,&input_expression) == -1)
+        return NULL;
+
+    size_t len = strlen(output_expression);
+    *output_subscripts = get_subscripts(output_expression,0,len);
+    if(*output_subscripts == NULL)
+        return NULL;
+
+    recursive_parser(input_expression,strlen(input_expression),es);
     return es;
+}
+
+int separate_expression(char *expression, size_t size, char **output, char **input){
+    int index = -1;
+    for(size_t i = 0; i < size; i++){
+        if(expression[i] == '='){
+            index = i;
+            break;
+        }
+    }
+
+    if(index == -1)
+        return -1;
+
+    size_t out_len = index;
+    size_t in_len = size - index - 1;
+
+    *output = (char*)malloc((out_len + 1)*sizeof(char));
+    *input = (char*)malloc((in_len + 1)*sizeof(char));
+
+    strncpy(*output,expression,out_len);
+    (*output)[out_len] = '\0';
+
+    strcpy(*input,expression + out_len + 1);
+    return 1;
 }
 
 void init_subexpression(sub_expression *sub){
@@ -66,8 +112,31 @@ int recursive_parser(char *expression, size_t size, expression_struct *es){
         es->left_sub = left_sub;
     }
     else{
-        es->left_sub = left_sub;
-        es->right_sub = right_sub;
+        if(size-end > 0){ // there is still expression to be parsed
+            expression_struct *left_es = (expression_struct*)malloc(sizeof(expression_struct));
+            expression_struct *right_es = (expression_struct*)malloc(sizeof(expression_struct));
+            init_expression_struct(left_es);
+            init_expression_struct(right_es);
+
+            left_es->left_sub = left_sub;
+            left_es->right_sub = right_sub;
+            if(is_operator(expression[end])){
+                es->operator = expression[end];
+                end++;
+            } else es->operator = '\0';
+
+            end = recursive_parser(expression + end, size - end, right_es);
+            if(end == -1) return -1;
+
+            es->left = left_es;
+            es->right = right_es;
+
+            es->right->up = es;
+            es->left->up = es;
+        }else{
+            es->left_sub = left_sub;
+            es->right_sub = right_sub;
+        }
         return 1;
     }
 
