@@ -298,7 +298,7 @@ int initialize_einsum(expression_struct *es,
         rep_size += repeated[i];
 
     op_order = (order*)malloc(rep_size*sizeof(order));
-    subscripts = (char**)malloc(rep_size*sizeof(char*));
+    subscripts = (char**)malloc((rep_size+1)*sizeof(char*)); // +1 to include output subscripts
     repeated_symbols = (char*)malloc(rep_size*sizeof(char));
     symbol_pos = (size_t*)malloc(sym_size*sizeof(size_t));
     size_t k = 0;
@@ -316,7 +316,7 @@ int initialize_einsum(expression_struct *es,
     char **grade_subscripts = (char**)malloc(rep_size*3*sizeof(char*));
     size_t size = 0;
 
-    void ***data = (void***)malloc(rep_size*sizeof(void**));
+    void ***data = (void***)malloc((rep_size+1)*sizeof(void**)); // include output tensor
     operation_tree *op_tree = (operation_tree*)malloc(sizeof(operation_tree));
     initialize_operation_tree(op_tree);
     operation_tree *parent_node = op_tree;
@@ -394,16 +394,19 @@ int initialize_einsum(expression_struct *es,
         op_tree->grades.operator = temp_es->operator;
     }while(iterate_expression_operations(&op_tree,&temp_es,0));
 
-    subscript_struct sub = {NULL,subscripts,rep_size};
+    // add output subscripts to the end of the list
+    size_t len = strlen(output_subscripts) + 1;
+    subscripts[rep_size] = (char*)malloc(len*sizeof(char));
+    strcpy(subscripts[rep_size],output_subscripts);
+    subscript_struct sub = {NULL,subscripts,rep_size + 1};
     subscript_shape sps = get_all_subscripts(&sub,new_tmvs.shapes,new_tmvs.shape_size,new_tmvs.size);
     char *diff_grade_subscripts = get_grade_subscripts(grade_subscripts,size);
     tensor_multivectors tmvs_out = append_out_tensor(new_tmvs,
                                                      &sps,output_subscripts,
                                                      diff_grade_subscripts,max_grade,out);
 
+
     tensor_strides ts = compute_tensor_strides(tmvs_out.shapes, sub, sps);
-
-
 
     size_t **grades_list = NULL;
     size_t **grade_strides_list = NULL;
@@ -436,6 +439,7 @@ int initialize_einsum(expression_struct *es,
         }
     }
 
+    *(data[rep_size]) = out->data;
     iterator iter__ =
         {ts,{grade_strides_list,max_grade,total_size,sps.size},
          data,grades_list,NULL,NULL,
@@ -459,6 +463,7 @@ int main_einsum(tensor_multivectors tmvs,
     operation_tree *op_tree;
 
     initialize_einsum(es,output_subscripts,tmvs,max_grade,&iter,&op_tree,out);
+    opfs.init(out->data,out->data_size); // initialize output tensor to 0
     einsum_sum_prods(opfs,extra,iter,op_tree);
 
     return 1;
@@ -536,10 +541,10 @@ void *recursive_products(operator_functions opfs, void *extra, operation_tree *o
     void *right,*left,*result;
     int right_free = 0, left_free = 0;
 
-    if(op_tree->left_op == NULL) left = op_tree->left;
+    if(op_tree->left_op == NULL) left = *op_tree->left;
     else left = recursive_products(opfs,extra,op_tree->left_op), left_free = 1;
 
-    if(op_tree->right_op == NULL) right = op_tree->right;
+    if(op_tree->right_op == NULL) right = *op_tree->right;
     else right = recursive_products(opfs,extra,op_tree->right_op), right_free = 1;
 
     if(right == NULL && left == NULL) return NULL;
@@ -725,7 +730,7 @@ void *get_data_from_symbol(char symbol, char *subscript, char **subscripts, char
     return NULL;
 }
 
-
+// it is assumed that **shapes is of size sub.size
 tensor_strides compute_tensor_strides(size_t **shapes, subscript_struct sub, subscript_shape sp){
     size_t **strides;
     char *subscripts;
@@ -735,9 +740,9 @@ tensor_strides compute_tensor_strides(size_t **shapes, subscript_struct sub, sub
     subscripts_size = sp.size;
     subscripts = sp.subscripts;
     // strides is of shape [n_tensors,n_subscripts]
-    strides = (size_t**)malloc(sub.size_*sizeof(size_t*));
-    for(size_t i = 0; i < subscripts_size; i++){
-        strides[i] = (size_t*)malloc(subscripts_size*sizeof(size_t));
+    strides = (size_t**)malloc(sub.size_*sizeof(size_t*)); // allocate for n_tensors
+    for(size_t i = 0; i < sub.size_; i++){
+        strides[i] = (size_t*)malloc(subscripts_size*sizeof(size_t)); // allocate for n_subscripts
         for(size_t j = 0; j < subscripts_size; j++){
             strides[i][j] = 0;
         }
@@ -769,21 +774,22 @@ tensor_strides compute_tensor_strides(size_t **shapes, subscript_struct sub, sub
 }
 
 
+
 subscript_shape get_all_subscripts(subscript_struct *sub, size_t **shapes, size_t *shape_size, size_t size){
     size_t subscripts_size = 0;
     char *subscripts;
     subscript_shape sp = {0,NULL,NULL};
     // check if each tensor subscripts are consistent with each corresponding tensor
     // if the number of tensors is different from the subscripts
-    if(sub->size_ != size)
+    if(sub->size_-1 != size)
         return sp;
 
-    sub->size = (size_t*)malloc(size*sizeof(size_t));
+    sub->size = (size_t*)malloc(sub->size_*sizeof(size_t));
 
     // number of subscripts for each tensor must be equal to the number of dimensions
-    for(size_t j = 0; j < size; j++){
+    for(size_t j = 0; j < sub->size_; j++){
         sub->size[j] = strlen(sub->subscripts[j]);
-        if(sub->size[j] != shape_size[j])
+        if(j < size && sub->size[j] != shape_size[j]) // don't compare output
             return sp;
     }
 
