@@ -245,7 +245,7 @@ int initialize_einsum(expression_struct *es,
     char *repeated_symbols;
     size_t rep_size = 0;
     size_t *symbol_pos;
-    order *op_order;
+    /* order *op_order; */
     int index;
 
     for(size_t i = 0; i < MAX_SYMBOLS; i++){
@@ -297,7 +297,7 @@ int initialize_einsum(expression_struct *es,
     for(size_t i = 0; i < sym_size; i++)
         rep_size += repeated[i];
 
-    op_order = (order*)malloc(rep_size*sizeof(order));
+    /* op_order = (order*)malloc(rep_size*sizeof(order)); */
     subscripts = (char**)malloc((rep_size+1)*sizeof(char*)); // +1 to include output subscripts
     repeated_symbols = (char*)malloc(rep_size*sizeof(char));
     symbol_pos = (size_t*)malloc(sym_size*sizeof(size_t));
@@ -438,7 +438,7 @@ int initialize_einsum(expression_struct *es,
             }
         }
     }
-
+    data[rep_size] = (void**)malloc(sizeof(void*));
     *(data[rep_size]) = out->data;
     iterator iter__ =
         {ts,{grade_strides_list,max_grade,total_size,sps.size},
@@ -502,9 +502,11 @@ void sum_of_products(
     int n_iter = get_nbr_iters(iter,1);
 
     void **sum_mvs = (void*)malloc(n_iter*sizeof(void*));
+    int *free_result = (int*)malloc(n_iter*sizeof(int));
     size_t j = 0;
     do{
-        sum_mvs[j++] = recursive_products(opfs,extra,op_tree);
+        sum_mvs[j] = recursive_products(opfs,extra,op_tree,free_result+j);
+        j++;
     }while(general_iterator(iter,1));
 
     void *added = opfs.atomic_add(sum_mvs,n_iter,extra); // adds n_iter multivectors
@@ -512,8 +514,10 @@ void sum_of_products(
     void *temp_add = opfs.add(data,added,extra);
     opfs.assign(data,temp_add);
     for(int i = 0; i < n_iter; i++){
-        opfs.free(sum_mvs[i],1);
-        free(sum_mvs[i]);
+        if(free_result[i]){
+            opfs.free(sum_mvs[i],1);
+            free(sum_mvs[i]);
+        }
     }
 
     opfs.free(added,1);
@@ -537,27 +541,32 @@ void einsum_sum_prods(
     free(iter.depth);
 }
 
-void *recursive_products(operator_functions opfs, void *extra, operation_tree *op_tree){
+void *recursive_products(operator_functions opfs, void *extra, operation_tree *op_tree, int *free_result){
     void *right,*left,*result;
     int right_free = 0, left_free = 0;
+    int free_result_left = 0, free_result_right = 0;
 
-    if(op_tree->left_op == NULL) left = *op_tree->left;
-    else left = recursive_products(opfs,extra,op_tree->left_op), left_free = 1;
+    if(op_tree->left_op == NULL)
+        if(op_tree->left != NULL) left = *op_tree->left;
+        else left = NULL;
+    else left = recursive_products(opfs,extra,op_tree->left_op,&free_result_left), left_free = 1;
 
-    if(op_tree->right_op == NULL) right = *op_tree->right;
-    else right = recursive_products(opfs,extra,op_tree->right_op), right_free = 1;
+    if(op_tree->right_op == NULL)
+        if(op_tree->right != NULL) right = *op_tree->right;
+        else right = NULL;
+    else right = recursive_products(opfs,extra,op_tree->right_op,&free_result_right), right_free = 1;
 
     if(right == NULL && left == NULL) return NULL;
 
     if(right != NULL && left != NULL)
-        result = opfs.product(left,right,extra,op_tree->grades);
+        result = opfs.product(left,right,extra,op_tree->grades), *free_result = 1; // only free the result when the product is computed
     else if(right != NULL)
-        result = right;
+        result = right, right_free = 0; // I don't want to free the result
     else
-        result = left;
+        result = left, left_free = 0; // I don't want to free the result
 
-    if(left_free && left != NULL) opfs.free(left,1);
-    if(right_free && right != NULL) opfs.free(right,1);
+    if(free_result_left && left_free && left != NULL) opfs.free(left,1);
+    if(free_result_right && right_free && right != NULL) opfs.free(right,1);
 
     return result;
 }
@@ -580,7 +589,10 @@ tensor_multivectors append_out_tensor(tensor_multivectors tmvs,
                                       tensor *out){
 
     tensor_multivectors new_tmvs = {NULL,NULL,NULL,NULL,0,0};
-    size_t size = strlen(grade_subscript) + sps->size;
+    size_t grade_len = 0;
+    if(grade_subscript != NULL)
+        grade_len = strlen(grade_subscript);
+    size_t size = sps->size + grade_len;
     char *subscripts = (char*)malloc(size*sizeof(char));
     size_t *shape = (size_t*)malloc(size*sizeof(size_t));
 
@@ -591,7 +603,7 @@ tensor_multivectors append_out_tensor(tensor_multivectors tmvs,
     }size = sps->size;
 
     // join grade subscripts and subscripts checking if shapes are consistent
-    for(size_t j = 0; j < strlen(grade_subscript); j++){
+    for(size_t j = 0; j < grade_len; j++){
         int found = 0;
         for(size_t i = 0; i < sps->size; i++){
             if(subscripts[i] == grade_subscript[j]){
@@ -662,6 +674,7 @@ tensor_multivectors append_out_tensor(tensor_multivectors tmvs,
 char *get_grade_subscripts(char **subscripts, size_t size){
     size_t diff_size = 0;
     char *diff_subscripts;
+    if(!size) return NULL;
     for(size_t i = 0; i < size; i++)
         diff_size += strlen(subscripts[i]);
     diff_subscripts = (char*)malloc(diff_size*sizeof(char));

@@ -106,7 +106,7 @@ void einsum_sum_prods(
 
 void *recursive_products(operator_functions opfs,
                          void *extra,
-                         operation_tree *op_tree);
+                         operation_tree *op_tree,int *free_result);
 
 void initialize_iterator(iterator *iter);
 

@@ -21,7 +21,8 @@ int main(){
 }
 
 void test_parser_expression(void){
-    char expression[100] = "d[ij]=a[ik]b[kl]c[lj]a[ik]";
+    /* char expression[100] = "d[ij]=a[ik]b[kl]c[lj]a[ik]"; */
+    char expression[100] = "d[ij]=a[ik]b[kl]c[lj]";
     tensor_multivectors tmvs;
     graded_extra extra;
     char *output_subscripts;
