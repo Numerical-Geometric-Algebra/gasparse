@@ -36,7 +36,7 @@ typedef struct dense_grade_map{
 }dense_grade_map;
 
 
-int comp_abs_eq(size_t,size_t);
+int comp_abs_eq(int,int);
 
 map cayley_table(size_t,size_t,size_t);
 map inner_cayley_table(map,grade_map);

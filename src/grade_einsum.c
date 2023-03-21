@@ -18,7 +18,7 @@ int general_iterator(iterator iter, int depth){
     if(index[k] < ts.n_strides[k]){ // first symbol not overflown
         for(size_t j = 0; j < ts.n_tensors; j++) // loop over tensors
             *(data[j]) += ts.strides[j][k]*iter.sizeof_data;
-        for(size_t j = 0; j < gs.n_grades; j++) // loop over operations
+        for(size_t j = 0; j < gs.n_grades; j++) // loop over grades
             *(grades[j]) += gs.strides[j][k]; // update grades
         return 1;  // continue incrementing
     }
@@ -219,12 +219,19 @@ tensor_multivectors repeat_tensors(char *symbols, size_t *repeated, tensor_multi
 
     new_tmvs.size = rep_size;
     new_tmvs.type_size = tmvs.type_size;
-
+    free(index);
     return new_tmvs;
 
 }
 
-
+void free_tensor_multivectors(tensor_multivectors tmvs){
+    for(size_t i = 0; i < tmvs.size; i++){
+        free(tmvs.data[i]);
+        free(tmvs.shapes[i]);
+    }free(tmvs.shapes); free(tmvs.data);
+    free(tmvs.shape_size);
+    free(tmvs.data_size);
+}
 
 int initialize_einsum(expression_struct *es,
                       char *output_subscripts,
@@ -267,6 +274,7 @@ int initialize_einsum(expression_struct *es,
             }
         }
         else if(flag == 1){ // add subscripts length to table
+            printf("subscripts = %s\n",temp_es->left_sub.subscripts);
             subscripts_length[sym_size-1] = strlen(temp_es->left_sub.subscripts);
             repeated[sym_size-1] = 1;
         }
@@ -320,6 +328,12 @@ int initialize_einsum(expression_struct *es,
     operation_tree *op_tree = (operation_tree*)malloc(sizeof(operation_tree));
     initialize_operation_tree(op_tree);
     operation_tree *parent_node = op_tree;
+
+    for(size_t i = 0; i < rep_size*3; i++){
+        grades[i] = NULL;
+        grade_strides[i] = NULL;
+        grade_subscripts[i] = NULL;
+    }
 
     reset_symbol_iterator(sym_iter);
     temp_es = es;
@@ -404,13 +418,16 @@ int initialize_einsum(expression_struct *es,
     tensor_multivectors tmvs_out = append_out_tensor(new_tmvs,
                                                      &sps,output_subscripts,
                                                      diff_grade_subscripts,max_grade,out);
-
+    free(new_tmvs.data);
+    free(new_tmvs.shapes);
+    free(new_tmvs.shape_size);
+    free(new_tmvs.data_size);
 
     tensor_strides ts = compute_tensor_strides(tmvs_out.shapes, sub, sps);
 
     size_t **grades_list = NULL;
     size_t **grade_strides_list = NULL;
-    size_t total_size = 0;
+    size_t total_size = 0; // the number of all the different grade subscripts
 
     // compute grades strides
     if(size > 0){
@@ -438,6 +455,7 @@ int initialize_einsum(expression_struct *es,
             }
         }
     }
+
     data[rep_size] = (void**)malloc(sizeof(void*)); // alloc memory for the output tensor
     *(data[rep_size]) = out->data;
     iterator iter__ =
@@ -453,6 +471,23 @@ int initialize_einsum(expression_struct *es,
     free_subscript_struct(sub);
     free(sym_iter.pos);
     free(sym_iter.symbols);
+    free(tmvs_out.data);
+    free(tmvs_out.shapes);
+    free(tmvs_out.shape_size);
+    free(tmvs_out.data_size);
+
+    if(diff_grade_subscripts != NULL)
+        free(diff_grade_subscripts);
+
+    for(size_t i = 0; i < rep_size*3; i++){
+        if(grade_strides[i] != NULL)
+            free(grade_strides[i]);
+        if(grade_subscripts[i] != NULL)
+            free(grade_subscripts[i]);
+    }
+    free(grades);
+    free(grade_strides);
+    free(grade_subscripts);
 
     return 1;
 }
@@ -475,6 +510,19 @@ void free_symbol_iterator(symbol_iterator iter){
     free(iter.symbols);
 }
 
+void free_operation_tree_recursive(operation_tree *op){
+    if(op->right_op != NULL)
+        free_operation_tree_recursive(op->right_op);
+    if(op->left_op != NULL)
+        free_operation_tree_recursive(op->left_op);
+
+    if(op->grades.left != NULL) free(op->grades.left);
+    if(op->grades.right != NULL) free(op->grades.right);
+    if(op->grades.out != NULL) free(op->grades.out);
+
+    free(op);
+}
+
 
 int main_einsum(tensor_multivectors tmvs,
                 void *extra,
@@ -490,8 +538,28 @@ int main_einsum(tensor_multivectors tmvs,
     initialize_einsum(es,output_subscripts,tmvs,max_grade,&iter,&op_tree,out);
     opfs.init(out->data,out->data_size); // initialize output tensor to 0
     einsum_sum_prods(opfs,extra,iter,op_tree);
+    free_iterator(iter);
+    free_operation_tree_recursive(op_tree);
 
     return 1;
+}
+
+void free_iterator(iterator iter){
+    free_tensor_strides(iter.ts);
+    free_grades_strides(iter.gs);
+    for(size_t i = 0; i < iter.ts.n_tensors; i++){
+        free(iter.data[i]);
+    }free(iter.data);
+
+    if(iter.grades != NULL){
+        for(size_t i = 0; i < iter.gs.n_grades; i++){
+            if(iter.grades[i] != NULL)
+                free(iter.grades[i]);
+        }free(iter.grades);
+    }
+
+    free(iter.index);
+    free(iter.depth);
 }
 
 
@@ -548,6 +616,7 @@ void sum_of_products(
     opfs.free(added,1);
     free(added);
     free(temp_add);
+    free(free_result);
     free(sum_mvs);
 
 }
@@ -562,8 +631,6 @@ void einsum_sum_prods(
         sum_of_products(opfs,extra,iter,op_tree);
     }while(general_iterator(iter,0));
 
-    free(iter.index);
-    free(iter.depth);
 }
 
 void *recursive_products(operator_functions opfs, void *extra, operation_tree *op_tree, int *free_result){
@@ -590,8 +657,8 @@ void *recursive_products(operator_functions opfs, void *extra, operation_tree *o
     else
         result = left, left_free = 0; // I don't want to free the result
 
-    if(free_result_left && left_free && left != NULL) opfs.free(left,1);
-    if(free_result_right && right_free && right != NULL) opfs.free(right,1);
+    if(free_result_left && left_free && left != NULL) opfs.free(left,1), free(left);
+    if(free_result_right && right_free && right != NULL) opfs.free(right,1), free(right);
 
     return result;
 }
@@ -632,7 +699,7 @@ tensor_multivectors append_out_tensor(tensor_multivectors tmvs,
         int found = 0;
         for(size_t i = 0; i < sps->size; i++){
             if(subscripts[i] == grade_subscript[j]){
-                if(sps->shape[i] != max_grade){ // if the same subscript -> shape must be equal to max_grade
+                if(sps->shape[i] != max_grade+1){ // if the same subscript -> shape must be equal to max_grade
                     return new_tmvs;
                 }
                 found = 1;
@@ -640,7 +707,7 @@ tensor_multivectors append_out_tensor(tensor_multivectors tmvs,
         }
         if(!found){
             subscripts[size] = grade_subscript[j];
-            shape[size] = max_grade;
+            shape[size] = max_grade+1;
             size++;
         }
     }
@@ -702,7 +769,7 @@ char *get_grade_subscripts(char **subscripts, size_t size){
     if(!size) return NULL;
     for(size_t i = 0; i < size; i++)
         diff_size += strlen(subscripts[i]);
-    diff_subscripts = (char*)malloc(diff_size*sizeof(char));
+    diff_subscripts = (char*)malloc((diff_size+1)*sizeof(char));
     diff_size = 0;
 
     for(size_t i = 0; i < size; i++){
@@ -747,7 +814,8 @@ int set_grades(char *sub,
             if(is_constant_grade(sub[i])){
                 *(grades[*size][i]) = (size_t)(sub[i] - '0');
                 grade_strides[*size][i] = 0;
-            }
+            }else
+                *(grades[*size][i]) = 0; // initialize grades to zero
         }
         return (*size)++;
     }
@@ -816,7 +884,20 @@ tensor_strides compute_tensor_strides(size_t **shapes, subscript_struct sub, sub
     return ts;
 }
 
+void free_tensor_strides(tensor_strides ts){
+    for(size_t i = 0; i < ts.n_tensors; i++)
+        free(ts.strides[i]);
+    free(ts.strides);
+    free(ts.n_strides);
+}
 
+void free_grades_strides(grades_strides gs){
+    if(gs.strides != NULL)
+        for(size_t i = 0; i < gs.n_grades; i++){
+            if(gs.strides[i] != NULL)
+                free(gs.strides[i]);
+        }free(gs.strides);
+}
 
 subscript_shape get_all_subscripts(subscript_struct *sub, size_t **shapes, size_t *shape_size, size_t size){
     size_t subscripts_size = 0;

@@ -39,4 +39,5 @@ int sub_expression_parser(char *expression, size_t size, sub_expression *m);
 int parse_expression_struct(char *expression, size_t size, sub_expression *right_sub,  sub_expression *left_sub, char *operator);
 char *get_subscripts(char *expression, int beg, int end);
 int recursive_parser(char *expression, size_t size, expression_struct *es);
+void free_expression_struct_recursive(expression_struct *es);
 #endif // PARSER_H_

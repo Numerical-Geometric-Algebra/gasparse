@@ -103,6 +103,11 @@ typedef struct operator_functions{
 void free_subscript_struct(subscript_struct sub);
 void free_subscript_shape(subscript_shape sp);
 void free_symbol_iterator(symbol_iterator iter);
+void free_tensor_multivectors(tensor_multivectors tmvs);
+void free_tensor_strides(tensor_strides ts);
+void free_grades_strides(grades_strides gs);
+void free_iterator(iterator iter);
+void free_operation_tree_recursive(operation_tree *op);
 
 void initialize_operation_tree(operation_tree *tree);
 

@@ -50,6 +50,26 @@ expression_struct *parse_expression(char *expression, size_t size, char **output
     return es;
 }
 
+void free_expression_struct_recursive(expression_struct *es){
+    if(es->left_sub.grades != NULL)
+        free(es->left_sub.grades);
+    if(es->left_sub.subscripts != NULL)
+        free(es->left_sub.subscripts);
+
+    if(es->right_sub.grades != NULL)
+        free(es->right_sub.grades);
+    if(es->right_sub.subscripts != NULL)
+        free(es->right_sub.subscripts);
+
+    if(es->left != NULL)
+        free_expression_struct_recursive(es->left);
+    if(es->right != NULL)
+        free_expression_struct_recursive(es->right);
+    if(es->grades != NULL)
+        free(es->grades);
+    free(es);
+}
+
 int separate_expression(char *expression, size_t size, char **output, char **input){
     int index = -1;
     for(size_t i = 0; i < size; i++){

@@ -22,7 +22,8 @@ int main(){
 
 void test_parser_expression(void){
     /* char expression[100] = "d[ij]=a[ik]b[kl]c[lj]a[ik]"; */
-    char expression[100] = "d[ij]=a[ik]b[kl]c[lj]";
+    /* char expression[100] = "d[m]=<a[ik]b[kl]c[lj]>[m]"; */
+    char expression[100] = "d[m]=<a[ik]b[ik]>[m]";
     tensor_multivectors tmvs;
     graded_extra extra;
     char *output_subscripts;
@@ -58,8 +59,13 @@ void test_parser_expression(void){
         printf("\tindex %zu:\n",i);
         print_blades(output_tensor[i],"\t\t");
     }
-
+    free_expression_struct_recursive(es);
     free(output_subscripts);
+    blades_free_tensor_multivectors(tmvs);
+    free_graded_tensor_(output_tensor,out.data_size);
+    free(out.shapes);
+    free_grade_map(extra.gm);
+    free_map(extra.m);
 }
 
 sparse *gen_random_tensor(size_t size, int bitmap_max, size_t n_values){
@@ -115,6 +121,16 @@ void free_graded_tensor_(blades *data, size_t data_size){
     free(data);
 }
 
+void blades_free_tensor_multivectors(tensor_multivectors tmvs){
+    blades **data = (blades**)tmvs.data;
+    free_graded_tensors(data,tmvs.data_size,tmvs.size);
+    for(size_t i = 0; i < tmvs.size; i++){
+        free(tmvs.shapes[i]);
+    }free(tmvs.shapes);
+    free(tmvs.shape_size);
+    free(tmvs.data_size);
+}
+
 blades **sparse_to_graded_tensors(sparse **data, size_t *data_size, size_t size, grade_map gm){
     blades **graded_data = (blades**)malloc(size*sizeof(blades*));
     for(size_t i = 0; i < size; i++){
@@ -132,11 +148,14 @@ void gen_input_tensors(tensor_multivectors *tmvs, graded_extra *extra){
     unsigned int p = 4, q = 1, r = 1;
     float precision = 1e-12;
     size_t dim = 2;
-    size_t shape0[] = {3,2};
-    size_t shape1[] = {2,3};
-    size_t shape2[] = {3,3};
+    /* size_t shape0[] = {3,2}; */
+    /* size_t shape1[] = {2,3}; */
+    /* size_t shape2[] = {3,3}; */
+    size_t shape0[] = {1,1};
+    size_t shape1[] = {1,1};
+    /* size_t shape2[] = {1,1}; */
 
-    size_t tensor_size = 3;
+    size_t tensor_size = 2;
     size_t sparse_size = 1;
     size_t **shapes = (size_t**)malloc(tensor_size*sizeof(size_t*));
     size_t *data_size = (size_t*)malloc(tensor_size*sizeof(size_t));
@@ -144,13 +163,13 @@ void gen_input_tensors(tensor_multivectors *tmvs, graded_extra *extra){
 
     shapes[0] = (size_t*)malloc(dim*sizeof(size_t));
     shapes[1] = (size_t*)malloc(dim*sizeof(size_t));
-    shapes[2] = (size_t*)malloc(dim*sizeof(size_t));
+    /* shapes[2] = (size_t*)malloc(dim*sizeof(size_t)); */
 
 
     for(size_t j = 0; j < dim; j++){
         shapes[0][j] = shape0[j];
         shapes[1][j] = shape1[j];
-        shapes[2][j] = shape2[j];
+        /* shapes[2][j] = shape2[j]; */
     }
 
 
@@ -203,7 +222,7 @@ void *graded_general_product__(void *a, void *b, void *extra, grades_struct grad
         pm.r[i] = *(grades.right[i]);
 
     for(size_t i = 0; i < grades.left_size; i++)
-        pm.l[i] = *(grades.left[i]);
+        pm.l[i] = *(grades.left[i]), printf("grades_left = %zu\n",*(grades.left[i]));
 
     for(size_t i = 0; i < grades.out_size; i++)
         pm.k[i] = *(grades.out[i]);
@@ -214,6 +233,13 @@ void *graded_general_product__(void *a, void *b, void *extra, grades_struct grad
 
     blades *out = (blades*)malloc(sizeof(blades));
     *out = graded_general_product_(*ga,*gb,gextra->m,gextra->gm,pm,gextra->precision);
+
+    if(pm.l != NULL)
+        free(pm.l);
+    if(pm.r != NULL)
+        free(pm.r);
+    if(pm.k != 0)
+        free(pm.k);
     return out;
 }
 

@@ -36,4 +36,9 @@ void *graded_general_product__(void*,void*,void*,grades_struct);
 dense project_dense_product(dense_multivectors,project_map);
 sparse project_sparse_product(sparse_multivectors,project_map);
 blades project_blades_product(graded_multivectors,project_map);
+
+
+void free_graded_tensors(blades **, size_t *, size_t);
+void free_graded_tensor_(blades *, size_t);
+void blades_free_tensor_multivectors(tensor_multivectors);
 #endif // MAIN_H_

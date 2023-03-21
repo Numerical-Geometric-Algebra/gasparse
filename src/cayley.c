@@ -1,8 +1,8 @@
 #include "cayley.h"
 
 // returns true if abs(v) == p
-int comp_abs_eq(size_t v,size_t p){
-    size_t r = (v < 0) ? -v : v;
+int comp_abs_eq(int v,int p){
+    int r = (v < 0) ? -v : v;
     return r == p;
 }
 
@@ -162,7 +162,6 @@ unsigned int* get_grade_bool(unsigned int *grades, size_t size, size_t max_grade
     }else{
         for(size_t i = 0; i < max_grade; i++)
             g[i] = 0;
-
         for(size_t i = 0; i < size; i++)
             g[grades[i]] = 1;
     }
