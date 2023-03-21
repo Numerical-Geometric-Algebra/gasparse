@@ -41,10 +41,12 @@ expression_struct *parse_expression(char *expression, size_t size, char **output
 
     size_t len = strlen(output_expression);
     *output_subscripts = get_subscripts(output_expression,0,len);
+    free(output_expression);
     if(*output_subscripts == NULL)
         return NULL;
 
     recursive_parser(input_expression,strlen(input_expression),es);
+    free(input_expression);
     return es;
 }
 

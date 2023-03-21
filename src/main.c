@@ -43,21 +43,23 @@ void test_parser_expression(void){
 
     blades **input_data = (blades**)tmvs.data;
     for(size_t j = 0; j < tmvs.size; j++){
-        printf("input_tensor: %zu\n",j);
+        printf("input: %zu\n",j);
         for(size_t i = 0; i < tmvs.data_size[j]; i++){
-            printf("index %zu:\n",i);
-            print_blades(input_data[j][i],"\t");
+            printf("\tindex %zu:\n",i);
+            print_blades(input_data[j][i],"\t\t");
         }
     }
 
     main_einsum(tmvs,(void*)&extra,opfs,es,output_subscripts,extra.gm.max_grade,&out);
 
     blades *output_tensor = (blades*)out.data;
-    printf("output_tensor: \n");
+    printf("output: \n");
     for(size_t i = 0; i < out.data_size; i++){
-        printf("index %zu:\n",i);
-        print_blades(output_tensor[i],"\t");
+        printf("\tindex %zu:\n",i);
+        print_blades(output_tensor[i],"\t\t");
     }
+
+    free(output_subscripts);
 }
 
 sparse *gen_random_tensor(size_t size, int bitmap_max, size_t n_values){

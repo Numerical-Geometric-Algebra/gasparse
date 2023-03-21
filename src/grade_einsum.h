@@ -98,6 +98,12 @@ typedef struct operator_functions{
 }operator_functions;
 
 
+
+
+void free_subscript_struct(subscript_struct sub);
+void free_subscript_shape(subscript_shape sp);
+void free_symbol_iterator(symbol_iterator iter);
+
 void initialize_operation_tree(operation_tree *tree);
 
 void einsum_sum_prods(

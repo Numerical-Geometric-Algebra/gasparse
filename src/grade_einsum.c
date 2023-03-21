@@ -438,7 +438,7 @@ int initialize_einsum(expression_struct *es,
             }
         }
     }
-    data[rep_size] = (void**)malloc(sizeof(void*));
+    data[rep_size] = (void**)malloc(sizeof(void*)); // alloc memory for the output tensor
     *(data[rep_size]) = out->data;
     iterator iter__ =
         {ts,{grade_strides_list,max_grade,total_size,sps.size},
@@ -448,8 +448,33 @@ int initialize_einsum(expression_struct *es,
     initialize_iterator(&iter__);
     *iter = iter__;
     *op_tree__ = parent_node;
+
+    free_subscript_shape(sps);
+    free_subscript_struct(sub);
+    free(sym_iter.pos);
+    free(sym_iter.symbols);
+
     return 1;
 }
+
+void free_subscript_struct(subscript_struct sub){
+    for(size_t i = 0; i < sub.size_; i++){
+        free(sub.subscripts[i]);
+    }free(sub.subscripts);
+    free(sub.size);
+}
+
+void free_subscript_shape(subscript_shape sp){
+    free(sp.subscripts);
+    free(sp.shape);
+}
+
+void free_symbol_iterator(symbol_iterator iter){
+    free(iter.repeated);
+    free(iter.pos);
+    free(iter.symbols);
+}
+
 
 int main_einsum(tensor_multivectors tmvs,
                 void *extra,
@@ -779,10 +804,15 @@ tensor_strides compute_tensor_strides(size_t **shapes, subscript_struct sub, sub
         }
     }
 
+    // copy shape to n_strides
+    ts.n_strides = (size_t*)malloc(sp.size*sizeof(size_t));
+    for(size_t i = 0; i < sp.size; i++)
+        ts.n_strides[i] = sp.shape[i];
+
+
     ts.n_tensors = sub.size_;
     ts.n_subscripts = subscripts_size;
     ts.strides = strides;
-    ts.n_strides = sp.shape;
     return ts;
 }
 
