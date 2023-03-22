@@ -104,7 +104,13 @@ void reset_symbol_iterator(symbol_iterator iter){
 int iterate_expression_symbols(expression_struct **es, int visited){
     if(*es == NULL)
         return 0;
-    do{
+
+    // check if node was visited
+    if((*es)->visited == visited)
+        return 0;
+
+    // go down the tree until a symbol is found
+    while((*es)->left_sub.symbol == '\0' && (*es)->right_sub.symbol == '\0'){
         if((*es)->left != NULL && (*es)->left->visited != visited)
             *es = (*es)->left;
         else if((*es)->right != NULL && (*es)->right->visited != visited)
@@ -112,7 +118,12 @@ int iterate_expression_symbols(expression_struct **es, int visited){
         else if((*es)->up != NULL)
             (*es)->visited = visited, (*es) = (*es)->up;
         else return 0;
-    }while((*es)->left_sub.symbol == '\0' && (*es)->right_sub.symbol == '\0');
+    }
+
+    // set this node to visited
+    if((*es)->left_sub.symbol != '\0' || (*es)->right_sub.symbol != '\0')
+        (*es)->visited = visited;
+
     return 1;
 }
 
@@ -274,7 +285,6 @@ int initialize_einsum(expression_struct *es,
             }
         }
         else if(flag == 1){ // add subscripts length to table
-            printf("subscripts = %s\n",temp_es->left_sub.subscripts);
             subscripts_length[sym_size-1] = strlen(temp_es->left_sub.subscripts);
             repeated[sym_size-1] = 1;
         }
@@ -337,6 +347,19 @@ int initialize_einsum(expression_struct *es,
 
     reset_symbol_iterator(sym_iter);
     temp_es = es;
+
+    // determine the output grades
+    // the loop only determines sub childs output grades
+    index = set_grades(temp_es->grades,
+                       grades,
+                       grade_strides,
+                       grade_subscripts,
+                       &size);
+    if(index != -1){
+        op_tree->grades.out = grades[index];
+        op_tree->grades.out_size = strlen(grade_subscripts[index]);
+    }
+
     do{
         // add data to the tree and to the list
         index = next_symbol(sym_iter,temp_es->left_sub.symbol);
@@ -403,7 +426,6 @@ int initialize_einsum(expression_struct *es,
                 op_tree->grades.right_size = strlen(grade_subscripts[index]);
             }
         }
-
 
         op_tree->grades.operator = temp_es->operator;
     }while(iterate_expression_operations(&op_tree,&temp_es,0));
@@ -637,6 +659,7 @@ void *recursive_products(operator_functions opfs, void *extra, operation_tree *o
     void *right,*left,*result;
     int right_free = 0, left_free = 0;
     int free_result_left = 0, free_result_right = 0;
+    *free_result = 0;
 
     if(op_tree->left_op == NULL)
         if(op_tree->left != NULL) left = *op_tree->left;
@@ -653,9 +676,9 @@ void *recursive_products(operator_functions opfs, void *extra, operation_tree *o
     if(right != NULL && left != NULL)
         result = opfs.product(left,right,extra,op_tree->grades), *free_result = 1; // only free the result when the product is computed
     else if(right != NULL)
-        result = right, right_free = 0; // I don't want to free the result
+        result = right, *free_result = right_free, right_free = 0; // I don't want to free the result here
     else
-        result = left, left_free = 0; // I don't want to free the result
+        result = left, *free_result = left_free, left_free = 0; // I don't want to free the result here
 
     if(free_result_left && left_free && left != NULL) opfs.free(left,1), free(left);
     if(free_result_right && right_free && right != NULL) opfs.free(right,1), free(right);

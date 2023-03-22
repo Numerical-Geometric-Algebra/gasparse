@@ -42,8 +42,6 @@ expression_struct *parse_expression(char *expression, size_t size, char **output
     size_t len = strlen(output_expression);
     *output_subscripts = get_subscripts(output_expression,0,len);
     free(output_expression);
-    if(*output_subscripts == NULL)
-        return NULL;
 
     recursive_parser(input_expression,strlen(input_expression),es);
     free(input_expression);
@@ -121,7 +119,6 @@ int recursive_parser(char *expression, size_t size, expression_struct *es){
     int beg = 0, end;
     char operator;
     int flag = 0;
-    int beg_right;
     es->operator = '\0';
 
     init_expression_struct(&es_sub);
@@ -132,8 +129,7 @@ int recursive_parser(char *expression, size_t size, expression_struct *es){
     else if(right_sub.symbol == '\0'){ // found left subexpression
         expression += end, size -= end;
         es->left_sub = left_sub;
-    }
-    else{
+    }else{
         if(size-end > 0){ // there is still expression to be parsed
             expression_struct *left_es = (expression_struct*)malloc(sizeof(expression_struct));
             expression_struct *right_es = (expression_struct*)malloc(sizeof(expression_struct));
@@ -168,7 +164,7 @@ int recursive_parser(char *expression, size_t size, expression_struct *es){
     end = find_matching_angle_brackets(expression,size,&beg);
     if(end == -1) return -1; // No matching angle brackets found
 
-    if(end + 1 < (int)size){
+    if(end + 1 < (int)size){ // find grades
         int end_grades = end + 1;
         if(expression[end_grades] == '['){
             es->grades = get_subscripts(expression,end+1,size);
@@ -182,32 +178,29 @@ int recursive_parser(char *expression, size_t size, expression_struct *es){
         if(is_operator(*expression))
             es->operator = *expression;
 
-    beg_right = end;
-    end = recursive_parser(expression + beg + 1,end - beg - 1,&es_sub);
+
+    if(flag)
+        end = recursive_parser(expression + beg + 1,end - beg - 1,es); // continue parsing expression here
+    else
+        end = recursive_parser(expression + beg + 1,end - beg - 1,&es_sub); // continue parsing expression in child
+
     if(end == -1) return -1;
 
-    if(flag){
-        es->left = (expression_struct*)malloc(sizeof(expression_struct));
-        *(es->left) = es_sub;
-        es->left->up = es;
-        init_expression_struct(&es_sub); // reset
-
-        if(es->operator != '\0')
-            expression++, size--;
-        if(size - beg_right - 1 > 0){ // no more expression to parse
-            end = recursive_parser(expression + beg_right + 1, size - beg_right - 1, &es_sub);
-            if(end == -1) return -1;
-            es->right = (expression_struct*)malloc(sizeof(expression_struct));
-            *(es->right) = es_sub;
-            es->right->up = es;
-        }
-    }else{
+    if(!flag){
          es->right = (expression_struct*)malloc(sizeof(expression_struct));
         *(es->right) = es_sub;
         es->right->up = es;
     }
 
     return 1;
+}
+
+int count_symbols(char *expression, size_t size){
+    size_t count = 0;
+    for(size_t i = 0; i < size; i++)
+        if(is_symbol(expression[i]))
+            count++;
+    return count;
 }
 
 int parse_expression_struct(char *expression, size_t size, sub_expression *left_sub,  sub_expression *right_sub, char *operator){
@@ -217,7 +210,7 @@ int parse_expression_struct(char *expression, size_t size, sub_expression *left_
     if(end != -1){ // if first argument is a subexpression
         *left_sub = m;
         expression += end; size -= end;
-        if(is_operator(*expression)){ *operator = *expression; expression++; size--; }
+        if(is_operator(*expression)) *operator = *expression, expression++, size--;
         else *operator = '\0';
         int end_right = sub_expression_parser(expression,size,&m);
         if(end_right != -1){ // if second argument is a subexpression
@@ -296,10 +289,14 @@ char *get_subscripts(char *expression, int beg, int end){
                 return NULL;
         }
     }
+    char *subscripts;
+    if(sub_count == -1){ // if no subscripts found return '\0'
+        subscripts = (char*)malloc(sizeof(char));
+        *subscripts = '\0';
+        return subscripts;
+    }
 
-    if(sub_count == -1) return NULL;
-
-    char *subscripts = (char*)malloc((sub_count+1)*sizeof(char));
+    subscripts = (char*)malloc((sub_count+1)*sizeof(char));
     for(int i = beg; i < end; i++){
         if(expression[i] == '['){
             int j = 0;

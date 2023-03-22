@@ -23,7 +23,7 @@ int main(){
 void test_parser_expression(void){
     /* char expression[100] = "d[ij]=a[ik]b[kl]c[lj]a[ik]"; */
     /* char expression[100] = "d[m]=<a[ik]b[kl]c[lj]>[m]"; */
-    char expression[100] = "d[m]=<a[ik]b[ik]>[m]";
+    char expression[100] = "d[mn]=<<a[ik]>[n]b[ik]>[m]";
     tensor_multivectors tmvs;
     graded_extra extra;
     char *output_subscripts;
@@ -156,7 +156,7 @@ void gen_input_tensors(tensor_multivectors *tmvs, graded_extra *extra){
     /* size_t shape2[] = {1,1}; */
 
     size_t tensor_size = 2;
-    size_t sparse_size = 1;
+    size_t sparse_size = 5;
     size_t **shapes = (size_t**)malloc(tensor_size*sizeof(size_t*));
     size_t *data_size = (size_t*)malloc(tensor_size*sizeof(size_t));
     size_t *shape_size__ = (size_t*)malloc(tensor_size*sizeof(size_t));
@@ -213,7 +213,6 @@ void *graded_general_product__(void *a, void *b, void *extra, grades_struct grad
         pm.l = (unsigned int*)malloc(pm.l_size*sizeof(unsigned int));
     else pm.l = NULL;
 
-
     if(pm.k_size)
         pm.k = (unsigned int*)malloc(pm.k_size*sizeof(unsigned int));
     else pm.k = NULL;
@@ -222,7 +221,7 @@ void *graded_general_product__(void *a, void *b, void *extra, grades_struct grad
         pm.r[i] = *(grades.right[i]);
 
     for(size_t i = 0; i < grades.left_size; i++)
-        pm.l[i] = *(grades.left[i]), printf("grades_left = %zu\n",*(grades.left[i]));
+        pm.l[i] = *(grades.left[i]);
 
     for(size_t i = 0; i < grades.out_size; i++)
         pm.k[i] = *(grades.out[i]);
