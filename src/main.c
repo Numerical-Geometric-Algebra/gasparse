@@ -21,14 +21,17 @@ int main(){
 }
 
 void test_parser_expression(void){
+    char operators[3] = "\0|^";
+    size_t operators_size = 3;
+
     /* char expression[100] = "d[ij]=a[ik]b[kl]c[lj]a[ik]"; */
     /* char expression[100] = "d[m]=<a[ik]b[kl]c[lj]>[m]"; */
-    char expression[100] = "d[mn]=<<a[ik]>[n]b[ik]>[m]";
+    char expression[100] = "d[ik]=a[ik]|b[ik]";
     tensor_multivectors tmvs;
     graded_extra extra;
     char *output_subscripts;
     expression_struct *es = parse_expression(expression,strlen(expression),&output_subscripts);
-
+    set_operator_index(operators,operators_size,es);
     /* printf("expression: "); */
     /* scanf("%s",expression); */
     tensor out;
@@ -65,7 +68,9 @@ void test_parser_expression(void){
     free_graded_tensor_(output_tensor,out.data_size);
     free(out.shapes);
     free_grade_map(extra.gm);
-    free_map(extra.m);
+    for(size_t i = 0; i < extra.size; i++)
+        free_map(extra.m[i]);
+    free(extra.m);
 }
 
 sparse *gen_random_tensor(size_t size, int bitmap_max, size_t n_values){
@@ -145,7 +150,7 @@ blades **sparse_to_graded_tensors(sparse **data, size_t *data_size, size_t size,
 
 
 void gen_input_tensors(tensor_multivectors *tmvs, graded_extra *extra){
-    unsigned int p = 4, q = 1, r = 1;
+    unsigned int p = 5, q = 0, r = 0;
     float precision = 1e-12;
     size_t dim = 2;
     /* size_t shape0[] = {3,2}; */
@@ -156,7 +161,7 @@ void gen_input_tensors(tensor_multivectors *tmvs, graded_extra *extra){
     /* size_t shape2[] = {1,1}; */
 
     size_t tensor_size = 2;
-    size_t sparse_size = 5;
+    size_t sparse_size = 1;
     size_t **shapes = (size_t**)malloc(tensor_size*sizeof(size_t*));
     size_t *data_size = (size_t*)malloc(tensor_size*sizeof(size_t));
     size_t *shape_size__ = (size_t*)malloc(tensor_size*sizeof(size_t));
@@ -177,18 +182,24 @@ void gen_input_tensors(tensor_multivectors *tmvs, graded_extra *extra){
     for(size_t i = 0; i < tensor_size; i++)
         shape_size__[i] = shape_size[i];
 
-    map m = cayley_table(p,q,r);
-    grade_map gm = bitmap_grade_map(m.size);
+    map *m_array = (map*)malloc(3*sizeof(map));
 
-    /* time_t t; */
-    /* srand((unsigned) time(&t)); // set random seed */
-    srand(75843);
+    map geo_m = cayley_table(p,q,r);
+    grade_map gm = bitmap_grade_map(geo_m.size);
+    map inner_m = inner_cayley_table(geo_m,gm);
+    map outer_m = outer_cayley_table(geo_m,gm);
+
+    m_array[0] = geo_m; m_array[1] = inner_m; m_array[2] = outer_m;
+
+    time_t t;
+    srand((unsigned) time(&t)); // set random seed
+    /* srand(75843); */
     sparse **data = gen_random_tensors(shapes,shape_size,tensor_size,p+q+r,sparse_size,&data_size);
     blades **graded_data = sparse_to_graded_tensors(data,data_size,tensor_size,gm);
 
     free_sparse_tensors(data,data_size,tensor_size); // free the data allocated to the input tensors
 
-    graded_extra gextra = {m,gm,precision};
+    graded_extra gextra = {m_array,3,gm,precision};
     *extra = gextra;
     tmvs->data = (void**)graded_data;
     tmvs->shapes = shapes;
@@ -231,7 +242,7 @@ void *graded_general_product__(void *a, void *b, void *extra, grades_struct grad
     blades *gb = b;
 
     blades *out = (blades*)malloc(sizeof(blades));
-    *out = graded_general_product_(*ga,*gb,gextra->m,gextra->gm,pm,gextra->precision);
+    *out = graded_general_product_(*ga,*gb,gextra->m[grades.operator],gextra->gm,pm,gextra->precision);
 
     if(pm.l != NULL)
         free(pm.l);

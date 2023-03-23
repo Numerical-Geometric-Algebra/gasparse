@@ -130,7 +130,7 @@ int recursive_parser(char *expression, size_t size, expression_struct *es){
         expression += end, size -= end;
         es->left_sub = left_sub;
     }else{
-        if(size-end > 0){ // there is still expression to be parsed
+        if(size - end > 0){ // there is still expression to be parsed
             expression_struct *left_es = (expression_struct*)malloc(sizeof(expression_struct));
             expression_struct *right_es = (expression_struct*)malloc(sizeof(expression_struct));
             init_expression_struct(left_es);
@@ -154,6 +154,7 @@ int recursive_parser(char *expression, size_t size, expression_struct *es){
         }else{
             es->left_sub = left_sub;
             es->right_sub = right_sub;
+            es->operator = operator;
         }
         return 1;
     }
@@ -210,7 +211,7 @@ int parse_expression_struct(char *expression, size_t size, sub_expression *left_
     if(end != -1){ // if first argument is a subexpression
         *left_sub = m;
         expression += end; size -= end;
-        if(is_operator(*expression)) *operator = *expression, expression++, size--;
+        if(is_operator(*expression)) *operator = *expression, expression++, size--, end++;
         else *operator = '\0';
         int end_right = sub_expression_parser(expression,size,&m);
         if(end_right != -1){ // if second argument is a subexpression

@@ -192,6 +192,61 @@ int iterate_expression_operations(operation_tree **ot, expression_struct **es, i
     return 1;
 }
 
+
+int iterate_expression(expression_struct **es, int visited){
+    if(*es == NULL)
+        return 0;
+
+    // if reached bottom go up and then one down
+    if((*es)->left == NULL && (*es)->right == NULL){
+        // try to go up and then right until found not visited
+        do{
+            (*es)->visited = visited; // set node to visited
+            (*es) = (*es)->up; // go up
+            if((*es) == NULL)
+                return 0;
+            if((*es)->right != NULL && (*es)->right->visited != visited){
+                (*es) = (*es)->right; // then try go right
+
+            }
+            else{
+                (*es)->visited = visited; // if can't go right go up again
+            }
+        }while((*es)->visited == visited);
+
+        return 1;
+    }
+
+    if((*es)->left != NULL && (*es)->left->visited != visited){ // try to go left
+        *es = (*es)->left;
+    }
+    else if((*es)->right != NULL && (*es)->right->visited != visited){
+        (*es) = (*es)->right;
+    }
+    else if((*es)->up != NULL){
+        (*es)->visited = visited, (*es) = (*es)->up;
+    }
+    else return 0;
+
+    return 1;
+}
+
+
+void set_operator_index(char *operators, size_t size, expression_struct *es){
+    int visited = !es->visited;
+    do{
+        int flag = 0;
+        for(size_t i = 0; i < size; i++){
+            if(operators[i] == es->operator){
+                es->operator = i;
+                flag = 1;
+                break;
+            }
+        }
+        if(!flag) es->operator = 0; // if the operator is not found set the index to 0
+    }while(iterate_expression(&es,visited));
+}
+
 tensor_multivectors repeat_tensors(char *symbols, size_t *repeated, tensor_multivectors tmvs){
     tensor_multivectors new_tmvs;
     size_t rep_size = 0;
@@ -272,7 +327,8 @@ int initialize_einsum(expression_struct *es,
     }
 
     // get list of all symbols
-    while(iterate_expression_symbols(&temp_es,1)){
+    int visited = !temp_es->visited;
+    while(iterate_expression_symbols(&temp_es,visited)){
         // add left symbol to list and check subscripts
         int flag = set_symbols(symbols,&sym_size, temp_es->left_sub.symbol,&pos);
         if(flag == 0){
@@ -360,6 +416,7 @@ int initialize_einsum(expression_struct *es,
         op_tree->grades.out_size = strlen(grade_subscripts[index]);
     }
 
+    visited = !temp_es->visited;
     do{
         // add data to the tree and to the list
         index = next_symbol(sym_iter,temp_es->left_sub.symbol);
@@ -428,7 +485,7 @@ int initialize_einsum(expression_struct *es,
         }
 
         op_tree->grades.operator = temp_es->operator;
-    }while(iterate_expression_operations(&op_tree,&temp_es,0));
+    }while(iterate_expression_operations(&op_tree,&temp_es,visited));
 
     // add output subscripts to the end of the list
     size_t len = strlen(output_subscripts) + 1;

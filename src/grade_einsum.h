@@ -67,7 +67,7 @@ typedef struct subscript_shape{
 typedef struct grades_struct{
     size_t **left,**right,**out;
     size_t left_size,right_size,out_size;
-    char operator; // this doesn't change through iterations
+    size_t operator; // this doesn't change through iterations
 }grades_struct;
 
 typedef struct operation_tree{
@@ -136,9 +136,11 @@ tensor_multivectors append_out_tensor(tensor_multivectors tmvs,
                                       char *grade_subscript,
                                       size_t max_grade, tensor *out);
 
-int iterate_expression_operations(operation_tree **ot,
-                                  expression_struct **es,
-                                  int visited);
+int iterate_expression_operations(operation_tree **ot,expression_struct **es, int visited);
+int iterate_expression(expression_struct **es, int visited);
+int iterate_expression_symbols(expression_struct **es, int visited);
+
+void set_operator_index(char *operators, size_t size, expression_struct *es);
 
 void reset_symbol_iterator(symbol_iterator iter);
 int next_symbol(symbol_iterator iter, char symbol);

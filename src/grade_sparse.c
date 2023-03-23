@@ -485,7 +485,8 @@ void *graded_product__(void *a, void *b, void *extra){
     blades *ga = a;
     blades *gb = b;
     blades *out = (blades*)malloc(sizeof(blades));
-    *out = graded_product_(*ga,*gb,gextra->m,gextra->gm,gextra->precision);
+    // the first product should be the geometric product
+    *out = graded_product_(*ga,*gb,*gextra->m,gextra->gm,gextra->precision);
     return (void*)out;
 }
 

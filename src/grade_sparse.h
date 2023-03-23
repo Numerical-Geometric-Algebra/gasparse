@@ -17,7 +17,8 @@ typedef struct graded_multivectors{
 }graded_multivectors;
 
 typedef struct graded_extra{
-    map m;
+    map *m;
+    size_t size;
     grade_map gm;
     float precision;
 }graded_extra;
