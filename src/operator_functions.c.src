@@ -1,0 +1,101 @@
+#include "operator_functions.h"
+
+{% for data_type in data_type_list %}
+
+void *{{data_type}}_general_product__(void *a, void *b, void *extra, grades_struct grades){
+    project_map pm;
+    pm.right_size = grades.right_size;
+    pm.left_size = grades.left_size;
+    pm.out_size = grades.out_size;
+
+    if(pm.right_size) pm.right = (size_t*)malloc(pm.right_size*sizeof(size_t));
+    else pm.right = NULL;
+
+    if(pm.left_size) pm.left = (size_t*)malloc(pm.left_size*sizeof(size_t));
+    else pm.left = NULL;
+
+    if(pm.out_size)  pm.out = (size_t*)malloc(pm.k_size*sizeof(size_t));
+    else pm.out = NULL;
+
+    for(size_t i = 0; i < grades.right_size; i++)
+        pm.right[i] = *(grades.right[i]);
+
+    for(size_t i = 0; i < grades.left_size; i++)
+        pm.left[i] = *(grades.left[i]);
+
+    for(size_t i = 0; i < grades.out_size; i++)
+        pm.out[i] = *(grades.out[i]);
+
+    {{data_type}}_extra *typed_extra = extra;
+    {{data_type}} *typed_a = a;
+    {{data_type}} *typed_b = b;
+
+    {{data_type}} *out = ({{data_type}}*)malloc(sizeof({{data_type}}));
+    *out = {{data_type}}_general_product_(*typed_a,*typed_b,typed_extra->m[grades.operator],typed_extra->gm,pm,typed_extra->precision);
+
+    if(pm.left != NULL) free(pm.left);
+    if(pm.right != NULL) free(pm.right);
+    if(pm.out != 0) free(pm.out);
+
+    return out;
+}
+
+void {{data_type}}_assign__(void *data, void *temp){
+    {{data_type}} *typed_data = data;
+    {{data_type}} *typed_temp = temp;
+    *typed_data = *typed_temp;
+}
+
+void {{data_type}}_init__(void *data, size_t size){
+    {{data_type}} *typed_data = data;
+    for(size_t i = 0; i < size; i++)
+        {{data_type}}_init_(typed_data[i]);
+}
+
+void *{{data_type}}_operator_product__(void *a, void *b, void *extra, size_t operator){
+    {{data_type}}_extra *typed_extra = extra;
+    {{data_type}} *typed_a = a;
+    {{data_type}} *typed_b = b;
+    {{data_type}} *out = ({{data_type}}*)malloc(sizeof({{data_type}}));
+
+    *out = {{data_type}}_product_(*typed_a,*typed_b,typed_extra->m[operator],typed_extra->gm,typed_extra->precision);
+    return (void*)out;
+}
+
+void *{{data_type}}_product__(void *a, void *b, void *extra){
+    {{data_type}}_extra *typed_extra = extra;
+    {{data_type}} *typed_a = a;
+    {{data_type}} *typed_b = b;
+    {{data_type}} *out = ({{data_type}}*)malloc(sizeof({{data_type}}));
+
+    *out = {{data_type}}_product_(*typed_a,*typed_b,*typed_extra->m,typed_extra->gm,typed_extra->precision);
+    return (void*)out;
+}
+
+
+
+void *{{data_type}}_add_add__(void *a, void *b, void *extra){
+    {{data_type}}_extra *typed_extra = extra;
+    {{data_type}} *typed_a = a;
+    {{data_type}} *typed_b = b;
+    {{data_type}} *out = ({{data_type}}*)malloc(sizeof({{data_type}}));
+    *out = {{data_type}}_add_add_(*typed_a,*typed_b,typed_extra->gm,typed_extra->precision);
+    return (void*)out;
+}
+
+void *{{data_type}}_atomic_add__(void *data, size_t size, void *extra){
+    {{data_type}}_extra *typed_extra = extra;
+    {{data_type}} **typed_data = data;
+    {{data_type}} *out = ({{data_type}}*)malloc(sizeof({{data_type}}));
+    *out = graded_atomic_add_add_(typed_data,size,typed_extra->gm,typed_extra->precision);
+    return (void*)out;
+}
+
+void {{data_type}}_free__(void *data, size_t size){
+    {{data_type}} *typed_data = data;
+    for(size_t i = 0; i < size; i++){
+        {{data_type}}_free_(typed_data[i]);
+    }
+}
+
+{% endfor %}

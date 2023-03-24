@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#define MAX_SUBSCRIPTS 12
+
 typedef struct sub_expression{
     char *grades; // grades per grade selection
     char symbol;
@@ -21,16 +23,29 @@ typedef struct expression_struct{
     char operator;
 }expression_struct;
 
+typedef struct subscript_struct{
+    size_t *size;
+    char **subscripts;
+    size_t size_;
+}subscript_struct;
+
+typedef struct subscript_shape{
+    size_t size;
+    char *subscripts;
+    size_t *shape;
+}subscript_shape;
+
+
+int parse_simple_expression(char*,size_t,subscript_struct*);
 expression_struct *parse_expression(char*,size_t,char**);
+subscript_shape get_all_subscripts(subscript_struct*,size_t**,size_t*,size_t);
+int separate_expression(char*,size_t,char**,char**);
 
 int is_symbol(char c);
 int is_operator(char c);
 int is_grade_subscripts(char c);
 int is_subscript(char c);
 int is_constant_grade(char c);
-
-
-int separate_expression(char *expression, size_t size, char **output, char **input);
 
 void init_subexpression(sub_expression* sub);
 void init_expression_struct(expression_struct *es);

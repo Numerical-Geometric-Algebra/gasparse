@@ -38,13 +38,13 @@ typedef struct tensor_strides{
     size_t n_symbols;
 }tensor_strides;
 
-typedef struct iterator{
+typedef struct iterator_t{
     tensor_strides ts;
     void **data;
     size_t *index;
     int *depth;
     size_t sizeof_data;
-}iterator;
+}iterator_t;
 
 typedef struct symbol_shape{
     size_t size;
@@ -68,39 +68,39 @@ void free_symbols(symbols);
 symbols parse_all(char*,size_t,size_t*,size_t);
 void free_symbol_shape(symbol_shape);
 
-size_t get_nbr_inner_iters(iterator);
-iterator init_iterator(tensor_strides,void**,size_t);
+size_t get_nbr_inner_iters(iterator_t);
+iterator_t init_iterator_t(tensor_strides,void**,size_t);
 
-int general_iterator(iterator,int);
+int general_iterator_t(iterator_t,int);
 void free_tensor_strides(tensor_strides);
 
 symbol_shape get_all_symbols(symbols,size_t**,size_t*,size_t);
 tensor_strides compute_strides(size_t**,symbols,symbol_shape);
 
 
-int main_einsum(
+int main_einsum_t(
     tensor_multivectors,
     void*,
     operator_functions,
     symbols,
     tensor*);
 
-tensor_multivectors append_out_tensor(
+tensor_multivectors append_out_tensor_t(
     symbol_shape,
     char*,
     size_t,
     tensor_multivectors);
 
-void einsum_sum_prods(
+void einsum_sum_prods_t(
     tensor_strides,
     tensor_multivectors,
     operator_functions,
     void*);
 
-void sum_of_products(
+void sum_of_products_t(
     tensor_multivectors,
     operator_functions,
     void*,
-    iterator);
+    iterator_t);
 
 #endif // EINSUM_H_

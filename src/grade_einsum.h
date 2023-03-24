@@ -31,7 +31,7 @@ typedef struct grades_strides{
 }grades_strides;
 
 
-typedef struct iterator{
+typedef struct iterator_g{
     tensor_strides ts;
     grades_strides gs;
     void ***data; // n_tensors
@@ -40,7 +40,7 @@ typedef struct iterator{
     int *depth;
     size_t out_index;
     size_t sizeof_data;
-}iterator;
+}iterator_g;
 
 typedef struct tensor_multivectors{ // general
     void **data;
@@ -50,19 +50,6 @@ typedef struct tensor_multivectors{ // general
     size_t size; // size of the shape size (number of multivector tensors)
     size_t type_size; // sizeof(type)
 }tensor_multivectors;
-
-typedef struct subscript_struct{
-    size_t *size;
-    char **subscripts;
-    size_t size_;
-}subscript_struct;
-
-
-typedef struct subscript_shape{
-    size_t size;
-    char *subscripts;
-    size_t *shape;
-}subscript_shape;
 
 typedef struct grades_struct{
     size_t **left,**right,**out;
@@ -90,14 +77,14 @@ typedef struct symbol_iterator{
 
 typedef struct operator_functions{
     void *(*atomic_add)(void *data, size_t size, void *extra);
-    void *(*add)(void *a,void *b, void *extra);
-    void *(*product)(void *a, void *b, void *extra, grades_struct grades);
+    void *(*add)(void *a, void *b, void *extra);
+    void *(*product)(void *a, void *b, void *extra);
+    void *(*graded_product)(void *a, void *b, void *extra, grades_struct grades);
+    void *(*operator_product)(void *a, void *b, void *extra, size_t operator);
     void (*init)(void *data, size_t size);
     void (*assign)(void *data, void *temp);
     void (*free)(void *data, size_t size);
 }operator_functions;
-
-
 
 
 void free_subscript_struct(subscript_struct sub);
@@ -106,20 +93,24 @@ void free_symbol_iterator(symbol_iterator iter);
 void free_tensor_multivectors(tensor_multivectors tmvs);
 void free_tensor_strides(tensor_strides ts);
 void free_grades_strides(grades_strides gs);
-void free_iterator(iterator iter);
+void free_iterator(iterator_g iter);
 void free_operation_tree_recursive(operation_tree *op);
 
 void initialize_operation_tree(operation_tree *tree);
 
 void einsum_sum_prods(
     operator_functions opfs,
-    void* extra, iterator iter, operation_tree *op_tree);
+    void* extra, iterator_g iter, operation_tree *op_tree);
+void sum_of_products(
+    operator_functions opfs,
+    void* extra, iterator_g iter, operation_tree *op_tree);
 
 void *recursive_products(operator_functions opfs,
                          void *extra,
                          operation_tree *op_tree,int *free_result);
 
-void initialize_iterator(iterator *iter);
+void initialize_iterator(iterator_g *iter);
+size_t get_nbr_iters(iterator_g iter, int depth);
 
 int set_grades(char *sub,
                size_t ***grades,
@@ -145,11 +136,6 @@ void set_operator_index(char *operators, size_t size, expression_struct *es);
 void reset_symbol_iterator(symbol_iterator iter);
 int next_symbol(symbol_iterator iter, char symbol);
 
-
-subscript_shape get_all_subscripts(subscript_struct *sub,
-                                   size_t **shapes,
-                                   size_t *shape_size,
-                                   size_t size);
 
 tensor_strides compute_tensor_strides(size_t **shapes,
                                subscript_struct sub,

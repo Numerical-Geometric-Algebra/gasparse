@@ -18,7 +18,7 @@ void free_map(map m){
 
 // Determines the number of one bits in an integer
 // Which is equivalent to determining the grade of a bitset
-unsigned int grade(unsigned int v){
+size_t grade(size_t v){
     v = v - ((v >> 1) & 0x55555555);                    // reuse input as temporary
     v = (v & 0x33333333) + ((v >> 2) & 0x33333333);     // temp
     return ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24; // count
@@ -33,10 +33,10 @@ void free_grade_map(grade_map m){
 // Determines the position of the bitmap on the corresponding grade
 grade_map bitmap_grade_map(size_t size){
     grade_map m;
-    unsigned int max_grade = grade(size-1);
-    unsigned int *g_pos = (unsigned int*)malloc((max_grade + 1)*sizeof(unsigned int));
-    m.grade = (unsigned int*)malloc(size*sizeof(unsigned int));
-    m.position = (unsigned int*)malloc(size*sizeof(unsigned int));
+    size_t max_grade = grade(size-1);
+    size_t *g_pos = (size_t*)malloc((max_grade + 1)*sizeof(size_t));
+    m.grade = (size_t*)malloc(size*sizeof(size_t));
+    m.position = (size_t*)malloc(size*sizeof(size_t));
     for(size_t i = 0; i <= max_grade; i++)
         g_pos[i] = 0;
 
@@ -53,11 +53,11 @@ grade_map bitmap_grade_map(size_t size){
 map init_map(size_t n){
     map m;
     int **sign = (int**)malloc(n*sizeof(int*));
-    unsigned int **bitmap = (unsigned int**)malloc(n*sizeof(unsigned int*));
+    size_t **bitmap = (size_t**)malloc(n*sizeof(size_t*));
 
     for(size_t i = 0; i < n; i++){
         sign[i] = (int*)malloc(n*sizeof(int));
-        bitmap[i] = (unsigned int*)malloc(n*sizeof(unsigned int));
+        bitmap[i] = (size_t*)malloc(n*sizeof(size_t));
     }
     m.bitmap = bitmap;
     m.sign = sign;
@@ -118,7 +118,7 @@ map cayley_table(size_t p, size_t q, size_t r){
     // determine each basis blade and its grade
     for(size_t i = 0; i < n; i++){
         for(size_t j = 0; j < n; j++){
-            unsigned int bitmap_ij = i ^ j;
+            size_t bitmap_ij = i ^ j;
             m.bitmap[i][j] = bitmap_ij;
         }
     }
@@ -126,7 +126,7 @@ map cayley_table(size_t p, size_t q, size_t r){
     return m;
 }
 
-void sub_algebra(unsigned int k, int **s, int metric){
+void sub_algebra(size_t k, int **s, int metric){
     size_t m = 1 << k; // same as 2^k
     size_t n = m << 1; // same as 2^(k+1)
     int sign;
@@ -154,8 +154,8 @@ void sub_algebra(unsigned int k, int **s, int metric){
     }
 }
 
-unsigned int* get_grade_bool(unsigned int *grades, size_t size, size_t max_grade){
-    unsigned int *g = (unsigned int*)malloc(max_grade*sizeof(unsigned int));
+size_t* get_grade_bool(size_t *grades, size_t size, size_t max_grade){
+    size_t *g = (size_t*)malloc(max_grade*sizeof(size_t));
     if(size == 0){ // if size is 0 project to all grades
         for(size_t i = 0; i < max_grade; i++)
             g[i] = 1;

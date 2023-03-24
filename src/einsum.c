@@ -135,7 +135,7 @@ void free_symbols(symbols s){
     free(s.subscripts);
 }
 
-int main_einsum(
+int main_einsum_t(
     tensor_multivectors tmvs,
     void* extra,
     operator_functions opfs,
@@ -147,12 +147,12 @@ int main_einsum(
         return 0;
 
     tensor_multivectors new_tmvs =
-        append_out_tensor(sp,s.subscripts[s.size_-1],s.size[s.size_-1],tmvs);
+        append_out_tensor_t(sp,s.subscripts[s.size_-1],s.size[s.size_-1],tmvs);
     opfs.init(new_tmvs.data[new_tmvs.size-1],new_tmvs.data_size[new_tmvs.size-1]);
 
     tensor_strides ts = compute_strides(new_tmvs.shapes,s,sp);
 
-    einsum_sum_prods(ts,new_tmvs,opfs,extra);
+    einsum_sum_prods_t(ts,new_tmvs,opfs,extra);
 
     out->data = new_tmvs.data[new_tmvs.size-1];
     out->shapes = new_tmvs.shapes[new_tmvs.size-1];
@@ -170,26 +170,26 @@ int main_einsum(
 }
 
 
-void einsum_sum_prods(
+void einsum_sum_prods_t(
     tensor_strides ts,
     tensor_multivectors tmvs,
     operator_functions opfs,
     void* extra){
 
-    iterator iter = init_iterator(ts,tmvs.data,tmvs.type_size);
+    iterator_t iter = init_iterator_t(ts,tmvs.data,tmvs.type_size);
     do{
-        sum_of_products(tmvs,opfs,extra,iter);
-    }while(general_iterator(iter,0));
+        sum_of_products_t(tmvs,opfs,extra,iter);
+    }while(general_iterator_t(iter,0));
 
     free(iter.index);
     free(iter.depth);
 }
 
-void sum_of_products(
+void sum_of_products_t(
     tensor_multivectors tmvs,
     operator_functions opfs,
     void* extra,
-    iterator iter){
+    iterator_t iter){
 
     size_t n_iter = get_nbr_inner_iters(iter);
     void **sum_mvs = (void*)malloc(n_iter*sizeof(void*));
@@ -209,7 +209,7 @@ void sum_of_products(
         }
         sum_mvs[j] = temp;
         j++;
-    }while(general_iterator(iter,1));
+    }while(general_iterator_t(iter,1));
 
     void *added = opfs.atomic_add(sum_mvs,j,extra); // adds j multivectors
     void *data_ = tmvs.data[tmvs.size-1];
@@ -235,7 +235,7 @@ void free_tensor_strides(tensor_strides ts){
 
 }
 
-tensor_multivectors append_out_tensor(symbol_shape sp, char *symbols, size_t n_symbols, tensor_multivectors tmvs){
+tensor_multivectors append_out_tensor_t(symbol_shape sp, char *symbols, size_t n_symbols, tensor_multivectors tmvs){
    size_t *shape = (size_t*)malloc(n_symbols*sizeof(size_t)); // shape of the output tensor per symbol
 
     for(size_t i = 0; i < sp.size; i++){
@@ -315,8 +315,8 @@ tensor_strides compute_strides(size_t **shapes, symbols sym, symbol_shape sp){
     return ts;
 }
 
-iterator init_iterator(tensor_strides ts, void **data, size_t sizeof_data){
-    iterator iter;
+iterator_t init_iterator_t(tensor_strides ts, void **data, size_t sizeof_data){
+    iterator_t iter;
     iter.ts = ts;
     iter.data = data;
     iter.sizeof_data = sizeof_data;
@@ -333,7 +333,7 @@ iterator init_iterator(tensor_strides ts, void **data, size_t sizeof_data){
     return iter;
 }
 
-int general_iterator(iterator iter, int depth){
+int general_iterator_t(iterator_t iter, int depth){
     tensor_strides ts = iter.ts;
     void **data = iter.data;
     size_t *index = iter.index;
@@ -379,7 +379,7 @@ int general_iterator(iterator iter, int depth){
     return 1; // continue incrementing
 }
 
-size_t get_nbr_inner_iters(iterator iter){
+size_t get_nbr_inner_iters(iterator_t iter){
     size_t n_iter = 1;
     for(size_t k = 0; k < iter.ts.n_symbols; k++)
         if(iter.ts.strides[iter.ts.n_tensors-1][k] == 0)

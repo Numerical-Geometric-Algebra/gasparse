@@ -32,6 +32,89 @@ int is_operator(char c){
     return 0;
 }
 
+
+subscript_shape get_all_subscripts(subscript_struct *sub, size_t **shapes, size_t *shape_size, size_t size){
+    size_t subscripts_size = 0;
+    char *subscripts;
+    subscript_shape sp = {0,NULL,NULL};
+    // check if each tensor subscripts are consistent with each corresponding tensor
+    // if the number of tensors is different from the subscripts
+    if(sub->size_-1 != size)
+        return sp;
+
+    sub->size = (size_t*)malloc(sub->size_*sizeof(size_t));
+
+    // number of subscripts for each tensor must be equal to the number of dimensions
+    for(size_t j = 0; j < sub->size_; j++){
+        sub->size[j] = strlen(sub->subscripts[j]);
+        if(j < size && sub->size[j] != shape_size[j]) // don't compare output
+            return sp;
+    }
+
+    // initialize list of different subscripts
+    for(size_t j = 0; j < size; j++)
+        subscripts_size += sub->size[j];
+    subscripts = (char*)malloc(subscripts_size*sizeof(char));
+    size_t *s_shape = (size_t*)malloc(subscripts_size*sizeof(size_t)); // shape for each subscripts
+    subscripts_size = 0;
+
+    // determine all the different subscripts;
+    for(size_t i = 0; i < size; i++){ // loop over each tensor
+        for(size_t j = 0; j < sub->size[i]; j++){ // loop over each symbol
+            int found = 0;
+            for(size_t k = 0; k < subscripts_size; k++){ // loop over found subscripts
+                if(sub->subscripts[i][j] == subscripts[k]){ // found symbol
+                    found = 1;
+                    if(s_shape[k] != shapes[i][j]) // check if shape is consistent
+                        return sp;
+                }
+            }
+            if(!found){ // if symbol not in the list
+                subscripts[subscripts_size] = sub->subscripts[i][j]; // add subscript to the list
+                s_shape[subscripts_size] = shapes[i][j]; // add subscripts shape to the list
+                subscripts_size++;
+            }
+        }
+    }
+    sp.size = subscripts_size;
+    sp.subscripts = subscripts;
+    sp.shape = s_shape;
+    return sp;
+}
+
+
+int parse_simple_expression(char *expression, size_t size, subscript_struct *sub){
+    sub->size_ = 0;
+    for(size_t i = 0; i < size; i++){
+        if(expression[i] == ',') sub->size_++;
+        else if(expression[i] == '-'){
+            if(i+1  < size){
+                if(expression[i+1] == '>')
+                    sub->size_++;
+                else return -1;
+            }else return -1;
+        }
+    }
+    sub->subscripts = (char**)malloc(sub->size_*sizeof(char*));
+    sub->size = (size_t*)malloc(sub->size_*sizeof(size_t));
+    size_t k = 0;
+    size_t j = 0;
+    char subscript[MAX_SUBSCRIPTS];
+    for(size_t i = 0; i < size; i++){
+        if(expression[i] == ',' || expression[i] == '-'){
+            k++;
+            subscript[j] = '\0';
+            sub->subscripts[k] = (char*)malloc((j+1)*sizeof(char));
+            sub->size[k] = j;
+            strcpy(sub->subscripts[k],subscript);
+            j = 0;
+        }else  subscript[j++] = expression[i];
+        if(expression[i] == '-') i++; // ignore next symbol
+    }
+    return 1;
+}
+
+
 expression_struct *parse_expression(char *expression, size_t size, char **output_subscripts){
     expression_struct *es = (expression_struct*)malloc(sizeof(expression_struct));
     init_expression_struct(es);
