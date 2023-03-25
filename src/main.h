@@ -2,7 +2,7 @@
 #define MAIN_H_
 #include "cayley.h"
 #include "sparse.h"
-#include "grade_sparse.h"
+#include "blades.h"
 #include "dense.h"
 /* #include "einsum.h" */
 #include "parser.h"

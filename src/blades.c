@@ -1,4 +1,4 @@
-#include "grade_sparse.h"
+#include "blades.h"
 
 
 // projects multivector to each specified grade
