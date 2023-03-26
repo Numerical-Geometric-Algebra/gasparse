@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 typedef struct map{
-    int **sign;
+    char **sign;
     size_t **bitmap;
     size_t size;
 }map;
@@ -41,7 +41,7 @@ int comp_abs_eq(int,int);
 map cayley_table(size_t,size_t,size_t);
 map inner_cayley_table(map,grade_map);
 map outer_cayley_table(map,grade_map);
-void sub_algebra(size_t,int**,int);
+void sub_algebra(size_t,char**,int);
 void free_map(map);
 map init_map(size_t);
 size_t grade(size_t);

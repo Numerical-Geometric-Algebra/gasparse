@@ -19,9 +19,10 @@ void free_map(map m){
 // Determines the number of one bits in an integer
 // Which is equivalent to determining the grade of a bitset
 size_t grade(size_t v){
-    v = v - ((v >> 1) & 0x55555555);                    // reuse input as temporary
-    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);     // temp
-    return ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24; // count
+    size_t c = 0; // c accumulates the total bits set in v
+    for (c = 0; v; c++)
+        v &= v - 1; // clear the least significant bit set
+    return c;
 }
 
 void free_grade_map(grade_map m){
@@ -52,11 +53,11 @@ grade_map bitmap_grade_map(size_t size){
 
 map init_map(size_t n){
     map m;
-    int **sign = (int**)malloc(n*sizeof(int*));
+    char **sign = (char**)malloc(n*sizeof(char*));
     size_t **bitmap = (size_t**)malloc(n*sizeof(size_t*));
 
     for(size_t i = 0; i < n; i++){
-        sign[i] = (int*)malloc(n*sizeof(int));
+        sign[i] = (char*)malloc(n*sizeof(char));
         bitmap[i] = (size_t*)malloc(n*sizeof(size_t));
     }
     m.bitmap = bitmap;
@@ -126,7 +127,7 @@ map cayley_table(size_t p, size_t q, size_t r){
     return m;
 }
 
-void sub_algebra(size_t k, int **s, int metric){
+void sub_algebra(size_t k, char **s, int metric){
     size_t m = 1 << k; // same as 2^k
     size_t n = m << 1; // same as 2^(k+1)
     int sign;

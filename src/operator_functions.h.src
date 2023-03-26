@@ -1,6 +1,9 @@
 #ifndef OPERATOR_FUNCTIONS_H_
 #define OPERATOR_FUNCTIONS_H_
 
+{% for data_type in data_type_list %}
+#include "{{data_type}}.h"
+{% endfor %}
 #include "cayley.h"
 
 operator_functions opfs[{{n_data_types}}] =

@@ -26,7 +26,7 @@ void test_parser_expression(void){
 
     /* char expression[100] = "d[ij]=a[ik]b[kl]c[lj]a[ik]"; */
     /* char expression[100] = "d[m]=<a[ik]b[kl]c[lj]>[m]"; */
-    char expression[100] = "d[ik]=a[ik]|b[ik]";
+    char expression[100] = "d=a[ik]b[ik]";
     printf("expression: %s\n\n",expression);
     tensor_multivectors tmvs;
     blades_extra extra;
@@ -153,18 +153,18 @@ blades **sparse_to_graded_tensors(sparse **data, size_t *data_size, size_t size,
 
 
 void gen_input_tensors(tensor_multivectors *tmvs, blades_extra *extra){
-    unsigned int p = 5, q = 0, r = 0;
+    unsigned int p = 4, q = 4, r = 1;
     float precision = 1e-12;
     size_t dim = 2;
     /* size_t shape0[] = {3,2}; */
     /* size_t shape1[] = {2,3}; */
     /* size_t shape2[] = {3,3}; */
-    size_t shape0[] = {1,1};
-    size_t shape1[] = {1,1};
+    size_t shape0[] = {2,2};
+    size_t shape1[] = {2,2};
     /* size_t shape2[] = {1,1}; */
 
     size_t tensor_size = 2;
-    size_t sparse_size = 1;
+    size_t sparse_size = 20;
     size_t **shapes = (size_t**)malloc(tensor_size*sizeof(size_t*));
     size_t *data_size = (size_t*)malloc(tensor_size*sizeof(size_t));
     size_t *shape_size__ = (size_t*)malloc(tensor_size*sizeof(size_t));
