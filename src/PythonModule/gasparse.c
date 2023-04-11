@@ -216,7 +216,6 @@ static void geometric_algebra_dealloc(PyGeometricAlgebraObject *self){
     for(Py_ssize_t i = ProductTypeMIN + 1; i < ProductTypeMAX; i++)
         map_dealloc(&self->product[i]);
 
-    if(self->dgm.grade) PyMem_RawFree(self->dgm.grade), self->dgm.grade = NULL;
     if(self->gm.grade) PyMem_RawFree(self->gm.grade),self->gm.grade = NULL;
     if(self->gm.position) PyMem_RawFree(self->gm.position), self->gm.position = NULL;
     if(self->gm.grade_size) PyMem_RawFree(self->gm.grade_size), self->gm.grade_size = NULL;
@@ -230,9 +229,6 @@ static PyObject *geometric_algebra_new(PyTypeObject *type, PyObject *args, PyObj
     self = (PyGeometricAlgebraObject*)type->tp_alloc(type,0);
     if(self){
         self->p = 0, self->q = 0, self->r = 0;
-        self->dgm.max_grade = -1;
-        self->dgm.grade_size = -1;
-        self->dgm.grade = NULL;
         self->gm.grade = NULL;
         self->gm.position = NULL;
         self->gm.grade_size = NULL;
@@ -248,10 +244,10 @@ static PyObject *geometric_algebra_new(PyTypeObject *type, PyObject *args, PyObj
 
 
 static int geometric_algebra_init(PyGeometricAlgebraObject *self, PyObject *args, PyObject *kwds){
-    static char *kwlist[] = {"p","q","r","metric","print_type",NULL};
-    int p = 0, q = 0, r = 0; PrintType print_type = -1;
+    static char *kwlist[] = {"p","q","r","metric","print_type","print_type_mv",NULL};
+    int p = 0, q = 0, r = 0; PrintType print_type = PrintTypeMIN; PrintTypeMV print_type_mv = PrintTypeMVMIN;
     PyObject *metric_obj = NULL;
-    if(!PyArg_ParseTupleAndKeywords(args, kwds, "|iiiOi", kwlist, &p, &q, &r, &metric_obj, &print_type))
+    if(!PyArg_ParseTupleAndKeywords(args, kwds, "|iiiOii", kwlist, &p, &q, &r, &metric_obj, &print_type, &print_type_mv))
         return -1;
     if(!metric_obj){
         if(p < 0 || q < 0 || r < 0)
@@ -304,13 +300,21 @@ static int geometric_algebra_init(PyGeometricAlgebraObject *self, PyObject *args
     grade_map_init(&self->gm,self->product[ProductType_geometric].size);
     inner_map_init(self);
     outer_map_init(self);
+
     inverted_map_init(&self->product[ProductType_inverted],&self->product[ProductType_geometric]);
     // can also compute the inverse map of the other products...
     self->p = p; self->q = q; self->r = r; self->precision = 1e-6;
-    if(print_type >= PrintTypeMAX || print_type <= PrintTypeMIN)
-        self->print_type = PrintType_metric_array;
-    else
+
+    // set ga print type
+    self->print_type = PrintType_metric_array;
+    if(print_type < PrintTypeMAX && print_type > PrintTypeMIN)
         self->print_type = print_type;
+
+    // set multivector print type
+    self->print_type_mv = PrintTypeMV_reduced;
+    if(print_type_mv < PrintTypeMVMAX && print_type_mv > PrintTypeMVMIN)
+        self->print_type_mv = print_type_mv;
+
     return 0;
 }
 
@@ -388,7 +392,6 @@ static PyObject *geometric_algebra_add_basis(PyGeometricAlgebraObject *self, PyO
     for(Py_ssize_t i = ProductType_geometric + 1; i < ProductTypeMAX; i++)
         map_dealloc(&self->product[i]);
 
-    if(self->dgm.grade) PyMem_RawFree(self->dgm.grade);
     if(self->gm.grade) PyMem_RawFree(self->gm.grade);
     if(self->gm.position) PyMem_RawFree(self->gm.position);
     if(self->gm.grade_size) PyMem_RawFree(self->gm.grade_size);
@@ -497,22 +500,39 @@ static int parse_list_as_bitmaps(PyObject *blades, int **bitmap){
 }
 
 static PyNumberMethods PyMultivectorNumberMethods = {
-    .nb_multiply = (binaryfunc) multivector_geometric_product
+    .nb_multiply = (binaryfunc) multivector_geometric_product,
+    .nb_xor = (binaryfunc) multivector_outer_product,
+    .nb_or = (binaryfunc) multivector_inner_product,
+    .nb_add = (binaryfunc) multivector_add,
+    .nb_subtract = (binaryfunc) multivector_subtract,
+    .nb_invert = (unaryfunc) multivector_invert
+};
+
+PyDoc_STRVAR(add_doc, "adds a bunch of multivectors.");
+PyDoc_STRVAR(product_doc, "multiplies a bunch of multivectors.");
+
+PyMethodDef multivector_methods[] = {
+    {"add", (PyCFunction) multivector_atomic_add, METH_VARARGS|METH_CLASS, add_doc},
+    {"geometric_product", (PyCFunction) multivector_atomic_geometric_product, METH_VARARGS|METH_CLASS, product_doc},
+    {"outer_product", (PyCFunction) multivector_atomic_outer_product, METH_VARARGS|METH_CLASS, product_doc},
+    {NULL},
 };
 
 
 static PyTypeObject PyMultivectorType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "gasparse.multivector",
-    .tp_doc= PyDoc_STR("Builds a multivector in different types (sparse,dense,blades)"),
+    .tp_doc = PyDoc_STR("Builds a multivector in different types (sparse,dense,blades)"),
     .tp_basicsize = sizeof(PyMultivectorObject),
     .tp_itemsize = 0,
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
     .tp_dealloc = (destructor) multivector_dealloc,
     .tp_repr = (reprfunc) multivector_repr,
     .tp_str = (reprfunc) multivector_repr,
+    .tp_call = (ternaryfunc) multivector_grade_project,
     .tp_new = NULL,
-    .tp_as_number = &PyMultivectorNumberMethods
+    .tp_as_number = &PyMultivectorNumberMethods,
+    .tp_methods = multivector_methods
 };
 
 
@@ -537,12 +557,15 @@ static PyObject *geometric_algebra_multivector(PyGeometricAlgebraObject *self, P
     values_float = (float*)PyMem_RawMalloc(size*sizeof(float));
     for(Py_ssize_t i = 0; i < size; i++){
         PyObject *value_i = PyList_GetItem(values,i);
-        if(!PyFloat_Check(value_i)){
+        if(PyFloat_Check(value_i))
+            values_float[i] = (float)PyFloat_AsDouble(value_i);
+        else if(PyLong_Check(value_i))
+            values_float[i] = (float)PyLong_AsLong(value_i);
+        else{
             PyErr_SetString(PyExc_TypeError,"Elements of the list of values must be float");
             PyMem_RawFree(values_float);
             return NULL;
         }
-        values_float[i] = (float)PyFloat_AsDouble(value_i);
     }
 
     if(blades){
@@ -553,8 +576,8 @@ static PyObject *geometric_algebra_multivector(PyGeometricAlgebraObject *self, P
         }
     }
 
-    if(dtype && !PyByteArray_Check(dtype)){
-        char *dtype_str = PyByteArray_AsString(dtype);
+    if(dtype && PyUnicode_Check(dtype)){
+        const char *dtype_str = PyUnicode_AsUTF8(dtype);
         if(!strcmp(dtype_str,"sparse")){
             type = MultivectorType_sparse;
         }else if(!strcmp(dtype_str,"dense")){
@@ -575,8 +598,6 @@ static PyObject *geometric_algebra_multivector(PyGeometricAlgebraObject *self, P
     PyMem_RawFree(bitmaps_int);
     return out;
 }
-
-
 
 
 static PyMethodDef geometric_algebra_methods[] = {
@@ -641,134 +662,3 @@ PyMODINIT_FUNC PyInit_gasparse(void){
 
     return m;
 }
-
-
-
-/*
-static int ga_array_iterator(PyGaArrayIterator iter, int depth){
-    PyArrayStrides ts = iter.strides_s;
-    void **data = iter.data;
-    size_t *index = iter.index;
-    int k = -1;
-    while(k < (int)(ts.n_symbols - 1) && iter.depth[++k] != depth); // find first symbol
-    if(iter.depth[k] == depth)
-        index[k]++;
-    else // no symbols at this depth
-        return 0; // don't iterate
-
-    if(index[k] < ts.n_strides[k]){ // first symbol not overflown
-        for(size_t j = 0; j < ts.n_tensors; j++) // loop over tensors
-            data[j] += ts.strides[j][k]*iter.sizeof_data;
-        return 1;  // continue incrementing
-    }
-
-    size_t i = k;
-    while(i < ts.n_symbols){ // loop over all symbols
-        if(index[i] >= ts.n_strides[i]){ // symbol i overflown
-            // go to the beggining
-            for(size_t j = 0; j < ts.n_tensors; j++) // loop over tensors
-                data[j] -= (ts.n_strides[i]-1)*ts.strides[j][i]*iter.sizeof_data;
-            index[i] = 0; // reset symbol i
-            if(i == ts.n_symbols-1) // this is the last symbol
-                return 0;
-            i++;
-            while(i < ts.n_symbols && iter.depth[i++] != depth); // find next symbol
-            if(i >= ts.n_symbols)// no more symbols, found the last one
-                if(iter.depth[i-1] != depth)
-                    return 0; // stop incrementing
-            index[--i]++; // increment next symbol
-            if(index[i] < ts.n_strides[i]){ // symbol i not overflown
-                for(size_t j = 0; j < ts.n_tensors; j++) // loop over tensors
-                    data[j] += ts.strides[j][i]*iter.sizeof_data;
-                return 1; // continue incrementing
-            }
-        }else{ // no more symbols to increment
-            return 1; // continue incrementing
-        }
-    }
-    return 1; // continue incrementing
-}
-
-
-static PyArrayIterator init_iterator(PyArrayStrides ts, void **data, size_t sizeof_data){
-    iterator_t iter;
-    iter.ts = ts;
-    iter.data = data;
-    iter.sizeof_data = sizeof_data;
-    iter.index = (Py_ssize_t*)PyMem_RawMalloc(ts.n_symbols*sizeof(size_t));
-    iter.depth = (int*)PyMem_RawMalloc(ts.n_symbols*sizeof(int));
-    for(Py_ssize_t k = 0; k < ts.n_symbols; k++){ // loop over each symbol
-        iter.index[k] = 0;
-        iter.depth[k] = 0;
-    }
-
-    return iter;
-}
-*/
-
-/*
-static PyObject *geometric_algebra_array(PyGeometricAlgebraObject *self, PyObject *args, PyObject *kwds){
-    static char *kwlist[] = {"values","blades",NULL};
-    // float **values = NULL; char ***blades = NULL;
-    PyObject *values_list = NULL, *blades_list = NULL;
-    Py_ssize_t shape[MAX_SHAPE_SIZE];
-    Py_ssize_t strides[MAX_SHAPE_SIZE];
-    Py_ssize_t data_size = 1;
-    void *data;
-
-    if(!PyArg_ParseTupleAndKeywords(args, kwds, "|OO", kwlist, &values_list, &blades_list))
-        return NULL;
-
-    if(!values_list)
-        return NULL;
-    if(!PyList_Check(values_list)){
-        PyErr_SetString(PyExc_TypeError,"values must be a list");
-        return NULL;
-    }
-    if(!blades_list && !PyList_Check(blades_list)){
-        PyErr_SetString(PyExc_TypeError,"blades must be a list");
-        return NULL;
-    }
-
-    Py_ssize_t size = PyList_Size(values_list);
-    if(!blades_list && PyList_Size(blades_list) != size){
-        PyErr_SetString(PyExc_TypeError,"blades must be of the same size as values");
-        return NULL;
-    }
-    if(blades_list){
-        Py_ssize_t shape_size = 0;
-        strides[0] = 1;
-        PyObject *sublist = values_list;
-        while(PyListCheck(sublist)){
-            shape[shape_size] = PyList_Size(sublist);
-            strides[shape_size + 1] = shape[shape_size]*strides[shape_size]
-            data_size *=  shape[shape_size];
-            sublist = PyListGetItem(sublist,0);
-            shape_size++;
-        }
-        data = (void*)PyMem_RawMalloc(data_size*sizeof(void));
-        PyArrayStrides ts;
-        ts.strides = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
-        *ts.strides = strides;
-        ts.n_strides = shape;
-        ts.n_tensors = 1;
-        ts.n_symbols = shape_size;
-
-        PyArrayIterator iter =  init_iterator(ts,&data,sizeof(PyBladesObject));
-        do{
-            PyObject *sublist = values_list;
-            for(Py_ssize_t i = 0; i < ts.n_symbols; i++){
-                if(ts.index[i] < PyList_Size(sublist))
-                    sublist = PyListGetItem(sublist,index[i]);
-                else{
-                    PyErr_SetString(PyExc_TypeError,"size of sublists are not consistent");
-                    return NULL;
-                }
-            }
-            PyBladesObject blades = parse_list_as_blades(sublist,blades_list);
-
-        }while(ga_array_iterator(iter));
-
-    }
-}
-*/
