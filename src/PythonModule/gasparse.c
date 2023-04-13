@@ -1,4 +1,3 @@
-/* #include "gasparse.h" */
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include "structmember.h"
@@ -541,7 +540,7 @@ static PyObject *geometric_algebra_multivector(PyGeometricAlgebraObject *self, P
     PyObject *values = NULL, *blades = NULL, *dtype = NULL, *addmethod = NULL, *out = NULL;
     int precision;
     int *bitmaps_int = NULL;
-    float *values_float;
+    ga_float *values_float;
     Py_ssize_t size;
     MultivectorType type = MultivectorType_sparse; // default type
 
@@ -554,15 +553,15 @@ static PyObject *geometric_algebra_multivector(PyGeometricAlgebraObject *self, P
         return NULL;
     }
     size = PyList_Size(values);
-    values_float = (float*)PyMem_RawMalloc(size*sizeof(float));
+    values_float = (ga_float*)PyMem_RawMalloc(size*sizeof(ga_float));
     for(Py_ssize_t i = 0; i < size; i++){
         PyObject *value_i = PyList_GetItem(values,i);
         if(PyFloat_Check(value_i))
-            values_float[i] = (float)PyFloat_AsDouble(value_i);
+            values_float[i] = (ga_float)PyFloat_AsDouble(value_i);
         else if(PyLong_Check(value_i))
-            values_float[i] = (float)PyLong_AsLong(value_i);
+            values_float[i] = (ga_float)PyLong_AsLong(value_i);
         else{
-            PyErr_SetString(PyExc_TypeError,"Elements of the list of values must be float");
+            PyErr_SetString(PyExc_TypeError,"Elements of the list of values must be ga_float");
             PyMem_RawFree(values_float);
             return NULL;
         }
