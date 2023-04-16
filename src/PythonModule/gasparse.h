@@ -6,7 +6,7 @@
 #define Is_NonZero(s) (s <= '9' && s >= '1')
 #define MAX_SHAPE_SIZE 10
 
-typedef enum {MultivectorTypeMIN=-1,MultivectorType_sparse,MultivectorType_dense,MultivectorType_blades,MultivectorType_scalar,MultivectorTypeMAX} MultivectorType;
+typedef enum {MultivectorTypeMIN=-1,MultivectorType_sparse,MultivectorType_dense,MultivectorType_blades,MultivectorTypeMAX} MultivectorType;
 typedef enum {PrintTypeMIN=-1,PrintType_metric_array,PrintType_metric,PrintType_vectors,PrintTypeMAX} PrintType;
 typedef enum {ProductTypeMIN=-1,ProductType_geometric,ProductType_inner,ProductType_outer,ProductType_regressive,ProductType_inverted,ProductTypeMAX} ProductType;
 typedef enum {PrintTypeMVMIN=-1,PrintTypeMV_reduced,PrintTypeMV_normal,PrintTypeMVMAX} PrintTypeMV;
@@ -60,25 +60,33 @@ typedef struct _PyMultivectorObject PyMultivectorObject;
 typedef PyMultivectorObject *(*gabinaryfunc)(PyMultivectorObject *left, PyMultivectorObject *right);
 typedef PyMultivectorObject *(*gaaddfunc)(PyMultivectorObject *left, PyMultivectorObject *right, int sign);
 typedef PyMultivectorObject *(*gaunarygradefunc)(PyMultivectorObject *self, int *grades, Py_ssize_t size);
-typedef PyMultivectorObject *(*gaproductfunc)(PyMultivectorObject *left,PyMultivectorObject *right, ProductType ptype);
+typedef PyMultivectorObject *(*gaprodfunc)(PyMultivectorObject *left,PyMultivectorObject *right, ProductType ptype);
+typedef PyMultivectorObject *(*gaternaryprodfunc)(PyMultivectorObject *data0,PyMultivectorObject *data1, PyMultivectorObject *data2, ProductType ptype);
 typedef PyMultivectorObject *(*gaunaryfunc)(PyMultivectorObject *self);
 typedef PyMultivectorObject *(*gaatomicfunc)(PyMultivectorObject *data, Py_ssize_t size);
 typedef PyMultivectorObject *(*gaatomicprodfunc)(PyMultivectorObject *data, Py_ssize_t size,ProductType ptype);
 typedef PyMultivectorObject *(*gacastfunc)(PyMultivectorObject *self);
 typedef PyMultivectorObject *(*gabinarygradefunc)(PyMultivectorObject *left, PyMultivectorObject *right, GradeMap grades);
+typedef PyMultivectorObject *(*gascalarfunc)(PyMultivectorObject *self, ga_float value);
+typedef PyMultivectorObject *(*gascalaraddfunc)(PyMultivectorObject *self, ga_float value, int sign);
 
-typedef void *(*gainitfunc)(int *bitmap, ga_float *value, Py_ssize_t size, GradeMap gm, Py_ssize_t algebra_size);
+typedef void *(*gainitfunc)(int *bitmap, ga_float *value, Py_ssize_t size, PyGeometricAlgebraObject *ga);
 typedef void (*gafreefunc)(void *data);
 typedef PyObject *(*gareprfunc)(void *data, PrintTypeMV ptype);
 
 typedef struct PyMultivectorMath_Funcs{
     gaatomicfunc atomic_add[MultivectorTypeMAX];
     gaatomicprodfunc atomic_product[MultivectorTypeMAX];
-    gaaddfunc add[MultivectorTypeMAX][MultivectorTypeMAX];
-    gaproductfunc product[MultivectorTypeMAX][MultivectorTypeMAX];
-    gabinarygradefunc graded_product[MultivectorTypeMAX][MultivectorTypeMAX];
+    gaaddfunc add[MultivectorTypeMAX];
+    gaprodfunc product[MultivectorTypeMAX];
+    gabinarygradefunc graded_product[MultivectorTypeMAX];
     gaunarygradefunc grade_project[MultivectorTypeMAX];
+    gascalarfunc scalar_product[MultivectorTypeMAX];
+    gascalaraddfunc scalar_add[MultivectorTypeMAX];
     gaunaryfunc reverse[MultivectorTypeMAX];
+    gaternaryprodfunc ternary_product[MultivectorTypeMAX];
+    gaaddfunc mixed_add;
+    gaprodfunc mixed_product;
     gaatomicfunc mixed_atomic_add;
     gaatomicprodfunc mixed_atomic_product;
 }PyMultivectorMath_Funcs;
@@ -172,6 +180,8 @@ PyObject *multivector_inner_product(PyObject *left, PyObject *right);
 PyObject *multivector_outer_product(PyObject *left, PyObject *right);
 PyObject *multivector_add(PyObject *left, PyObject *right);
 PyObject *multivector_subtract(PyObject *left, PyObject *right);
+PyObject *multivector_negative(PyMultivectorObject *self);
+PyObject *multivector_positive(PyMultivectorObject *self);
 // tp_methods
 PyObject* multivector_atomic_add(PyObject *self, PyObject *args);
 PyObject* multivector_atomic_geometric_product(PyObject *self, PyObject *args);

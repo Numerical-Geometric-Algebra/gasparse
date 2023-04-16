@@ -504,7 +504,10 @@ static PyNumberMethods PyMultivectorNumberMethods = {
     .nb_or = (binaryfunc) multivector_inner_product,
     .nb_add = (binaryfunc) multivector_add,
     .nb_subtract = (binaryfunc) multivector_subtract,
-    .nb_invert = (unaryfunc) multivector_invert
+    .nb_invert = (unaryfunc) multivector_invert,
+    .nb_negative = (unaryfunc) multivector_negative,
+    .nb_positive = (unaryfunc) multivector_positive,
+
 };
 
 PyDoc_STRVAR(add_doc, "adds a bunch of multivectors.");
@@ -583,8 +586,6 @@ static PyObject *geometric_algebra_multivector(PyGeometricAlgebraObject *self, P
             type = MultivectorType_dense;
         }else if(!strcmp(dtype_str,"blades")){
             type = MultivectorType_blades;
-        }else if(!strcmp(dtype_str,"scalar")){
-            type = MultivectorType_scalar;
         }else {
             // raise warning saying the default type
         }
