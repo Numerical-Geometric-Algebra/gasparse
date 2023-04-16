@@ -4,6 +4,7 @@
 
 #define Metric_SIZE(s) (s->p + s->q + s->r)
 #define Is_NonZero(s) (s <= '9' && s >= '1')
+#define GRADE(value) (__builtin_popcountll(value))
 #define MAX_SHAPE_SIZE 10
 
 typedef enum {MultivectorTypeMIN=-1,MultivectorType_sparse,MultivectorType_dense,MultivectorType_blades,MultivectorTypeMAX} MultivectorType;

@@ -10,5 +10,5 @@ text_op_funcs_c = template_c.render()
 
 
 # to save the results
-with open("multivector_test.c", "w") as fh:
+with open("multivector.c", "w") as fh:
     fh.write(text_op_funcs_c)

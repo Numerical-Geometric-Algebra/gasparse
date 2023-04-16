@@ -271,7 +271,7 @@ static int sparse_iter_next(PyMultivectorIter *iter){
     }
     iter->bitmap = sparse->bitmap[*iter->index];
     iter->value = sparse->value[(*iter->index)++];
-    iter->grade = grade(iter->bitmap);
+    iter->grade = GRADE(iter->bitmap);
     return 1;
 }
 
@@ -283,7 +283,7 @@ static int dense_iter_next(PyMultivectorIter *iter){
     }
     iter->bitmap = *iter->index;
     iter->value = dense->value[(*iter->index)++];
-    iter->grade = grade(iter->bitmap);
+    iter->grade = GRADE(iter->bitmap);
     return 1;
 }
 
@@ -373,7 +373,7 @@ static PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ss
 
 
 static char *bitmap_to_string(int bitmap){
-    Py_ssize_t size = grade((Py_ssize_t)bitmap) + 2;
+    Py_ssize_t size = GRADE((Py_ssize_t)bitmap) + 2;
     char *str = (char*)PyMem_RawMalloc(size*sizeof(char));
     unsigned int x = (unsigned int)bitmap;
     str[0] = 'e';
