@@ -498,6 +498,48 @@ static int parse_list_as_bitmaps(PyObject *blades, int **bitmap){
     return size;
 }
 
+static PyObject* geometric_algebra_cayley_table(PyGeometricAlgebraObject *self, PyObject *args){
+    ProductType type = ProductType_geometric;
+    CliffordMap m = self->product[type];
+    Py_ssize_t algebra_size = m.size;
+    PyObject *sign_list = PyList_New(algebra_size);
+    PyObject *bitmap_list = PyList_New(algebra_size);
+    PyObject *tuple = PyTuple_New(2);
+
+    char *type_str = NULL;
+
+    PyArg_ParseTuple(args,"|s",&type_str);
+
+    if(type_str){
+        if(!strcmp("geometric",type_str)){
+            type = ProductType_geometric;
+        }else if(!strcmp("inner",type_str)){
+            type = ProductType_inner;
+        }else if(!strcmp("outer",type_str)){
+            type = ProductType_outer;
+        }
+    }
+    m = self->product[type];
+
+    for(Py_ssize_t i = 0; i < algebra_size; i++){
+        PyObject *bitmap_sublist = PyList_New(algebra_size);
+        PyObject *sign_sublist = PyList_New(algebra_size);
+        for(Py_ssize_t j = 0; j < algebra_size; j++){
+            PyObject *bitmapij = PyLong_FromLong((long)m.bitmap[i][j]);
+            PyObject *signij = PyLong_FromLong((long)m.sign[i][j]);
+            PyList_SetItem(bitmap_sublist,j,bitmapij);
+            PyList_SetItem(sign_sublist,j,signij);
+        }
+        PyList_SetItem(bitmap_list,i,bitmap_sublist);
+        PyList_SetItem(sign_list,i,sign_sublist);
+    }
+
+    PyTuple_SetItem(tuple,0,bitmap_list);
+    PyTuple_SetItem(tuple,1,sign_list);
+    return tuple;
+}
+
+
 static PyNumberMethods PyMultivectorNumberMethods = {
     .nb_multiply = (binaryfunc) multivector_geometric_product,
     .nb_xor = (binaryfunc) multivector_outer_product,
@@ -509,6 +551,7 @@ static PyNumberMethods PyMultivectorNumberMethods = {
     .nb_positive = (unaryfunc) multivector_positive,
 
 };
+
 
 PyDoc_STRVAR(add_doc, "adds a bunch of multivectors.");
 PyDoc_STRVAR(product_doc, "multiplies a bunch of multivectors.");
@@ -601,12 +644,12 @@ static PyObject *geometric_algebra_multivector(PyGeometricAlgebraObject *self, P
 
 
 static PyMethodDef geometric_algebra_methods[] = {
+    {"cayley", (PyCFunction)geometric_algebra_cayley_table, METH_VARARGS,
+     "returns the signs and bitmaps of the cayley table" },
     {"add_basis", (PyCFunction) geometric_algebra_add_basis, METH_VARARGS | METH_KEYWORDS,
-     "adds basis vectors to the algebra"
-    },
+     "adds basis vectors to the algebra" },
     {"multivector",(PyCFunction) geometric_algebra_multivector, METH_VARARGS | METH_KEYWORDS,
-     "generate a multivector"
-    },
+     "generate a multivector" },
     {NULL}  /* Sentinel */
 };
 
