@@ -9,16 +9,16 @@ static int comp_abs_eq(int v,int p){
     return r == p;
 }
 
-
+/*
 // Determines the number of one bits in an integer
 // Which is equivalent to determining the grade of a bitset
-Py_ssize_t grade(Py_ssize_t v){
+Py_ssize_t grade_(Py_ssize_t v){
     Py_ssize_t c = 0; // c accumulates the total bits set in v
     for (c = 0; v; c++)
         v &= v - 1; // clear the least significant bit set
     return c;
 }
-
+*/
 
 static void clifford_sub_algebra(Py_ssize_t k, char **s, int metric){
     Py_ssize_t m = 1 << k; // same as 2^k
@@ -28,7 +28,7 @@ static void clifford_sub_algebra(Py_ssize_t k, char **s, int metric){
     for(Py_ssize_t i = m; i < n; i++){// loop through the new elements
         for(Py_ssize_t j = 0; j < m; j++){// loop through old elements
             // j is indepedent of the new basis vector
-            sign = ((grade(j) & 1) == 0) ? 1 : -1;// return minus one if grade is odd
+            sign = ((GRADE(j) & 1) == 0) ? 1 : -1;// return minus one if grade is odd
             s[i][j] = sign*s[i-m][j];
             s[j][i] = s[j][i-m];
         }
@@ -37,7 +37,7 @@ static void clifford_sub_algebra(Py_ssize_t k, char **s, int metric){
                 // These elements have the new basis vector in common
                 sign = metric;
                 // remove the new basis vector then determine sign
-                sign *= ((grade(j-m) & 1) == 0) ? 1 : -1;
+                sign *= ((GRADE(j-m) & 1) == 0) ? 1 : -1;
                 sign *= s[i-m][j-m];// remove the new vector part
                 s[i][j] = sign;
             }
@@ -147,7 +147,7 @@ static void map_add_basis(CliffordMap *map, char *metric, Py_ssize_t size, Py_ss
 
 static void grade_map_init(GradeMap *m, Py_ssize_t size){
 
-    Py_ssize_t max_grade = grade(size-1);
+    Py_ssize_t max_grade = GRADE(size-1);
     Py_ssize_t *g_pos = (Py_ssize_t*)PyMem_RawMalloc((max_grade + 1)*sizeof(Py_ssize_t));
     m->grade = (Py_ssize_t*)PyMem_RawMalloc(size*sizeof(Py_ssize_t));
     m->position = (Py_ssize_t*)PyMem_RawMalloc(size*sizeof(Py_ssize_t));
@@ -155,7 +155,7 @@ static void grade_map_init(GradeMap *m, Py_ssize_t size){
         g_pos[i] = 0;
 
     for(Py_ssize_t i = 0; i < size; i++){
-        m->grade[i] = grade(i);
+        m->grade[i] = GRADE(i);
         m->position[i] = g_pos[m->grade[i]]++; // assign value then increment
     }
     m->size = size;
@@ -498,14 +498,60 @@ static int parse_list_as_bitmaps(PyObject *blades, int **bitmap){
     return size;
 }
 
+static PyObject* geometric_algebra_cayley_table(PyGeometricAlgebraObject *self, PyObject *args){
+    ProductType type = ProductType_geometric;
+    CliffordMap m = self->product[type];
+    Py_ssize_t algebra_size = m.size;
+    PyObject *sign_list = PyList_New(algebra_size);
+    PyObject *bitmap_list = PyList_New(algebra_size);
+    PyObject *tuple = PyTuple_New(2);
+
+    char *type_str = NULL;
+
+    PyArg_ParseTuple(args,"|s",&type_str);
+
+    if(type_str){
+        if(!strcmp("geometric",type_str)){
+            type = ProductType_geometric;
+        }else if(!strcmp("inner",type_str)){
+            type = ProductType_inner;
+        }else if(!strcmp("outer",type_str)){
+            type = ProductType_outer;
+        }
+    }
+    m = self->product[type];
+
+    for(Py_ssize_t i = 0; i < algebra_size; i++){
+        PyObject *bitmap_sublist = PyList_New(algebra_size);
+        PyObject *sign_sublist = PyList_New(algebra_size);
+        for(Py_ssize_t j = 0; j < algebra_size; j++){
+            PyObject *bitmapij = PyLong_FromLong((long)m.bitmap[i][j]);
+            PyObject *signij = PyLong_FromLong((long)m.sign[i][j]);
+            PyList_SetItem(bitmap_sublist,j,bitmapij);
+            PyList_SetItem(sign_sublist,j,signij);
+        }
+        PyList_SetItem(bitmap_list,i,bitmap_sublist);
+        PyList_SetItem(sign_list,i,sign_sublist);
+    }
+
+    PyTuple_SetItem(tuple,0,bitmap_list);
+    PyTuple_SetItem(tuple,1,sign_list);
+    return tuple;
+}
+
+
 static PyNumberMethods PyMultivectorNumberMethods = {
     .nb_multiply = (binaryfunc) multivector_geometric_product,
     .nb_xor = (binaryfunc) multivector_outer_product,
     .nb_or = (binaryfunc) multivector_inner_product,
     .nb_add = (binaryfunc) multivector_add,
     .nb_subtract = (binaryfunc) multivector_subtract,
-    .nb_invert = (unaryfunc) multivector_invert
+    .nb_invert = (unaryfunc) multivector_invert,
+    .nb_negative = (unaryfunc) multivector_negative,
+    .nb_positive = (unaryfunc) multivector_positive,
+
 };
+
 
 PyDoc_STRVAR(add_doc, "adds a bunch of multivectors.");
 PyDoc_STRVAR(product_doc, "multiplies a bunch of multivectors.");
@@ -583,8 +629,6 @@ static PyObject *geometric_algebra_multivector(PyGeometricAlgebraObject *self, P
             type = MultivectorType_dense;
         }else if(!strcmp(dtype_str,"blades")){
             type = MultivectorType_blades;
-        }else if(!strcmp(dtype_str,"scalar")){
-            type = MultivectorType_scalar;
         }else {
             // raise warning saying the default type
         }
@@ -600,12 +644,12 @@ static PyObject *geometric_algebra_multivector(PyGeometricAlgebraObject *self, P
 
 
 static PyMethodDef geometric_algebra_methods[] = {
+    {"cayley", (PyCFunction)geometric_algebra_cayley_table, METH_VARARGS,
+     "returns the signs and bitmaps of the cayley table" },
     {"add_basis", (PyCFunction) geometric_algebra_add_basis, METH_VARARGS | METH_KEYWORDS,
-     "adds basis vectors to the algebra"
-    },
+     "adds basis vectors to the algebra" },
     {"multivector",(PyCFunction) geometric_algebra_multivector, METH_VARARGS | METH_KEYWORDS,
-     "generate a multivector"
-    },
+     "generate a multivector" },
     {NULL}  /* Sentinel */
 };
 

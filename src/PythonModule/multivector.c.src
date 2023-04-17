@@ -1239,527 +1239,57 @@ static DenseMultivector unary_dense_reverse_(DenseMultivector dense0, PyGeometri
 
 
 
+{% set type_list = ["sparse","blades","dense"] %}
+{% set Type_list = ["Sparse","Blades","Dense"] %}
+{% set args_str_list = ["unary","binary","ternary"] %}
+{% set op_list = ["scalaradd","scalarproduct","add","product","gradeproject","reverse","norm"]%}
+{% set args_index_list = [[0],[0],[1],[1,2],[0],[0],[0]] %}
+{% set OP_args_list = [", ga_float value, int sign",", ga_float value",", int sign",", ProductType type",", int *grades, Py_ssize_t size","",""]%}
+{% set op_args_list = [", value, sign",", value",", sign",", type",", grades, size","",""]%}
 
 
-   
-static PyMultivectorObject *unary_sparse_scalaradd(PyMultivectorObject *data0
-    , ga_float value, int sign){
-    SparseMultivector *sparse_out = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_sparse);
-    SparseMultivector *sparse0 = (SparseMultivector*)data0->data;
+{% for j in range(3)%} {# iterate over types #}
+{% set type = type_list[j] %}
+{% set Type = Type_list[j] %}
+{% for k in range(6) %} {# iterate over operation #}
+{% set OP_args = OP_args_list[k] %}
+{% set op_args = op_args_list[k] %}
+{% set operation = op_list[k] %}
+{% for args_i in args_index_list[k] %} {# iterate over arg size #}
+{% set args_str = args_str_list[args_i] %}
 
-    *sparse_out = unary_sparse_scalaradd_(
-        *sparse0,
-        data0->GA, value, sign);
+static PyMultivectorObject *{{args_str}}_{{type}}_{{operation}}(PyMultivectorObject *data0
+{% for i in range(1,args_i+1) %}
+    , PyMultivectorObject *data{{i}}
+{% endfor %}
+    {{OP_args}}){
+    {{Type}}Multivector *{{type}}_out = ({{Type}}Multivector*)PyMem_RawMalloc(sizeof({{Type}}Multivector));
+    PyMultivectorObject *out = new_multivector(data0,MultivectorType_{{type}});
+{% for i in range(args_i + 1) %}
+    {{Type}}Multivector *{{type}}{{i}} = ({{Type}}Multivector*)data{{i}}->data;
+{% endfor %}
 
-    if(sparse_out->size == -1){
-        PyMem_RawFree(sparse_out);
+    *{{type}}_out = {{args_str}}_{{type}}_{{operation}}_(
+{% for i in range(args_i + 1) %}
+        *{{type}}{{i}},
+{% endfor %}
+        data0->GA{{op_args}});
+
+    if({{type}}_out->size == -1){
+        PyMem_RawFree({{type}}_out);
         free_multivector(out);
         return NULL;
     }
 
-    out->data = sparse_out;
+    out->data = {{type}}_out;
     Py_SET_REFCNT((PyObject*)out->data,1);
     Py_SET_REFCNT((PyObject*)out,1);
     return out;
 }
 
-  
-static PyMultivectorObject *unary_sparse_scalarproduct(PyMultivectorObject *data0
-    , ga_float value){
-    SparseMultivector *sparse_out = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_sparse);
-    SparseMultivector *sparse0 = (SparseMultivector*)data0->data;
-
-    *sparse_out = unary_sparse_scalarproduct_(
-        *sparse0,
-        data0->GA, value);
-
-    if(sparse_out->size == -1){
-        PyMem_RawFree(sparse_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = sparse_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *binary_sparse_add(PyMultivectorObject *data0
-    , PyMultivectorObject *data1
-    , int sign){
-    SparseMultivector *sparse_out = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_sparse);
-    SparseMultivector *sparse0 = (SparseMultivector*)data0->data;
-    SparseMultivector *sparse1 = (SparseMultivector*)data1->data;
-
-    *sparse_out = binary_sparse_add_(
-        *sparse0,
-        *sparse1,
-        data0->GA, sign);
-
-    if(sparse_out->size == -1){
-        PyMem_RawFree(sparse_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = sparse_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *binary_sparse_product(PyMultivectorObject *data0
-    , PyMultivectorObject *data1
-    , ProductType type){
-    SparseMultivector *sparse_out = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_sparse);
-    SparseMultivector *sparse0 = (SparseMultivector*)data0->data;
-    SparseMultivector *sparse1 = (SparseMultivector*)data1->data;
-
-    *sparse_out = binary_sparse_product_(
-        *sparse0,
-        *sparse1,
-        data0->GA, type);
-
-    if(sparse_out->size == -1){
-        PyMem_RawFree(sparse_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = sparse_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
- 
-static PyMultivectorObject *ternary_sparse_product(PyMultivectorObject *data0
-    , PyMultivectorObject *data1
-    , PyMultivectorObject *data2
-    , ProductType type){
-    SparseMultivector *sparse_out = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_sparse);
-    SparseMultivector *sparse0 = (SparseMultivector*)data0->data;
-    SparseMultivector *sparse1 = (SparseMultivector*)data1->data;
-    SparseMultivector *sparse2 = (SparseMultivector*)data2->data;
-
-    *sparse_out = ternary_sparse_product_(
-        *sparse0,
-        *sparse1,
-        *sparse2,
-        data0->GA, type);
-
-    if(sparse_out->size == -1){
-        PyMem_RawFree(sparse_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = sparse_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *unary_sparse_gradeproject(PyMultivectorObject *data0
-    , int *grades, Py_ssize_t size){
-    SparseMultivector *sparse_out = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_sparse);
-    SparseMultivector *sparse0 = (SparseMultivector*)data0->data;
-
-    *sparse_out = unary_sparse_gradeproject_(
-        *sparse0,
-        data0->GA, grades, size);
-
-    if(sparse_out->size == -1){
-        PyMem_RawFree(sparse_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = sparse_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *unary_sparse_reverse(PyMultivectorObject *data0
-    ){
-    SparseMultivector *sparse_out = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_sparse);
-    SparseMultivector *sparse0 = (SparseMultivector*)data0->data;
-
-    *sparse_out = unary_sparse_reverse_(
-        *sparse0,
-        data0->GA);
-
-    if(sparse_out->size == -1){
-        PyMem_RawFree(sparse_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = sparse_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-   
-static PyMultivectorObject *unary_blades_scalaradd(PyMultivectorObject *data0
-    , ga_float value, int sign){
-    BladesMultivector *blades_out = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_blades);
-    BladesMultivector *blades0 = (BladesMultivector*)data0->data;
-
-    *blades_out = unary_blades_scalaradd_(
-        *blades0,
-        data0->GA, value, sign);
-
-    if(blades_out->size == -1){
-        PyMem_RawFree(blades_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = blades_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *unary_blades_scalarproduct(PyMultivectorObject *data0
-    , ga_float value){
-    BladesMultivector *blades_out = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_blades);
-    BladesMultivector *blades0 = (BladesMultivector*)data0->data;
-
-    *blades_out = unary_blades_scalarproduct_(
-        *blades0,
-        data0->GA, value);
-
-    if(blades_out->size == -1){
-        PyMem_RawFree(blades_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = blades_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *binary_blades_add(PyMultivectorObject *data0
-    , PyMultivectorObject *data1
-    , int sign){
-    BladesMultivector *blades_out = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_blades);
-    BladesMultivector *blades0 = (BladesMultivector*)data0->data;
-    BladesMultivector *blades1 = (BladesMultivector*)data1->data;
-
-    *blades_out = binary_blades_add_(
-        *blades0,
-        *blades1,
-        data0->GA, sign);
-
-    if(blades_out->size == -1){
-        PyMem_RawFree(blades_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = blades_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *binary_blades_product(PyMultivectorObject *data0
-    , PyMultivectorObject *data1
-    , ProductType type){
-    BladesMultivector *blades_out = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_blades);
-    BladesMultivector *blades0 = (BladesMultivector*)data0->data;
-    BladesMultivector *blades1 = (BladesMultivector*)data1->data;
-
-    *blades_out = binary_blades_product_(
-        *blades0,
-        *blades1,
-        data0->GA, type);
-
-    if(blades_out->size == -1){
-        PyMem_RawFree(blades_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = blades_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
- 
-static PyMultivectorObject *ternary_blades_product(PyMultivectorObject *data0
-    , PyMultivectorObject *data1
-    , PyMultivectorObject *data2
-    , ProductType type){
-    BladesMultivector *blades_out = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_blades);
-    BladesMultivector *blades0 = (BladesMultivector*)data0->data;
-    BladesMultivector *blades1 = (BladesMultivector*)data1->data;
-    BladesMultivector *blades2 = (BladesMultivector*)data2->data;
-
-    *blades_out = ternary_blades_product_(
-        *blades0,
-        *blades1,
-        *blades2,
-        data0->GA, type);
-
-    if(blades_out->size == -1){
-        PyMem_RawFree(blades_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = blades_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *unary_blades_gradeproject(PyMultivectorObject *data0
-    , int *grades, Py_ssize_t size){
-    BladesMultivector *blades_out = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_blades);
-    BladesMultivector *blades0 = (BladesMultivector*)data0->data;
-
-    *blades_out = unary_blades_gradeproject_(
-        *blades0,
-        data0->GA, grades, size);
-
-    if(blades_out->size == -1){
-        PyMem_RawFree(blades_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = blades_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *unary_blades_reverse(PyMultivectorObject *data0
-    ){
-    BladesMultivector *blades_out = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_blades);
-    BladesMultivector *blades0 = (BladesMultivector*)data0->data;
-
-    *blades_out = unary_blades_reverse_(
-        *blades0,
-        data0->GA);
-
-    if(blades_out->size == -1){
-        PyMem_RawFree(blades_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = blades_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-   
-static PyMultivectorObject *unary_dense_scalaradd(PyMultivectorObject *data0
-    , ga_float value, int sign){
-    DenseMultivector *dense_out = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_dense);
-    DenseMultivector *dense0 = (DenseMultivector*)data0->data;
-
-    *dense_out = unary_dense_scalaradd_(
-        *dense0,
-        data0->GA, value, sign);
-
-    if(dense_out->size == -1){
-        PyMem_RawFree(dense_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = dense_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *unary_dense_scalarproduct(PyMultivectorObject *data0
-    , ga_float value){
-    DenseMultivector *dense_out = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_dense);
-    DenseMultivector *dense0 = (DenseMultivector*)data0->data;
-
-    *dense_out = unary_dense_scalarproduct_(
-        *dense0,
-        data0->GA, value);
-
-    if(dense_out->size == -1){
-        PyMem_RawFree(dense_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = dense_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *binary_dense_add(PyMultivectorObject *data0
-    , PyMultivectorObject *data1
-    , int sign){
-    DenseMultivector *dense_out = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_dense);
-    DenseMultivector *dense0 = (DenseMultivector*)data0->data;
-    DenseMultivector *dense1 = (DenseMultivector*)data1->data;
-
-    *dense_out = binary_dense_add_(
-        *dense0,
-        *dense1,
-        data0->GA, sign);
-
-    if(dense_out->size == -1){
-        PyMem_RawFree(dense_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = dense_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *binary_dense_product(PyMultivectorObject *data0
-    , PyMultivectorObject *data1
-    , ProductType type){
-    DenseMultivector *dense_out = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_dense);
-    DenseMultivector *dense0 = (DenseMultivector*)data0->data;
-    DenseMultivector *dense1 = (DenseMultivector*)data1->data;
-
-    *dense_out = binary_dense_product_(
-        *dense0,
-        *dense1,
-        data0->GA, type);
-
-    if(dense_out->size == -1){
-        PyMem_RawFree(dense_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = dense_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
- 
-static PyMultivectorObject *ternary_dense_product(PyMultivectorObject *data0
-    , PyMultivectorObject *data1
-    , PyMultivectorObject *data2
-    , ProductType type){
-    DenseMultivector *dense_out = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_dense);
-    DenseMultivector *dense0 = (DenseMultivector*)data0->data;
-    DenseMultivector *dense1 = (DenseMultivector*)data1->data;
-    DenseMultivector *dense2 = (DenseMultivector*)data2->data;
-
-    *dense_out = ternary_dense_product_(
-        *dense0,
-        *dense1,
-        *dense2,
-        data0->GA, type);
-
-    if(dense_out->size == -1){
-        PyMem_RawFree(dense_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = dense_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *unary_dense_gradeproject(PyMultivectorObject *data0
-    , int *grades, Py_ssize_t size){
-    DenseMultivector *dense_out = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_dense);
-    DenseMultivector *dense0 = (DenseMultivector*)data0->data;
-
-    *dense_out = unary_dense_gradeproject_(
-        *dense0,
-        data0->GA, grades, size);
-
-    if(dense_out->size == -1){
-        PyMem_RawFree(dense_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = dense_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
-  
-static PyMultivectorObject *unary_dense_reverse(PyMultivectorObject *data0
-    ){
-    DenseMultivector *dense_out = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_dense);
-    DenseMultivector *dense0 = (DenseMultivector*)data0->data;
-
-    *dense_out = unary_dense_reverse_(
-        *dense0,
-        data0->GA);
-
-    if(dense_out->size == -1){
-        PyMem_RawFree(dense_out);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = dense_out;
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    Py_SET_REFCNT((PyObject*)out,1);
-    return out;
-}
-
+{% endfor %}
+{% endfor %}
+{% endfor %}
 
 static SparseMultivector atomic_sparse_add_(SparseMultivector *data, Py_ssize_t dsize, PyGeometricAlgebraObject *ga){
     SparseMultivector dense = init_sparse_empty(ga->product[ProductType_geometric].size);
@@ -1964,145 +1494,45 @@ static DenseMultivector atomic_dense_product_(DenseMultivector *data, Py_ssize_t
     return temp;
 }
 
+{# generating code for same type atomic operations #}
+{% set type_list = ["sparse","blades","dense"] %}
+{% set Type_list = ["Sparse","Blades","Dense"] %}
+{% set op_list = ["add","product","gradeproject","reverse"] %}
+{% set OP_args_list = ["",", ProductType type",", int *grades, Py_ssize_t size",""] %}
+{% set op_args_list = ["",",type",",*grades,size",""] %}
 
-  static PyMultivectorObject *atomic_sparse_add(PyMultivectorObject *data, Py_ssize_t size){
-    SparseMultivector *sparse = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivector(data,MultivectorType_sparse);
-    SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(size*sizeof(SparseMultivector));
+{% for j in range(3)%} {# iterate over types #}
+{% set type = type_list[j] %}
+{% set Type = Type_list[j] %}
+{% for k in range(2) %} {# iterate over operation #}
+{% set OP_args = OP_args_list[k] %}
+{% set op_args = op_args_list[k] %}
+{% set operation = op_list[k] %}
+static PyMultivectorObject *atomic_{{type}}_{{operation}}(PyMultivectorObject *data, Py_ssize_t size{{OP_args}}){
+    {{Type}}Multivector *{{type}} = ({{Type}}Multivector*)PyMem_RawMalloc(sizeof({{Type}}Multivector));
+    PyMultivectorObject *out = new_multivector(data,MultivectorType_{{type}});
+    {{Type}}Multivector *{{type}}_array = ({{Type}}Multivector*)PyMem_RawMalloc(size*sizeof({{Type}}Multivector));
     for(Py_ssize_t i = 0; i < size; i++)
-        sparse_array[i] = *((SparseMultivector*)data[i].data);
+        {{type}}_array[i] = *(({{Type}}Multivector*)data[i].data);
 
-    *sparse = atomic_sparse_add_(sparse_array,size,data->GA);
+    *{{type}} = atomic_{{type}}_{{operation}}_({{type}}_array,size,data->GA{{op_args}});
 
-    if(sparse->size == -1){
-        PyMem_RawFree(sparse);
-        PyMem_RawFree(sparse_array);
+    if({{type}}->size == -1){
+        PyMem_RawFree({{type}});
+        PyMem_RawFree({{type}}_array);
         free_multivector(out);
         return NULL;
     }
 
-    out->data = sparse;
+    out->data = {{type}};
     Py_SET_REFCNT((PyObject*)out,1);
     Py_SET_REFCNT((PyObject*)out->data,1);
 
-    PyMem_RawFree(sparse_array);
+    PyMem_RawFree({{type}}_array);
     return out;
 }
- static PyMultivectorObject *atomic_sparse_product(PyMultivectorObject *data, Py_ssize_t size, ProductType type){
-    SparseMultivector *sparse = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivector(data,MultivectorType_sparse);
-    SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(size*sizeof(SparseMultivector));
-    for(Py_ssize_t i = 0; i < size; i++)
-        sparse_array[i] = *((SparseMultivector*)data[i].data);
-
-    *sparse = atomic_sparse_product_(sparse_array,size,data->GA,type);
-
-    if(sparse->size == -1){
-        PyMem_RawFree(sparse);
-        PyMem_RawFree(sparse_array);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = sparse;
-    Py_SET_REFCNT((PyObject*)out,1);
-    Py_SET_REFCNT((PyObject*)out->data,1);
-
-    PyMem_RawFree(sparse_array);
-    return out;
-}
-  static PyMultivectorObject *atomic_blades_add(PyMultivectorObject *data, Py_ssize_t size){
-    BladesMultivector *blades = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivector(data,MultivectorType_blades);
-    BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(size*sizeof(BladesMultivector));
-    for(Py_ssize_t i = 0; i < size; i++)
-        blades_array[i] = *((BladesMultivector*)data[i].data);
-
-    *blades = atomic_blades_add_(blades_array,size,data->GA);
-
-    if(blades->size == -1){
-        PyMem_RawFree(blades);
-        PyMem_RawFree(blades_array);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = blades;
-    Py_SET_REFCNT((PyObject*)out,1);
-    Py_SET_REFCNT((PyObject*)out->data,1);
-
-    PyMem_RawFree(blades_array);
-    return out;
-}
- static PyMultivectorObject *atomic_blades_product(PyMultivectorObject *data, Py_ssize_t size, ProductType type){
-    BladesMultivector *blades = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivector(data,MultivectorType_blades);
-    BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(size*sizeof(BladesMultivector));
-    for(Py_ssize_t i = 0; i < size; i++)
-        blades_array[i] = *((BladesMultivector*)data[i].data);
-
-    *blades = atomic_blades_product_(blades_array,size,data->GA,type);
-
-    if(blades->size == -1){
-        PyMem_RawFree(blades);
-        PyMem_RawFree(blades_array);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = blades;
-    Py_SET_REFCNT((PyObject*)out,1);
-    Py_SET_REFCNT((PyObject*)out->data,1);
-
-    PyMem_RawFree(blades_array);
-    return out;
-}
-  static PyMultivectorObject *atomic_dense_add(PyMultivectorObject *data, Py_ssize_t size){
-    DenseMultivector *dense = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
-    PyMultivectorObject *out = new_multivector(data,MultivectorType_dense);
-    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(size*sizeof(DenseMultivector));
-    for(Py_ssize_t i = 0; i < size; i++)
-        dense_array[i] = *((DenseMultivector*)data[i].data);
-
-    *dense = atomic_dense_add_(dense_array,size,data->GA);
-
-    if(dense->size == -1){
-        PyMem_RawFree(dense);
-        PyMem_RawFree(dense_array);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = dense;
-    Py_SET_REFCNT((PyObject*)out,1);
-    Py_SET_REFCNT((PyObject*)out->data,1);
-
-    PyMem_RawFree(dense_array);
-    return out;
-}
- static PyMultivectorObject *atomic_dense_product(PyMultivectorObject *data, Py_ssize_t size, ProductType type){
-    DenseMultivector *dense = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
-    PyMultivectorObject *out = new_multivector(data,MultivectorType_dense);
-    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(size*sizeof(DenseMultivector));
-    for(Py_ssize_t i = 0; i < size; i++)
-        dense_array[i] = *((DenseMultivector*)data[i].data);
-
-    *dense = atomic_dense_product_(dense_array,size,data->GA,type);
-
-    if(dense->size == -1){
-        PyMem_RawFree(dense);
-        PyMem_RawFree(dense_array);
-        free_multivector(out);
-        return NULL;
-    }
-
-    out->data = dense;
-    Py_SET_REFCNT((PyObject*)out,1);
-    Py_SET_REFCNT((PyObject*)out->data,1);
-
-    PyMem_RawFree(dense_array);
-    return out;
-}
+{% endfor %}
+{% endfor %}
 
 
 static SparseMultivector binary_mixed_add_(PyMultivectorIter *iter0, PyMultivectorIter *iter1, PyGeometricAlgebraObject *ga, int sign){
@@ -2161,9 +1591,16 @@ static SparseMultivector binary_mixed_product_(PyMultivectorIter *iter0, PyMulti
 
 
 // mixed type binary operations
+{% set op_list = ["add","product"]%}
+{% set OP_args_list = [", int sign",", ProductType type"]%}
+{% set op_args_list = [",sign",",type"]%}
 
- 
-static PyMultivectorObject *binary_mixed_add(PyMultivectorObject *data0, PyMultivectorObject *data1, int sign){
+{% for k in range(2) %} {# iterate over operation #}
+{% set OP_args = OP_args_list[k] %}
+{% set op_args = op_args_list[k] %}
+{% set operation = op_list[k] %}
+
+static PyMultivectorObject *binary_mixed_{{operation}}(PyMultivectorObject *data0, PyMultivectorObject *data1{{OP_args}}){
     PyMultivectorIter *iter0 = init_multivector_iter(data0,1);
     if(!iter0) return NULL;
     PyMultivectorIter *iter1 = init_multivector_iter(data1,1);
@@ -2185,7 +1622,7 @@ static PyMultivectorObject *binary_mixed_add(PyMultivectorObject *data0, PyMulti
         return NULL;
     }
 
-    *sparse = binary_mixed_add_(iter0,iter1,data0->GA,sign);
+    *sparse = binary_mixed_{{operation}}_(iter0,iter1,data0->GA{{op_args}});
 
     free_multivector_iter(iter0,1);
     free_multivector_iter(iter1,1);
@@ -2201,45 +1638,7 @@ static PyMultivectorObject *binary_mixed_add(PyMultivectorObject *data0, PyMulti
     return out;
 }
 
- 
-static PyMultivectorObject *binary_mixed_product(PyMultivectorObject *data0, PyMultivectorObject *data1, ProductType type){
-    PyMultivectorIter *iter0 = init_multivector_iter(data0,1);
-    if(!iter0) return NULL;
-    PyMultivectorIter *iter1 = init_multivector_iter(data1,1);
-    if(!iter1){
-        free_multivector_iter(iter0,1);
-        return NULL;
-    }
-    SparseMultivector *sparse = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    if(!sparse){
-        free_multivector_iter(iter1,1);
-        free_multivector_iter(iter0,1);
-        return NULL;
-    }
-    PyMultivectorObject *out = new_multivector(data0,MultivectorType_sparse);
-    if(!out){
-        PyMem_RawFree(sparse);
-        free_multivector_iter(iter1,1);
-        free_multivector_iter(iter0,1);
-        return NULL;
-    }
-
-    *sparse = binary_mixed_product_(iter0,iter1,data0->GA,type);
-
-    free_multivector_iter(iter0,1);
-    free_multivector_iter(iter1,1);
-
-    if(sparse->size == -1){
-        PyMem_RawFree(sparse);
-        free_multivector(out);
-        return NULL;
-    }
-    out->data = (void*)sparse;
-    Py_SET_REFCNT((PyObject*)out,1);
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    return out;
-}
-
+{% endfor %}
 
 
 static SparseMultivector atomic_mixed_add_(PyMultivectorIter *iter, Py_ssize_t dsize, PyGeometricAlgebraObject *ga){
@@ -2313,9 +1712,16 @@ static SparseMultivector atomic_mixed_product_(PyMultivectorIter *iter, Py_ssize
 
 
 // atomic mixed type operations
+{% set op_list = ["add","product"]%}
+{% set OP_args_list = ["",", ProductType type"]%}
+{% set op_args_list = ["",",type"]%}
 
- 
-static PyMultivectorObject *atomic_mixed_add(PyMultivectorObject *data, Py_ssize_t size){
+{% for k in range(2) %} {# iterate over operation #}
+{% set OP_args = OP_args_list[k] %}
+{% set op_args = op_args_list[k] %}
+{% set operation = op_list[k] %}
+
+static PyMultivectorObject *atomic_mixed_{{operation}}(PyMultivectorObject *data, Py_ssize_t size{{OP_args}}){
     PyMultivectorIter *iter = init_multivector_iter(data,size);
     if(!iter) return NULL;
     SparseMultivector *sparse = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
@@ -2330,7 +1736,7 @@ static PyMultivectorObject *atomic_mixed_add(PyMultivectorObject *data, Py_ssize
         return NULL;
     }
 
-    *sparse = atomic_mixed_add_(iter,size,data->GA);
+    *sparse = atomic_mixed_{{operation}}_(iter,size,data->GA{{op_args}});
 
     free_multivector_iter(iter,size);
     if(sparse->size == -1){
@@ -2344,74 +1750,25 @@ static PyMultivectorObject *atomic_mixed_add(PyMultivectorObject *data, Py_ssize
     return out;
 }
 
- 
-static PyMultivectorObject *atomic_mixed_product(PyMultivectorObject *data, Py_ssize_t size, ProductType type){
-    PyMultivectorIter *iter = init_multivector_iter(data,size);
-    if(!iter) return NULL;
-    SparseMultivector *sparse = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    if(!sparse){
-        free_multivector_iter(iter,size);
-        return NULL;
-    }
-    PyMultivectorObject *out = new_multivector(data,MultivectorType_sparse);
-    if(!out){
-        free_multivector_iter(iter,size);
-        PyMem_RawFree(sparse);
-        return NULL;
-    }
-
-    *sparse = atomic_mixed_product_(iter,size,data->GA,type);
-
-    free_multivector_iter(iter,size);
-    if(sparse->size == -1){
-        PyMem_RawFree(sparse);
-        free_multivector(out);
-        return NULL;
-    }
-    out->data = (void*)sparse;
-    Py_SET_REFCNT((PyObject*)out,1);
-    Py_SET_REFCNT((PyObject*)out->data,1);
-    return out;
-}
+{% endfor %}
 
 
-
- void sparse_free(void *sparse){
-    if(!sparse)
+{% for j in range(3)%} {# iterate over types #}
+{% set type = type_list[j] %}
+{% set Type = Type_list[j] %}
+void {{type}}_free(void *{{type}}){
+    if(!{{type}})
         return;
-    sparse_free_(*((SparseMultivector*)sparse));
+    {{type}}_free_(*(({{Type}}Multivector*){{type}}));
 }
 
-static void* sparse_init(int *bitmap, ga_float *value, Py_ssize_t size, PyGeometricAlgebraObject *ga){
-    SparseMultivector *sparse = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    *sparse = sparse_init_(bitmap,value,size,ga);
-    return (void*)sparse;
+static void* {{type}}_init(int *bitmap, ga_float *value, Py_ssize_t size, PyGeometricAlgebraObject *ga){
+    {{Type}}Multivector *{{type}} = ({{Type}}Multivector*)PyMem_RawMalloc(sizeof({{Type}}Multivector));
+    *{{type}} = {{type}}_init_(bitmap,value,size,ga);
+    return (void*){{type}};
 }
 
- void blades_free(void *blades){
-    if(!blades)
-        return;
-    blades_free_(*((BladesMultivector*)blades));
-}
-
-static void* blades_init(int *bitmap, ga_float *value, Py_ssize_t size, PyGeometricAlgebraObject *ga){
-    BladesMultivector *blades = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    *blades = blades_init_(bitmap,value,size,ga);
-    return (void*)blades;
-}
-
- void dense_free(void *dense){
-    if(!dense)
-        return;
-    dense_free_(*((DenseMultivector*)dense));
-}
-
-static void* dense_init(int *bitmap, ga_float *value, Py_ssize_t size, PyGeometricAlgebraObject *ga){
-    DenseMultivector *dense = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
-    *dense = dense_init_(bitmap,value,size,ga);
-    return (void*)dense;
-}
-
+{% endfor %}
 
 /*
   Method calls of PyMultivectorType:
