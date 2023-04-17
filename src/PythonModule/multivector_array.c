@@ -1,91 +1,707 @@
 #include "multivector.c"
 
-static SparseMultivector *sparse_array_init_(int **bitmap, ga_float **value, Py_ssize_t *size, Py_ssize_t ssize){
-    SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(ssize*sizeof(SparseMultivector));
-    for(Py_ssize_t i = 0; i < ssize; i++){
-        sparse_array[i] = sparse_init_(bitmap[i],value[i],size[i]);
+static PyMultivectorArrayObject *init_multivector_array_object(PyMultivectorArrayObject *src){
+    PyMultivectorArrayObject *out = (PyMultivectorArrayObject*)PyMem_RawMalloc(sizeof(PyMultivectorArrayObject));
+    out->shapes = (Py_ssize_t*)PyMem_RawMalloc(src->shape_size*sizeof(Py_ssize_t));
+    out->strides = (Py_ssize_t*)PyMem_RawMalloc(src->shape_size*sizeof(Py_ssize_t));
+    out->GA = src->GA;
+    out->math_funcs = src->math_funcs;
+    out->data_funcs = src->data_funcs;
+    out->type = src->type;
+    out->data_size = src->data_size;
+    out->shape_size = src->shape_size;
+    for(Py_ssize_t i = 0; i < src->shape_size; i++){
+        out->shapes[i] = src->shapes[i];
+        out->strides[i] = src->strides[i];
     }
-    return sparse_array;
+    Py_SET_REFCNT((void*)out,1);
+    Py_XINCREF((void*)src->GA);
+    return out;
 }
 
-void *sparse_array_init(int **bitmap, ga_float **value, Py_ssize_t *size, Py_ssize_t ssize, GradeMap gm, Py_ssize_t algebra_size){
-    return (void*)sparse_array_init_(bitmap,value,size,ssize);
+static void free_multivector_array_object(PyMultivectorArrayObject *self){
+    Py_XDECREF((void*)self->GA);
+    PyMem_RawFree(self->shapes);
+    PyMem_RawFree(self->strides);
+    PyMem_RawFree(self);
 }
 
-static BladesMultivector *blades_array_init_(int **bitmap, ga_float **value, Py_ssize_t *size, Py_ssize_t ssize, GradeMap gm){
-    BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(ssize*sizeof(BladesMultivector));
-    for(Py_ssize_t i = 0; i < ssize; i++){
-        blades_array[i] = blades_init_(bitmap[i],value[i],size[i],gm);
-    }
-    return blades_array;
-}
 
-void *blades_array_init(int **bitmap, ga_float **value, Py_ssize_t *size, Py_ssize_t ssize, GradeMap gm, Py_ssize_t algebra_size){
-    return (void*)blades_array_init_(bitmap,value,size,ssize,gm);
-}
 
-static DenseMultivector *dense_array_init_(int **bitmap, ga_float **value, Py_ssize_t *size, Py_ssize_t ssize, Py_ssize_t algebra_size){
-    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(ssize*sizeof(DenseMultivector));
-    for(Py_ssize_t i = 0; i < ssize; i++){
-        dense_array[i] = dense_init_(bitmap[i],value[i],size[i],algebra_size);
-    }
-    return dense_array;
-}
 
-void *dense_array_init(int **bitmap, ga_float **value, Py_ssize_t *size, Py_ssize_t ssize, GradeMap gm, Py_ssize_t algebra_size){
-    return (void*)dense_array_init_(bitmap,value,size,ssize,algebra_size);
-}
 
-static void sparse_array_free_(SparseMultivector *sparse_array, Py_ssize_t size){
-    for(Py_ssize_t i = 0; i < size; i++){
-        sparse_free_(sparse_array[i]);
-    }
-}
+// templated for binary functions do not edit source code
 
-void sparse_array_free(void *sparse_array, Py_ssize_t size){
-    sparse_array_free_((SparseMultivector*)sparse_array,size);
-}
 
-static void blades_array_free_(BladesMultivector *blades_array, Py_ssize_t size){
-    for(Py_ssize_t i = 0; i < size; i++){
-        blades_free_(blades_array[i]);
-    }
-}
 
-void blades_array_free(void *blades_array, Py_ssize_t size){
-    blades_array_free_((BladesMultivector*)blades_array,size);
-}
 
-static void dense_array_free_(DenseMultivector *dense_array, Py_ssize_t size){
-    for(Py_ssize_t i = 0; i < size; i++){
-        dense_free_(dense_array[i]);
-    }
-}
-
-void dense_array_free(void *dense_array, Py_ssize_t size){
-    dense_array_free_((DenseMultivector*)dense_array,size);
-}
-
-static SparseMultivector *sparse_sparse_array_add_(SparseMultivector *left_array, SparseMultivector *right_array, Py_ssize_t size, PyGeometricAlgebraObject ga, int sign){
+static PyMultivectorArrayObject *unary_sparse_array_add(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size, int sign){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
     SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(size*sizeof(SparseMultivector));
-    for(Py_ssize_t i = 0; i < size; i++){
-        sparse_array[i] = sparse_sparse_add_(left_array[i],right_array[i],ga,sign);
+    SparseMultivector *data0_array = (SparseMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        sparse_array[i] = unary_sparse_add_(left_array[i], ga, sign);
+        if(sparse_array[i].size == -1)
+            goto failure;
     }
-    return sparse_array;
+    out_array->data = (void*)sparse_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        sparse_free_(sparse_array[i]);
+    PyMem_RawFree(sparse_array);
+    free_multivector_array_object(out_array);
+    return NULL;
 }
 
-static BladesMultivector *blades_blades_array_add_(BladesMultivector *left_array, BladesMultivector *right_array, Py_ssize_t size, PyGeometricAlgebraObject ga, int sign){
+
+static PyMultivectorArrayObject *binary_sparse_array_add(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    Py_ssize_t size, int sign){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(size*sizeof(SparseMultivector));
+    SparseMultivector *data0_array = (SparseMultivector*)data0->data;
+    SparseMultivector *data1_array = (SparseMultivector*)data1->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        sparse_array[i] = binary_sparse_add_(left_array[i], right_array[i], ga, sign);
+        if(sparse_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)sparse_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        sparse_free_(sparse_array[i]);
+    PyMem_RawFree(sparse_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *ternary_sparse_array_add(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    PyMultivectorArrayObject *data2,
+    Py_ssize_t size, int sign){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(size*sizeof(SparseMultivector));
+    SparseMultivector *data0_array = (SparseMultivector*)data0->data;
+    SparseMultivector *data1_array = (SparseMultivector*)data1->data;
+    SparseMultivector *data2_array = (SparseMultivector*)data2->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        sparse_array[i] = ternary_sparse_add_(left_array[i], ga, sign);
+        if(sparse_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)sparse_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        sparse_free_(sparse_array[i]);
+    PyMem_RawFree(sparse_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *unary_sparse_array_product(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size, ProductType ptype){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(size*sizeof(SparseMultivector));
+    SparseMultivector *data0_array = (SparseMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        sparse_array[i] = unary_sparse_product_(left_array[i], ga, ptype);
+        if(sparse_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)sparse_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        sparse_free_(sparse_array[i]);
+    PyMem_RawFree(sparse_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *binary_sparse_array_product(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    Py_ssize_t size, ProductType ptype){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(size*sizeof(SparseMultivector));
+    SparseMultivector *data0_array = (SparseMultivector*)data0->data;
+    SparseMultivector *data1_array = (SparseMultivector*)data1->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        sparse_array[i] = binary_sparse_product_(left_array[i], right_array[i], ga, ptype);
+        if(sparse_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)sparse_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        sparse_free_(sparse_array[i]);
+    PyMem_RawFree(sparse_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *ternary_sparse_array_product(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    PyMultivectorArrayObject *data2,
+    Py_ssize_t size, ProductType ptype){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(size*sizeof(SparseMultivector));
+    SparseMultivector *data0_array = (SparseMultivector*)data0->data;
+    SparseMultivector *data1_array = (SparseMultivector*)data1->data;
+    SparseMultivector *data2_array = (SparseMultivector*)data2->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        sparse_array[i] = ternary_sparse_product_(left_array[i], ga, ptype);
+        if(sparse_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)sparse_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        sparse_free_(sparse_array[i]);
+    PyMem_RawFree(sparse_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *unary_sparse_array_reverse(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(size*sizeof(SparseMultivector));
+    SparseMultivector *data0_array = (SparseMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        sparse_array[i] = unary_sparse_reverse_(left_array[i], ga);
+        if(sparse_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)sparse_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        sparse_free_(sparse_array[i]);
+    PyMem_RawFree(sparse_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *unary_sparse_array_grade_project(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size, int *grades, Py_ssize_t size){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(size*sizeof(SparseMultivector));
+    SparseMultivector *data0_array = (SparseMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        sparse_array[i] = unary_sparse_grade_project_(left_array[i], ga, grades, size);
+        if(sparse_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)sparse_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        sparse_free_(sparse_array[i]);
+    PyMem_RawFree(sparse_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+static void sparse_array_free(void *array, Py_ssize_t size){
+    SparseMultivector *sparse_array = (SparseMultivector*)array;
+    for(Py_ssize_t i = 0; i < size; i++)
+        sparse_free_(sparse_array[i]);
+}
+
+static void *sparse_array_init(int **bitmap, ga_float **value, Py_ssize_t *size, Py_ssize_t ssize){
+    SparseMultivector *sparse_array = (SparseMultivector*)PyMem_RawMalloc(ssize*sizeof(SparseMultivector));
+    Py_ssize_t i = 0;
+    for(i = 0; i < ssize; i++){
+        sparse_array[i] = sparse_init_(bitmap[i],value[i],size[i]);
+        if(sparse_array[i].size == -1)
+            goto failure;
+    }
+    return (void*)sparse_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        sparse_free_(sparse_array[i]);
+    PyMem_RawFree(sparse_array);
+}
+
+
+static PyMultivectorArrayObject *unary_blades_array_add(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size, int sign){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
     BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(size*sizeof(BladesMultivector));
-    for(Py_ssize_t i = 0; i < size; i++){
-        blades_array[i] = blades_blades_add_(left_array[i],right_array[i],ga,sign);
+    BladesMultivector *data0_array = (BladesMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        blades_array[i] = unary_blades_add_(left_array[i], ga, sign);
+        if(blades_array[i].size == -1)
+            goto failure;
     }
-    return blades_array;
+    out_array->data = (void*)blades_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        blades_free_(blades_array[i]);
+    PyMem_RawFree(blades_array);
+    free_multivector_array_object(out_array);
+    return NULL;
 }
 
-static DenseMultivector *dense_dense_array_add_(DenseMultivector *left_array, DenseMultivector *right_array, Py_ssize_t size, PyGeometricAlgebraObject ga, int sign){
-    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(size*sizeof(DenseMultivector));
-    for(Py_ssize_t i = 0; i < size; i++){
-        dense_array[i] = dense_dense_add_(left_array[i],right_array[i],ga,sign);
+
+static PyMultivectorArrayObject *binary_blades_array_add(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    Py_ssize_t size, int sign){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(size*sizeof(BladesMultivector));
+    BladesMultivector *data0_array = (BladesMultivector*)data0->data;
+    BladesMultivector *data1_array = (BladesMultivector*)data1->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        blades_array[i] = binary_blades_add_(left_array[i], right_array[i], ga, sign);
+        if(blades_array[i].size == -1)
+            goto failure;
     }
-    return dense_array;
+    out_array->data = (void*)blades_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        blades_free_(blades_array[i]);
+    PyMem_RawFree(blades_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *ternary_blades_array_add(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    PyMultivectorArrayObject *data2,
+    Py_ssize_t size, int sign){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(size*sizeof(BladesMultivector));
+    BladesMultivector *data0_array = (BladesMultivector*)data0->data;
+    BladesMultivector *data1_array = (BladesMultivector*)data1->data;
+    BladesMultivector *data2_array = (BladesMultivector*)data2->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        blades_array[i] = ternary_blades_add_(left_array[i], ga, sign);
+        if(blades_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)blades_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        blades_free_(blades_array[i]);
+    PyMem_RawFree(blades_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *unary_blades_array_product(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size, ProductType ptype){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(size*sizeof(BladesMultivector));
+    BladesMultivector *data0_array = (BladesMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        blades_array[i] = unary_blades_product_(left_array[i], ga, ptype);
+        if(blades_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)blades_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        blades_free_(blades_array[i]);
+    PyMem_RawFree(blades_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *binary_blades_array_product(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    Py_ssize_t size, ProductType ptype){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(size*sizeof(BladesMultivector));
+    BladesMultivector *data0_array = (BladesMultivector*)data0->data;
+    BladesMultivector *data1_array = (BladesMultivector*)data1->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        blades_array[i] = binary_blades_product_(left_array[i], right_array[i], ga, ptype);
+        if(blades_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)blades_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        blades_free_(blades_array[i]);
+    PyMem_RawFree(blades_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *ternary_blades_array_product(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    PyMultivectorArrayObject *data2,
+    Py_ssize_t size, ProductType ptype){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(size*sizeof(BladesMultivector));
+    BladesMultivector *data0_array = (BladesMultivector*)data0->data;
+    BladesMultivector *data1_array = (BladesMultivector*)data1->data;
+    BladesMultivector *data2_array = (BladesMultivector*)data2->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        blades_array[i] = ternary_blades_product_(left_array[i], ga, ptype);
+        if(blades_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)blades_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        blades_free_(blades_array[i]);
+    PyMem_RawFree(blades_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *unary_blades_array_reverse(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(size*sizeof(BladesMultivector));
+    BladesMultivector *data0_array = (BladesMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        blades_array[i] = unary_blades_reverse_(left_array[i], ga);
+        if(blades_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)blades_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        blades_free_(blades_array[i]);
+    PyMem_RawFree(blades_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *unary_blades_array_grade_project(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size, int *grades, Py_ssize_t size){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(size*sizeof(BladesMultivector));
+    BladesMultivector *data0_array = (BladesMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        blades_array[i] = unary_blades_grade_project_(left_array[i], ga, grades, size);
+        if(blades_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)blades_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        blades_free_(blades_array[i]);
+    PyMem_RawFree(blades_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+static void blades_array_free(void *array, Py_ssize_t size){
+    BladesMultivector *blades_array = (BladesMultivector*)array;
+    for(Py_ssize_t i = 0; i < size; i++)
+        blades_free_(blades_array[i]);
+}
+
+static void *blades_array_init(int **bitmap, ga_float **value, Py_ssize_t *size, Py_ssize_t ssize){
+    BladesMultivector *blades_array = (BladesMultivector*)PyMem_RawMalloc(ssize*sizeof(BladesMultivector));
+    Py_ssize_t i = 0;
+    for(i = 0; i < ssize; i++){
+        blades_array[i] = blades_init_(bitmap[i],value[i],size[i]);
+        if(blades_array[i].size == -1)
+            goto failure;
+    }
+    return (void*)blades_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        blades_free_(blades_array[i]);
+    PyMem_RawFree(blades_array);
+}
+
+
+static PyMultivectorArrayObject *unary_dense_array_add(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size, int sign){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(size*sizeof(DenseMultivector));
+    DenseMultivector *data0_array = (DenseMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        dense_array[i] = unary_dense_add_(left_array[i], ga, sign);
+        if(dense_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)dense_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        dense_free_(dense_array[i]);
+    PyMem_RawFree(dense_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *binary_dense_array_add(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    Py_ssize_t size, int sign){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(size*sizeof(DenseMultivector));
+    DenseMultivector *data0_array = (DenseMultivector*)data0->data;
+    DenseMultivector *data1_array = (DenseMultivector*)data1->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        dense_array[i] = binary_dense_add_(left_array[i], right_array[i], ga, sign);
+        if(dense_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)dense_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        dense_free_(dense_array[i]);
+    PyMem_RawFree(dense_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *ternary_dense_array_add(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    PyMultivectorArrayObject *data2,
+    Py_ssize_t size, int sign){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(size*sizeof(DenseMultivector));
+    DenseMultivector *data0_array = (DenseMultivector*)data0->data;
+    DenseMultivector *data1_array = (DenseMultivector*)data1->data;
+    DenseMultivector *data2_array = (DenseMultivector*)data2->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        dense_array[i] = ternary_dense_add_(left_array[i], ga, sign);
+        if(dense_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)dense_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        dense_free_(dense_array[i]);
+    PyMem_RawFree(dense_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *unary_dense_array_product(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size, ProductType ptype){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(size*sizeof(DenseMultivector));
+    DenseMultivector *data0_array = (DenseMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        dense_array[i] = unary_dense_product_(left_array[i], ga, ptype);
+        if(dense_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)dense_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        dense_free_(dense_array[i]);
+    PyMem_RawFree(dense_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *binary_dense_array_product(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    Py_ssize_t size, ProductType ptype){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(size*sizeof(DenseMultivector));
+    DenseMultivector *data0_array = (DenseMultivector*)data0->data;
+    DenseMultivector *data1_array = (DenseMultivector*)data1->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        dense_array[i] = binary_dense_product_(left_array[i], right_array[i], ga, ptype);
+        if(dense_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)dense_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        dense_free_(dense_array[i]);
+    PyMem_RawFree(dense_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *ternary_dense_array_product(
+    PyMultivectorArrayObject *data0,
+    PyMultivectorArrayObject *data1,
+    PyMultivectorArrayObject *data2,
+    Py_ssize_t size, ProductType ptype){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(size*sizeof(DenseMultivector));
+    DenseMultivector *data0_array = (DenseMultivector*)data0->data;
+    DenseMultivector *data1_array = (DenseMultivector*)data1->data;
+    DenseMultivector *data2_array = (DenseMultivector*)data2->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        dense_array[i] = ternary_dense_product_(left_array[i], ga, ptype);
+        if(dense_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)dense_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        dense_free_(dense_array[i]);
+    PyMem_RawFree(dense_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *unary_dense_array_reverse(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(size*sizeof(DenseMultivector));
+    DenseMultivector *data0_array = (DenseMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        dense_array[i] = unary_dense_reverse_(left_array[i], ga);
+        if(dense_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)dense_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        dense_free_(dense_array[i]);
+    PyMem_RawFree(dense_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+
+
+static PyMultivectorArrayObject *unary_dense_array_grade_project(
+    PyMultivectorArrayObject *data0,
+    Py_ssize_t size, int *grades, Py_ssize_t size){
+    PyGeometricAlgebraObject *ga = left->GA;
+    PyMultivectorArrayObject *out_array = init_multivector_array_object(left);
+    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(size*sizeof(DenseMultivector));
+    DenseMultivector *data0_array = (DenseMultivector*)data0->data;
+    Py_ssize_t i = 0;
+    for(i = 0; i < size; i++){
+        dense_array[i] = unary_dense_grade_project_(left_array[i], ga, grades, size);
+        if(dense_array[i].size == -1)
+            goto failure;
+    }
+    out_array->data = (void*)dense_array;
+    return out_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        dense_free_(dense_array[i]);
+    PyMem_RawFree(dense_array);
+    free_multivector_array_object(out_array);
+    return NULL;
+}
+static void dense_array_free(void *array, Py_ssize_t size){
+    DenseMultivector *dense_array = (DenseMultivector*)array;
+    for(Py_ssize_t i = 0; i < size; i++)
+        dense_free_(dense_array[i]);
+}
+
+static void *dense_array_init(int **bitmap, ga_float **value, Py_ssize_t *size, Py_ssize_t ssize){
+    DenseMultivector *dense_array = (DenseMultivector*)PyMem_RawMalloc(ssize*sizeof(DenseMultivector));
+    Py_ssize_t i = 0;
+    for(i = 0; i < ssize; i++){
+        dense_array[i] = dense_init_(bitmap[i],value[i],size[i]);
+        if(dense_array[i].size == -1)
+            goto failure;
+    }
+    return (void*)dense_array;
+failure:
+    for(Py_ssize_t j = 0; j < i; j++) // free the other multivectors
+        dense_free_(dense_array[i]);
+    PyMem_RawFree(dense_array);
 }
