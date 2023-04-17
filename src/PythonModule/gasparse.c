@@ -3,22 +3,13 @@
 #include "structmember.h"
 #include "gasparse.h"
 
+
+// replace this with a builtin
 // returns true if abs(v) == p
 static int comp_abs_eq(int v,int p){
     int r = (v < 0) ? -v : v;
     return r == p;
 }
-
-/*
-// Determines the number of one bits in an integer
-// Which is equivalent to determining the grade of a bitset
-Py_ssize_t grade_(Py_ssize_t v){
-    Py_ssize_t c = 0; // c accumulates the total bits set in v
-    for (c = 0; v; c++)
-        v &= v - 1; // clear the least significant bit set
-    return c;
-}
-*/
 
 static void clifford_sub_algebra(Py_ssize_t k, char **s, int metric){
     Py_ssize_t m = 1 << k; // same as 2^k
@@ -51,16 +42,14 @@ static void clifford_sub_algebra(Py_ssize_t k, char **s, int metric){
 static void map_dealloc(CliffordMap *self){
     if(self->sign){
         for(Py_ssize_t i = 0; i < self->size; i++)
-            if(self->sign[i])
-                PyMem_RawFree(self->sign[i]), self->sign[i] = NULL;
+            PyMem_RawFree(self->sign[i]), self->sign[i] = NULL;
         PyMem_RawFree(self->sign);
         self->sign = NULL;
     }
 
     if(self->bitmap){
         for(Py_ssize_t i = 0; i < self->size; i++)
-            if(self->bitmap[i])
-                PyMem_RawFree(self->bitmap[i]), self->bitmap[i] = NULL;
+            PyMem_RawFree(self->bitmap[i]), self->bitmap[i] = NULL;
         PyMem_RawFree(self->bitmap);
         self->bitmap = NULL;
     }
@@ -78,14 +67,27 @@ static void map_alloc(CliffordMap *m, Py_ssize_t nitems){
     }
     sign = (char**)PyMem_RawMalloc(nitems*sizeof(char*));
     bitmap = (Py_ssize_t**)PyMem_RawMalloc(nitems*sizeof(Py_ssize_t*));
-
+    if(!bitmap || !sign){
+        m->size = -1;
+        PyMem_RawFree(sign);
+        PyMem_RawFree(bitmap);
+        PyErr_SetString(PyExc_MemoryError,"Error allocating memory for the map");
+        return;
+    }
+    m->bitmap = bitmap;
+    m->sign = sign;
     for(Py_ssize_t i = 0; i < nitems; i++){
         sign[i] = (char*)PyMem_RawMalloc(nitems*sizeof(char));
         bitmap[i] = (Py_ssize_t*)PyMem_RawMalloc(nitems*sizeof(Py_ssize_t));
+        if(!sign[i] || !bitmap[i]){
+            m->size = i + 1;
+            map_dealloc(m);
+            m->size = -1;
+            PyErr_SetString(PyExc_MemoryError,"Error allocating memory for the sign of the map");
+            return;
+        }
     }
 
-    m->bitmap = bitmap;
-    m->sign = sign;
     m->size = nitems;
 }
 
@@ -96,8 +98,10 @@ static void map_new(CliffordMap *map){
 }
 
 static void map_init(CliffordMap *map, char *metric, Py_ssize_t size){
+    if(size == -1) return;
     Py_ssize_t nitems = 1 << size;
     map_alloc(map,nitems); // alloc memory for the map
+    if(map->size == -1) return;
     map->sign[0][0] = 1;// initialize algebra of scalars
     for(Py_ssize_t i = 0; i < size; i++)
         clifford_sub_algebra(i,map->sign,metric[i]);
@@ -122,9 +126,14 @@ static void copy_map(CliffordMap *dest, CliffordMap *origin){
 
 
 static void map_add_basis(CliffordMap *map, char *metric, Py_ssize_t size, Py_ssize_t beg){
+    if(size == -1) return;
     Py_ssize_t nitems = 1 << size;
     CliffordMap temp;
     map_alloc(&temp,nitems); // alloc memory for the new map
+    if(temp.size == -1) {
+        map->size = -1;
+        return;
+    }
     copy_map(&temp,map); // copy the contents of the old map
     map_dealloc(map); // PyMem_RawFree the old map memory
 
@@ -146,11 +155,15 @@ static void map_add_basis(CliffordMap *map, char *metric, Py_ssize_t size, Py_ss
 
 
 static void grade_map_init(GradeMap *m, Py_ssize_t size){
-
+    if(size == -1) return;
     Py_ssize_t max_grade = GRADE(size-1);
     Py_ssize_t *g_pos = (Py_ssize_t*)PyMem_RawMalloc((max_grade + 1)*sizeof(Py_ssize_t));
     m->grade = (Py_ssize_t*)PyMem_RawMalloc(size*sizeof(Py_ssize_t));
     m->position = (Py_ssize_t*)PyMem_RawMalloc(size*sizeof(Py_ssize_t));
+    if(!m->grade || !m->position || !g_pos){
+        m->size = -1;
+        return;
+    }
     for(Py_ssize_t i = 0; i <= max_grade; i++)
         g_pos[i] = 0;
 
@@ -166,9 +179,11 @@ static void grade_map_init(GradeMap *m, Py_ssize_t size){
 
 static void inner_map_init(PyGeometricAlgebraObject *self){
     Py_ssize_t size = self->product[ProductType_geometric].size;
+    if(size == -1) return;
     GradeMap gm = self->gm;
     CliffordMap m = self->product[ProductType_geometric];
     map_alloc(&self->product[ProductType_inner],size);
+    if(self->product[ProductType_inner].size == -1) return;
     for(Py_ssize_t i = 0; i < size; i++){
         for(Py_ssize_t j = 0; j < size; j++){
             if(comp_abs_eq((int)gm.grade[i] - (int)gm.grade[j],(int)gm.grade[m.bitmap[i][j]])){
@@ -187,6 +202,7 @@ static void outer_map_init(PyGeometricAlgebraObject *self){
     GradeMap gm = self->gm;
     CliffordMap m = self->product[ProductType_geometric];
     map_alloc(&self->product[ProductType_outer],size);
+    if(self->product[ProductType_outer].size == -1) return;
     for(Py_ssize_t i = 0; i < size; i++){
         for(Py_ssize_t j = 0; j < size; j++){
             if(gm.grade[i] + gm.grade[j] == gm.grade[m.bitmap[i][j]]){
@@ -203,6 +219,7 @@ static void outer_map_init(PyGeometricAlgebraObject *self){
 static void inverted_map_init(CliffordMap *inv, CliffordMap *self){
     Py_ssize_t size = self->size;
     map_alloc(inv,size);
+    if(inv->size == -1) return;
     for(Py_ssize_t i = 0; i < size; i++){
         for(Py_ssize_t j = 0; j < size; j++){
             inv->bitmap[i][self->bitmap[i][j]] = j;
@@ -517,6 +534,8 @@ static PyObject* geometric_algebra_cayley_table(PyGeometricAlgebraObject *self, 
             type = ProductType_inner;
         }else if(!strcmp("outer",type_str)){
             type = ProductType_outer;
+        }else if(!strcmp("inverted",type_str)){
+            type = ProductType_inverted;
         }
     }
     m = self->product[type];

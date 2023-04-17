@@ -1,0 +1,89 @@
+
+
+
+{% for i in range(nalgebras) %}
+{% set algebra = algebras[i] %}
+typedef struct _gen{{i}}_DenseMultivector{
+    ga_float value[{{algebra.size}}]
+}gen{{i}}_DenseMultivector;
+
+
+PyObject *gen{{i}}_dense_multivector_geometric_product(PyMultivectorObject *data0, PyMultivectorObject *data1){
+    gen{{i}}_DenseMultivector *pdense0 = data0->data;
+    gen{{i}}_DenseMultivector *pdense1 = data1->data;
+    gen{{i}}_DenseMultivector *pdense = (gen{{i}}_DenseMultivector*)PyMem_RawMalloc(sizeof(gen{{i}}_DenseMultivector));
+    if(!pdense0 || !pdense1 || !pdense){
+        PyMem_RawFree(pdense);
+        return NULL; // raise error
+    }
+
+    gen{{i}}_DenseMultivector dense0 = *pdense0;
+    gen{{i}}_DenseMultivector dense1 = *pdense1;
+    gen{{i}}_DenseMultivector dense;
+    PyMultivectorObject *out = new_multivector(data0);
+
+{% for j in range(algebra.size) %}
+    dense.value[{{j}}] =
+{% for k in range(algebra.size) %}
+{% set bitmap = algebra.bitmap[k][j] %}
+{% set sign = algebra.sign[k][j] %}
+{% if sign == -1 %}
+    -dense0.value[{{k}}]*dense1.value[{{bitmap}}]
+{% elif sign == 1 %}
+    +dense0.value[{{k}}]*dense1.value[{{bitmap}}]
+{% endif %}
+{% endfor %};
+{% endfor %}
+
+    *pdense = dense;
+    out->data = pdense;
+    return (PyObject*)out;
+}
+
+{#
+typedef struct _gen{{i}}_BladesMultivector{
+    {% for j in range(algebra.max_grade + 1) %}
+    ga_float value{{j}}[{{algebra.grade_size[j]}}];
+    {% endfor %}
+}gen{{i}}_BladesMultivector;
+
+
+
+PyObject *gen{{i}}_blades_multivector_geometric_product(PyMultivectorObject *data0, PyMultivectorObject *data1){
+    gen{{i}}_BladesMultivector *pblades0 = data0->data;
+    gen{{i}}_BladesMultivector *pblades1 = data1->data;
+    gen{{i}}_BladesMultivector *pblades = (gen{{i}}_BladesMultivector*)PyMem_RawMalloc(sizeof(gen{{i}}_BladesMultivector));
+    if(!pblades0 || !pblades1 || !pblades){
+        PyMem_RawFree(pblades);
+        return NULL; // raise error
+    }
+
+    gen{{i}}_BladesMultivector blades0 = *pblades0;
+    gen{{i}}_BladesMultivector blades1 = *pblades1;
+    gen{{i}}_BladesMultivector blades;
+    PyMultivectorObject *out = new_multivector(data0);
+
+{% for j in range(algebra.size) %}
+{% set pj = algebra.position[j] %}
+    blades.value{{algebra.grade(j)}}[{{pj}}] =
+{% for k in range(algebra.size) %}
+{% set bitmap = algebra.bitmap[k][j]%}
+{% set pk = algebra.position[k] %}
+{% set pbitmap = algebra.position[bitmap] %}
+{% set sign = algebra.sign[k][j] %}
+{% if sign == -1 %}
+    -blades0.value{{algebra.grade(k)}}[{{pk}}]*blades1.value{{algebra.grade(bitmap)}}[{{pbitmap}}]
+{% elif sign == 1 %}
+    +blades0.value{{algebra.grade(k)}}[{{pk}}]*blades1.value{{algebra.grade(bitmap)}}[{{pbitmap}}]
+{% endif %}
+{% endfor %};
+{% endfor %}
+
+    *pblades = blades;
+    out->data = pblades;
+    return (PyObject*)out;
+}
+#}
+
+
+{% endfor %}

@@ -213,6 +213,5 @@ static void blades_free_(BladesMultivector blades);
 static void dense_free_(DenseMultivector dense);
 */
 // determine the grade of a bitmap
-Py_ssize_t grade(Py_ssize_t v);
 
 #endif // GASPARSE_H_
