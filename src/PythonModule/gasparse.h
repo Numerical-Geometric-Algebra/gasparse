@@ -143,21 +143,18 @@ typedef struct _PyMultivectorObject{
 */
 
 typedef struct SparseMultivector{
-    PyObject_HEAD
     int *bitmap;
     ga_float *value;
     Py_ssize_t size;
 }SparseMultivector;
 
 typedef struct BladesMultivector{
-    PyObject_HEAD
     SparseMultivector *data;
     Py_ssize_t *grade;
     Py_ssize_t size;
 }BladesMultivector;
 
 typedef struct DenseMultivector{
-    PyObject_HEAD
     ga_float *value; // fixed size array for all the algebra
     Py_ssize_t size;
 }DenseMultivector;
