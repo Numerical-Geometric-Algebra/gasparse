@@ -3,7 +3,7 @@
 import gasparse
 from gasparse import multivector
 
-ga = gasparse.GA(3)
+ga = gasparse.GA(4,1)
 
 e1 = ga.multivector([1.0],['e1'],dtype='sparse')
 e2 = ga.multivector([1.0],['e2'],dtype='sparse')

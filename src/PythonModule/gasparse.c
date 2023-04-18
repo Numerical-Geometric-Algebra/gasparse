@@ -124,6 +124,15 @@ static void copy_map(CliffordMap *dest, CliffordMap *origin){
     }
 }
 
+static void map_reset(CliffordMap *m){
+    for(Py_ssize_t i = 0; i < m->size; i++){
+        for(Py_ssize_t j = 0; j < m->size; j++){
+            m->bitmap[i][j] = -1;
+            m->sign[i][j] = 0;
+        }
+    }
+}
+
 
 static void map_add_basis(CliffordMap *map, char *metric, Py_ssize_t size, Py_ssize_t beg){
     if(size == -1) return;
@@ -177,7 +186,7 @@ static void grade_map_init(GradeMap *m, Py_ssize_t size){
 }
 
 
-static void inner_map_init(PyGeometricAlgebraObject *self){
+static void inner_map_init(PyAlgebraObject *self){
     Py_ssize_t size = self->product[ProductType_geometric].size;
     if(size == -1) return;
     GradeMap gm = self->gm;
@@ -186,7 +195,11 @@ static void inner_map_init(PyGeometricAlgebraObject *self){
     if(self->product[ProductType_inner].size == -1) return;
     for(Py_ssize_t i = 0; i < size; i++){
         for(Py_ssize_t j = 0; j < size; j++){
-            if(comp_abs_eq((int)gm.grade[i] - (int)gm.grade[j],(int)gm.grade[m.bitmap[i][j]])){
+            if(gm.grade[i] == 0 || gm.grade[j] == 0){
+                // inner product with grade 0 elements is 0
+                self->product[ProductType_inner].sign[i][j] = 0;
+                self->product[ProductType_inner].bitmap[i][j] = -1;
+            }else if(comp_abs_eq((int)gm.grade[i] - (int)gm.grade[j],(int)gm.grade[m.bitmap[i][j]])){
                 self->product[ProductType_inner].bitmap[i][j] = m.bitmap[i][j];
                 self->product[ProductType_inner].sign[i][j] = m.sign[i][j];
             }else{
@@ -197,7 +210,7 @@ static void inner_map_init(PyGeometricAlgebraObject *self){
     }
 }
 
-static void outer_map_init(PyGeometricAlgebraObject *self){
+static void outer_map_init(PyAlgebraObject *self){
     Py_ssize_t size = self->product[ProductType_geometric].size;
     GradeMap gm = self->gm;
     CliffordMap m = self->product[ProductType_geometric];
@@ -219,16 +232,20 @@ static void outer_map_init(PyGeometricAlgebraObject *self){
 static void inverted_map_init(CliffordMap *inv, CliffordMap *self){
     Py_ssize_t size = self->size;
     map_alloc(inv,size);
+    map_reset(inv);
     if(inv->size == -1) return;
     for(Py_ssize_t i = 0; i < size; i++){
         for(Py_ssize_t j = 0; j < size; j++){
-            inv->bitmap[i][self->bitmap[i][j]] = j;
-            inv->sign[i][self->bitmap[i][j]] = self->sign[i][j];
+            if(self->bitmap[i][j] != -1){
+                inv->bitmap[i][self->bitmap[i][j]] = j;
+                inv->sign[i][self->bitmap[i][j]] = self->sign[i][j];
+            }
         }
     }
 }
 
-static void geometric_algebra_dealloc(PyGeometricAlgebraObject *self){
+
+static void algebra_dealloc(PyAlgebraObject *self){
     for(Py_ssize_t i = ProductTypeMIN + 1; i < ProductTypeMAX; i++)
         map_dealloc(&self->product[i]);
 
@@ -240,9 +257,9 @@ static void geometric_algebra_dealloc(PyGeometricAlgebraObject *self){
 }
 
 
-static PyObject *geometric_algebra_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
-    PyGeometricAlgebraObject *self;
-    self = (PyGeometricAlgebraObject*)type->tp_alloc(type,0);
+static PyObject *algebra_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
+    PyAlgebraObject *self;
+    self = (PyAlgebraObject*)type->tp_alloc(type,0);
     if(self){
         self->p = 0, self->q = 0, self->r = 0;
         self->gm.grade = NULL;
@@ -259,7 +276,7 @@ static PyObject *geometric_algebra_new(PyTypeObject *type, PyObject *args, PyObj
 }
 
 
-static int geometric_algebra_init(PyGeometricAlgebraObject *self, PyObject *args, PyObject *kwds){
+static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
     static char *kwlist[] = {"p","q","r","metric","print_type","print_type_mv",NULL};
     int p = 0, q = 0, r = 0; PrintType print_type = PrintTypeMIN; PrintTypeMV print_type_mv = PrintTypeMVMIN;
     PyObject *metric_obj = NULL;
@@ -317,8 +334,9 @@ static int geometric_algebra_init(PyGeometricAlgebraObject *self, PyObject *args
     inner_map_init(self);
     outer_map_init(self);
 
-    inverted_map_init(&self->product[ProductType_inverted],&self->product[ProductType_geometric]);
-    // can also compute the inverse map of the other products...
+    inverted_map_init(&self->product[ProductType_geometricinverted],&self->product[ProductType_geometric]);
+    inverted_map_init(&self->product[ProductType_innerinverted],&self->product[ProductType_inner]);
+    inverted_map_init(&self->product[ProductType_outerinverted],&self->product[ProductType_outer]);
     self->p = p; self->q = q; self->r = r; self->precision = 1e-6;
 
     // set ga print type
@@ -336,7 +354,7 @@ static int geometric_algebra_init(PyGeometricAlgebraObject *self, PyObject *args
 
 
 
-static PyObject *geometric_algebra_add_basis(PyGeometricAlgebraObject *self, PyObject *args, PyObject *kwds){
+static PyObject *algebra_add_basis(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
     static char *kwlist[] = {"p","q","r","metric",NULL};
     int p = 0, q = 0, r = 0;
     PyObject *metric_obj = NULL;
@@ -415,13 +433,17 @@ static PyObject *geometric_algebra_add_basis(PyGeometricAlgebraObject *self, PyO
     grade_map_init(&self->gm,self->product[ProductType_geometric].size);
     inner_map_init(self);
     outer_map_init(self);
-    inverted_map_init(&self->product[ProductType_inverted],&self->product[ProductType_geometric]);
+
+    inverted_map_init(&self->product[ProductType_geometricinverted],&self->product[ProductType_geometric]);
+    inverted_map_init(&self->product[ProductType_innerinverted],&self->product[ProductType_inner]);
+    inverted_map_init(&self->product[ProductType_outerinverted],&self->product[ProductType_outer]);
+
     self->p += p; self->q += q; self->r += r;
 
     Py_RETURN_NONE;
 }
 
-static PyObject *geometric_algebra_repr(PyGeometricAlgebraObject *self){
+static PyObject *algebra_repr(PyAlgebraObject *self){
     char  str[100];
     if(self->print_type == PrintType_metric){
         PyOS_snprintf(str,100,"GA(p=%lu,q=%lu,r=%lu)",self->p,self->q,self->r);
@@ -515,8 +537,33 @@ static int parse_list_as_bitmaps(PyObject *blades, int **bitmap){
     return size;
 }
 
-static PyObject* geometric_algebra_cayley_table(PyGeometricAlgebraObject *self, PyObject *args){
-    ProductType type = ProductType_geometric;
+static PyObject* algebra_grademap(PyAlgebraObject *self, PyObject *Py_UNUSED(ignored)){
+    Py_ssize_t size = self->gm.size;
+    PyObject *grade_list = PyList_New(size);
+    PyObject *position_list = PyList_New(size);
+    PyObject *gradesize_list = PyList_New(self->gm.max_grade+1);
+    PyObject *tuple = PyTuple_New(3);
+
+
+    for(Py_ssize_t i = 0; i < size; i++){
+        PyObject *gradei = PyLong_FromLong(self->gm.grade[i]);
+        PyObject *positioni = PyLong_FromLong(self->gm.position[i]);
+        PyList_SetItem(grade_list,i,gradei);
+        PyList_SetItem(position_list,i,positioni);
+    }
+    for(Py_ssize_t i = 0; i < self->gm.max_grade+1; i++){
+        PyObject *gradesizei = PyLong_FromLong(self->gm.grade_size[i]);
+        PyList_SetItem(gradesize_list,i,gradesizei);
+    }
+
+    PyTuple_SetItem(tuple,0,grade_list);
+    PyTuple_SetItem(tuple,1,position_list);
+    PyTuple_SetItem(tuple,2,gradesize_list);
+    return tuple;
+}
+
+static PyObject* algebra_cayley_table(PyAlgebraObject *self, PyObject *args){
+    ProductType type = ProductType_geometricinverted;
     CliffordMap m = self->product[type];
     Py_ssize_t algebra_size = m.size;
     PyObject *sign_list = PyList_New(algebra_size);
@@ -534,8 +581,12 @@ static PyObject* geometric_algebra_cayley_table(PyGeometricAlgebraObject *self, 
             type = ProductType_inner;
         }else if(!strcmp("outer",type_str)){
             type = ProductType_outer;
-        }else if(!strcmp("inverted",type_str)){
-            type = ProductType_inverted;
+        }else if(!strcmp("geometricinverted",type_str)){
+            type = ProductType_geometricinverted;
+        }else if(!strcmp("innerinverted",type_str)){
+            type = ProductType_innerinverted;
+        }else if(!strcmp("outerinverted",type_str)){
+            type = ProductType_outerinverted;
         }
     }
     m = self->product[type];
@@ -600,7 +651,7 @@ static PyTypeObject PyMultivectorType = {
 };
 
 
-static PyObject *geometric_algebra_multivector(PyGeometricAlgebraObject *self, PyObject *args, PyObject *kwds){
+static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
     static char *kwlist[] = {"values","blades","precision","dtype","addmethod",NULL};
     PyObject *values = NULL, *blades = NULL, *dtype = NULL, *addmethod = NULL, *out = NULL;
     int precision;
@@ -662,12 +713,14 @@ static PyObject *geometric_algebra_multivector(PyGeometricAlgebraObject *self, P
 }
 
 
-static PyMethodDef geometric_algebra_methods[] = {
-    {"cayley", (PyCFunction)geometric_algebra_cayley_table, METH_VARARGS,
+static PyMethodDef algebra_methods[] = {
+    {"grademap", (PyCFunction)algebra_grademap, METH_NOARGS,
+     "returns the grades, positions and grade sizes of the algebra" },
+    {"cayley", (PyCFunction)algebra_cayley_table, METH_VARARGS,
      "returns the signs and bitmaps of the cayley table" },
-    {"add_basis", (PyCFunction) geometric_algebra_add_basis, METH_VARARGS | METH_KEYWORDS,
+    {"add_basis", (PyCFunction) algebra_add_basis, METH_VARARGS | METH_KEYWORDS,
      "adds basis vectors to the algebra" },
-    {"multivector",(PyCFunction) geometric_algebra_multivector, METH_VARARGS | METH_KEYWORDS,
+    {"multivector",(PyCFunction) algebra_multivector, METH_VARARGS | METH_KEYWORDS,
      "generate a multivector" },
     {NULL}  /* Sentinel */
 };
@@ -677,15 +730,15 @@ static PyTypeObject PyGeometricAlgebraType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "gasparse.GA",
     .tp_doc = PyDoc_STR("Construction of a geometric algebra given a metric"),
-    .tp_basicsize = sizeof(PyGeometricAlgebraObject),
+    .tp_basicsize = sizeof(PyAlgebraObject),
     .tp_itemsize = 0,
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-    .tp_new = (newfunc) geometric_algebra_new,
-    .tp_init = (initproc) geometric_algebra_init,
-    .tp_dealloc = (destructor) geometric_algebra_dealloc,
-    .tp_repr = (reprfunc) geometric_algebra_repr,
-    .tp_str = (reprfunc) geometric_algebra_repr,
-    .tp_methods = geometric_algebra_methods,
+    .tp_new = (newfunc) algebra_new,
+    .tp_init = (initproc) algebra_init,
+    .tp_dealloc = (destructor) algebra_dealloc,
+    .tp_repr = (reprfunc) algebra_repr,
+    .tp_str = (reprfunc) algebra_repr,
+    .tp_methods = algebra_methods,
 };
 
 static PyModuleDef gasparse_module = {
