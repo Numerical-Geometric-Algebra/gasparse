@@ -136,12 +136,6 @@ typedef struct _PyMultivectorObject{
 
 
 
-/*
-  Py_TYPE macro shouldn't be used in these type definitions
-  PyObject_HEAD is used only to do reference counting with the Py_REFCNT macro
-  I should implement my own referent counting for these types but I don't know how reference counting is implemented internally
-*/
-
 typedef struct SparseMultivector{
     int *bitmap;
     ga_float *value;

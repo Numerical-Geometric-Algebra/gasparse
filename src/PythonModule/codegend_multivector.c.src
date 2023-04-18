@@ -115,9 +115,9 @@ static int gen{{i}}_blades_iter_next(PyMultivectorIter *iter){
     return 0;
 }
 
-static int gen_{{i}}_dense_iter_next(PyMultivectorIter *iter){
+static int gen{{i}}_dense_iter_next(PyMultivectorIter *iter){
     gen{{i}}_DenseMultivector *dense = (gen{{i}}_DenseMultivector*)iter->data;
-    if(*iter->index >= dense->size){
+    if(*iter->index >= {{algebra.size}}){
         *iter->index = 0;
         return 0;
     }
@@ -199,7 +199,56 @@ static gen{{i}}_DenseMultivector gen{{i}}_dense_geometricproduct(gen{{1}}_DenseM
     return dense;
 }
 
-PyObject *gen{{i}}_dense_multivector_geometricproduct(PyMultivectorObject *data0, PyMultivectorObject *data1){
+static gen{{i}}_DenseMultivector gen{{i}}_dense_add(gen{{1}}_DenseMultivector dense0, gen{{1}}_DenseMultivector dense1, int sign){
+    gen{{i}}_DenseMultivector dense = {{"{{"}}0{{"}}"}};
+    if(sign == -1){
+{% for j in range(algebra.size) %}
+        dense.value[{{j}}] = dense0.value[{{j}}] - dense1.value[{{j}}];
+{% endfor %}
+    }else if(sign == 1){
+{% for j in range(algebra.size) %}
+        dense.value[{{j}}] = dense0.value[{{j}}] + dense1.value[{{j}}];
+{% endfor %}
+    } else{
+{% for j in range(algebra.size) %}
+        dense.value[{{j}}] = dense0.value[{{j}}] + sign*dense1.value[{{j}}];
+{% endfor %}
+    }
+    return dense;
+}
+
+
+static gen{{i}}_DenseMultivector gen{{i}}_dense_scalaradd(gen{{1}}_DenseMultivector dense0, ga_float value, int sign){
+    gen{{i}}_DenseMultivector dense = {{"{{"}}0{{"}}"}};
+    if(sign == -1){
+{% for j in range(algebra.size) %}
+        dense.value[{{j}}] = -dense0.value[{{j}}];
+{% endfor %}
+    }else if(sign == 1){
+{% for j in range(algebra.size) %}
+        dense.value[{{j}}] = dense0.value[{{j}}];
+{% endfor %}
+    } else{
+{% for j in range(algebra.size) %}
+        dense.value[{{j}}] = sign*dense0.value[{{j}}];
+{% endfor %}
+    }
+    dense.value[0] += value;
+    return dense;
+}
+
+static gen{{i}}_DenseMultivector gen{{i}}_dense_scalarproducr(gen{{1}}_DenseMultivector dense0, ga_float value){
+    gen{{i}}_DenseMultivector dense = {{"{{"}}0{{"}}"}};
+
+{% for j in range(algebra.size) %}
+    dense.value[{{j}}] = value*dense0.value[{{j}}];
+{% endfor %}
+
+    return dense;
+}
+
+
+PyMultivectorObject *gen{{i}}_dense_multivector_geometricproduct(PyMultivectorObject *data0, PyMultivectorObject *data1){
     gen{{i}}_DenseMultivector *dense0 = (gen{{i}}_DenseMultivector*)data0->data;
     gen{{i}}_DenseMultivector *dense1 = (gen{{i}}_DenseMultivector*)data1->data;
     gen{{i}}_DenseMultivector *dense  = (gen{{i}}_DenseMultivector*)PyMem_RawMalloc(sizeof(gen{{i}}_DenseMultivector));
@@ -211,7 +260,7 @@ PyObject *gen{{i}}_dense_multivector_geometricproduct(PyMultivectorObject *data0
     PyMultivectorObject *out = new_multivector(data0);
     *dense = gen{{i}}_dense_geometricproduct(dense0,dense1);
     out->data = (void*)dense;
-    return (PyObject*)out;
+    return out;
 }
 
 static gen{{i}}_BladesMultivector gen{{i}}_blades_geometricproduct(gen{{i}}_BladesMultivector blades0, gen{{i}}_BladesMultivector blades1){
@@ -237,7 +286,80 @@ static gen{{i}}_BladesMultivector gen{{i}}_blades_geometricproduct(gen{{i}}_Blad
     return blades;
 }
 
-PyObject *gen{{i}}_blades_multivector_geometricproduct(PyMultivectorObject *data0, PyMultivectorObject *data1){
+static gen{{i}}_BladesMultivector gen{{i}}_blades_add(gen{{i}}_BladesMultivector blades0, gen{{i}}_BladesMultivector blades1, int sign){
+    gen{{i}}_BladesMultivector blades = {{"{"}}{% for j in range(algebra.ngrades) -%}{0},{% endfor %}{{"}"}}
+
+    if(sign == -1){
+{% for gradesize in algebra.gradesize %}
+{% set grade = loop.index0 %}
+{% for j in range(gradesize) %}
+        blades.value{{grade}}[{{j}}] = blades0.value{{grade}}[{{j}}] - blades1.value{{grade}}[{{j}}];
+{% endfor %}
+{% endfor %}
+    }else if(sign == 1){
+{% for gradesize in algebra.gradesize %}
+{% set grade = loop.index0 %}
+{% for j in range(gradesize) %}
+        blades.value{{grade}}[{{j}}] = blades0.value{{grade}}[{{j}}] + blades1.value{{grade}}[{{j}}];
+{% endfor %}
+{% endfor %}
+    }else{
+{% for gradesize in algebra.gradesize %}
+{% set grade = loop.index0 %}
+{% for j in range(gradesize) %}
+        blades.value{{grade}}[{{j}}] = blades0.value{{grade}}[{{j}}] + sign*blades1.value{{grade}}[{{j}}];
+{% endfor %}
+{% endfor %}
+    }
+    return blades;
+}
+
+
+static gen{{i}}_BladesMultivector gen{{i}}_blades_scalaradd(gen{{i}}_BladesMultivector blades0, ga_float value, int sign){
+    gen{{i}}_BladesMultivector blades = {{"{"}}{% for j in range(algebra.ngrades) -%}{0},{% endfor %}{{"}"}}
+
+    if(sign == -1){
+{% for gradesize in algebra.gradesize %}
+{% set grade = loop.index0 %}
+{% for j in range(gradesize) %}
+        blades.value{{grade}}[{{j}}] = -blades0.value{{grade}}[{{j}}];
+{% endfor %}
+{% endfor %}
+    }else if(sign == 1){
+{% for gradesize in algebra.gradesize %}
+{% set grade = loop.index0 %}
+{% for j in range(gradesize) %}
+        blades.value{{grade}}[{{j}}] = blades0.value{{grade}}[{{j}}];
+{% endfor %}
+{% endfor %}
+    }else{
+{% for gradesize in algebra.gradesize %}
+{% set grade = loop.index0 %}
+{% for j in range(gradesize) %}
+        blades.value{{grade}}[{{j}}] = sign*blades1.value{{grade}}[{{j}}];
+{% endfor %}
+{% endfor %}
+    }
+    blades.value0[0] += value;
+    return blades;
+}
+
+
+static gen{{i}}_BladesMultivector gen{{i}}_blades_scalarproduct(gen{{i}}_BladesMultivector blades0, ga_float value){
+    gen{{i}}_BladesMultivector blades = {{"{"}}{% for j in range(algebra.ngrades) -%}{0},{% endfor %}{{"}"}}
+
+{% for gradesize in algebra.gradesize %}
+{% set grade = loop.index0 %}
+{% for j in range(gradesize) %}
+    blades.value{{grade}}[{{j}}] = value*blades0.value{{grade}}[{{j}}];
+{% endfor %}
+{% endfor %}
+    return blades;
+}
+
+
+
+PyMultivectorObject *gen{{i}}_blades_multivector_geometricproduct(PyMultivectorObject *data0, PyMultivectorObject *data1){
     gen{{i}}_BladesMultivector *blades0 = (gen{{i}}_BladesMultivector*)data0->data;
     gen{{i}}_BladesMultivector *blades1 = (gen{{i}}_BladesMultivector*)data1->data;
     gen{{i}}_BladesMultivector *blades = (gen{{i}}_BladesMultivector*)PyMem_RawMalloc(sizeof(gen{{i}}_BladesMultivector));
@@ -250,7 +372,7 @@ PyObject *gen{{i}}_blades_multivector_geometricproduct(PyMultivectorObject *data
 
     *blades = gen{{i}}_blades_geometricproduct(blades0,blades1);
     out->data = (void*)blades;
-    return (PyObject*)out;
+    return out;
 }
 
 

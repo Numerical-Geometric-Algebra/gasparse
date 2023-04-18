@@ -177,9 +177,9 @@ static int gen0_blades_iter_next(PyMultivectorIter *iter){
     return 0;
 }
 
-static int gen_0_dense_iter_next(PyMultivectorIter *iter){
+static int gen0_dense_iter_next(PyMultivectorIter *iter){
     gen0_DenseMultivector *dense = (gen0_DenseMultivector*)iter->data;
-    if(*iter->index >= dense->size){
+    if(*iter->index >= 8){
         *iter->index = 0;
         return 0;
     }
@@ -289,7 +289,91 @@ static gen0_DenseMultivector gen0_dense_geometricproduct(gen1_DenseMultivector d
     return dense;
 }
 
-PyObject *gen0_dense_multivector_geometricproduct(PyMultivectorObject *data0, PyMultivectorObject *data1){
+static gen0_DenseMultivector gen0_dense_add(gen1_DenseMultivector dense0, gen1_DenseMultivector dense1, int sign){
+    gen0_DenseMultivector dense = {{0}};
+    if(sign == -1){
+        dense.value[0] = dense0.value[0] - dense1.value[0];
+        dense.value[1] = dense0.value[1] - dense1.value[1];
+        dense.value[2] = dense0.value[2] - dense1.value[2];
+        dense.value[3] = dense0.value[3] - dense1.value[3];
+        dense.value[4] = dense0.value[4] - dense1.value[4];
+        dense.value[5] = dense0.value[5] - dense1.value[5];
+        dense.value[6] = dense0.value[6] - dense1.value[6];
+        dense.value[7] = dense0.value[7] - dense1.value[7];
+    }else if(sign == 1){
+        dense.value[0] = dense0.value[0] + dense1.value[0];
+        dense.value[1] = dense0.value[1] + dense1.value[1];
+        dense.value[2] = dense0.value[2] + dense1.value[2];
+        dense.value[3] = dense0.value[3] + dense1.value[3];
+        dense.value[4] = dense0.value[4] + dense1.value[4];
+        dense.value[5] = dense0.value[5] + dense1.value[5];
+        dense.value[6] = dense0.value[6] + dense1.value[6];
+        dense.value[7] = dense0.value[7] + dense1.value[7];
+    } else{
+        dense.value[0] = dense0.value[0] + sign*dense1.value[0];
+        dense.value[1] = dense0.value[1] + sign*dense1.value[1];
+        dense.value[2] = dense0.value[2] + sign*dense1.value[2];
+        dense.value[3] = dense0.value[3] + sign*dense1.value[3];
+        dense.value[4] = dense0.value[4] + sign*dense1.value[4];
+        dense.value[5] = dense0.value[5] + sign*dense1.value[5];
+        dense.value[6] = dense0.value[6] + sign*dense1.value[6];
+        dense.value[7] = dense0.value[7] + sign*dense1.value[7];
+    }
+    return dense;
+}
+
+
+static gen0_DenseMultivector gen0_dense_scalaradd(gen1_DenseMultivector dense0, ga_float value, int sign){
+    gen0_DenseMultivector dense = {{0}};
+    if(sign == -1){
+        dense.value[0] = -dense0.value[0];
+        dense.value[1] = -dense0.value[1];
+        dense.value[2] = -dense0.value[2];
+        dense.value[3] = -dense0.value[3];
+        dense.value[4] = -dense0.value[4];
+        dense.value[5] = -dense0.value[5];
+        dense.value[6] = -dense0.value[6];
+        dense.value[7] = -dense0.value[7];
+    }else if(sign == 1){
+        dense.value[0] = dense0.value[0];
+        dense.value[1] = dense0.value[1];
+        dense.value[2] = dense0.value[2];
+        dense.value[3] = dense0.value[3];
+        dense.value[4] = dense0.value[4];
+        dense.value[5] = dense0.value[5];
+        dense.value[6] = dense0.value[6];
+        dense.value[7] = dense0.value[7];
+    } else{
+        dense.value[0] = sign*dense0.value[0];
+        dense.value[1] = sign*dense0.value[1];
+        dense.value[2] = sign*dense0.value[2];
+        dense.value[3] = sign*dense0.value[3];
+        dense.value[4] = sign*dense0.value[4];
+        dense.value[5] = sign*dense0.value[5];
+        dense.value[6] = sign*dense0.value[6];
+        dense.value[7] = sign*dense0.value[7];
+    }
+    dense.value[0] += value;
+    return dense;
+}
+
+static gen0_DenseMultivector gen0_dense_scalarproducr(gen1_DenseMultivector dense0, ga_float value){
+    gen0_DenseMultivector dense = {{0}};
+
+    dense.value[0] = value*dense0.value[0];
+    dense.value[1] = value*dense0.value[1];
+    dense.value[2] = value*dense0.value[2];
+    dense.value[3] = value*dense0.value[3];
+    dense.value[4] = value*dense0.value[4];
+    dense.value[5] = value*dense0.value[5];
+    dense.value[6] = value*dense0.value[6];
+    dense.value[7] = value*dense0.value[7];
+
+    return dense;
+}
+
+
+PyMultivectorObject *gen0_dense_multivector_geometricproduct(PyMultivectorObject *data0, PyMultivectorObject *data1){
     gen0_DenseMultivector *dense0 = (gen0_DenseMultivector*)data0->data;
     gen0_DenseMultivector *dense1 = (gen0_DenseMultivector*)data1->data;
     gen0_DenseMultivector *dense  = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
@@ -301,7 +385,7 @@ PyObject *gen0_dense_multivector_geometricproduct(PyMultivectorObject *data0, Py
     PyMultivectorObject *out = new_multivector(data0);
     *dense = gen0_dense_geometricproduct(dense0,dense1);
     out->data = (void*)dense;
-    return (PyObject*)out;
+    return out;
 }
 
 static gen0_BladesMultivector gen0_blades_geometricproduct(gen0_BladesMultivector blades0, gen0_BladesMultivector blades1){
@@ -355,7 +439,94 @@ static gen0_BladesMultivector gen0_blades_geometricproduct(gen0_BladesMultivecto
     return blades;
 }
 
-PyObject *gen0_blades_multivector_geometricproduct(PyMultivectorObject *data0, PyMultivectorObject *data1){
+static gen0_BladesMultivector gen0_blades_add(gen0_BladesMultivector blades0, gen0_BladesMultivector blades1, int sign){
+    gen0_BladesMultivector blades = {{0},{0},{0},{0},}
+
+    if(sign == -1){
+        blades.value0[0] = blades0.value0[0] - blades1.value0[0];
+        blades.value1[0] = blades0.value1[0] - blades1.value1[0];
+        blades.value1[1] = blades0.value1[1] - blades1.value1[1];
+        blades.value1[2] = blades0.value1[2] - blades1.value1[2];
+        blades.value2[0] = blades0.value2[0] - blades1.value2[0];
+        blades.value2[1] = blades0.value2[1] - blades1.value2[1];
+        blades.value2[2] = blades0.value2[2] - blades1.value2[2];
+        blades.value3[0] = blades0.value3[0] - blades1.value3[0];
+    }else if(sign == 1){
+        blades.value0[0] = blades0.value0[0] + blades1.value0[0];
+        blades.value1[0] = blades0.value1[0] + blades1.value1[0];
+        blades.value1[1] = blades0.value1[1] + blades1.value1[1];
+        blades.value1[2] = blades0.value1[2] + blades1.value1[2];
+        blades.value2[0] = blades0.value2[0] + blades1.value2[0];
+        blades.value2[1] = blades0.value2[1] + blades1.value2[1];
+        blades.value2[2] = blades0.value2[2] + blades1.value2[2];
+        blades.value3[0] = blades0.value3[0] + blades1.value3[0];
+    }else{
+        blades.value0[0] = blades0.value0[0] + sign*blades1.value0[0];
+        blades.value1[0] = blades0.value1[0] + sign*blades1.value1[0];
+        blades.value1[1] = blades0.value1[1] + sign*blades1.value1[1];
+        blades.value1[2] = blades0.value1[2] + sign*blades1.value1[2];
+        blades.value2[0] = blades0.value2[0] + sign*blades1.value2[0];
+        blades.value2[1] = blades0.value2[1] + sign*blades1.value2[1];
+        blades.value2[2] = blades0.value2[2] + sign*blades1.value2[2];
+        blades.value3[0] = blades0.value3[0] + sign*blades1.value3[0];
+    }
+    return blades;
+}
+
+
+static gen0_BladesMultivector gen0_blades_scalaradd(gen0_BladesMultivector blades0, ga_float value, int sign){
+    gen0_BladesMultivector blades = {{0},{0},{0},{0},}
+
+    if(sign == -1){
+        blades.value0[0] = -blades0.value0[0];
+        blades.value1[0] = -blades0.value1[0];
+        blades.value1[1] = -blades0.value1[1];
+        blades.value1[2] = -blades0.value1[2];
+        blades.value2[0] = -blades0.value2[0];
+        blades.value2[1] = -blades0.value2[1];
+        blades.value2[2] = -blades0.value2[2];
+        blades.value3[0] = -blades0.value3[0];
+    }else if(sign == 1){
+        blades.value0[0] = blades0.value0[0];
+        blades.value1[0] = blades0.value1[0];
+        blades.value1[1] = blades0.value1[1];
+        blades.value1[2] = blades0.value1[2];
+        blades.value2[0] = blades0.value2[0];
+        blades.value2[1] = blades0.value2[1];
+        blades.value2[2] = blades0.value2[2];
+        blades.value3[0] = blades0.value3[0];
+    }else{
+        blades.value0[0] = sign*blades1.value0[0];
+        blades.value1[0] = sign*blades1.value1[0];
+        blades.value1[1] = sign*blades1.value1[1];
+        blades.value1[2] = sign*blades1.value1[2];
+        blades.value2[0] = sign*blades1.value2[0];
+        blades.value2[1] = sign*blades1.value2[1];
+        blades.value2[2] = sign*blades1.value2[2];
+        blades.value3[0] = sign*blades1.value3[0];
+    }
+    blades.value0[0] += value;
+    return blades;
+}
+
+
+static gen0_BladesMultivector gen0_blades_scalarproduct(gen0_BladesMultivector blades0, ga_float value){
+    gen0_BladesMultivector blades = {{0},{0},{0},{0},}
+
+    blades.value0[0] = value*blades0.value0[0];
+    blades.value1[0] = value*blades0.value1[0];
+    blades.value1[1] = value*blades0.value1[1];
+    blades.value1[2] = value*blades0.value1[2];
+    blades.value2[0] = value*blades0.value2[0];
+    blades.value2[1] = value*blades0.value2[1];
+    blades.value2[2] = value*blades0.value2[2];
+    blades.value3[0] = value*blades0.value3[0];
+    return blades;
+}
+
+
+
+PyMultivectorObject *gen0_blades_multivector_geometricproduct(PyMultivectorObject *data0, PyMultivectorObject *data1){
     gen0_BladesMultivector *blades0 = (gen0_BladesMultivector*)data0->data;
     gen0_BladesMultivector *blades1 = (gen0_BladesMultivector*)data1->data;
     gen0_BladesMultivector *blades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
@@ -368,7 +539,7 @@ PyObject *gen0_blades_multivector_geometricproduct(PyMultivectorObject *data0, P
 
     *blades = gen0_blades_geometricproduct(blades0,blades1);
     out->data = (void*)blades;
-    return (PyObject*)out;
+    return out;
 }
 
 
