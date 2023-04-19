@@ -84,6 +84,7 @@ typedef void *(*gainitfunc)(int *bitmap, ga_float *value, Py_ssize_t size, PyAlg
 typedef void (*gafreefunc)(void *data);
 typedef PyObject *(*gareprfunc)(void *data, PrintTypeMV ptype);
 
+
 typedef struct PyMultivectorMath_Funcs{
     gaatomicfunc atomic_add[MultivectorTypeMAX];
     gaatomicprodfunc atomic_product[MultivectorTypeMAX];
@@ -109,6 +110,8 @@ typedef struct PyMultivectorData_Funcs{
     gainitfunc init[MultivectorTypeMAX];
     gacastfunc to_sparse[MultivectorTypeMAX];
     gacastfunc to_dense[MultivectorTypeMAX];
+    // gaiternextfunc iter_next[MultivectorTypeMAX];
+    // gaiterinitfunc iter_init[MultivectorTypeMAX];
 }PyMultivectorData_Funcs;
 
 
@@ -155,7 +158,9 @@ typedef struct DenseMultivector{
 
 // multivector iterator definitions
 typedef struct _PyMultivectorIter PyMultivectorIter;
+
 typedef int (*gaiternextfunc)(PyMultivectorIter *iter);
+
 typedef struct _PyMultivectorIter{
     gaiternextfunc next;
     void *data;

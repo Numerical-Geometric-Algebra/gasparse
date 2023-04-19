@@ -537,6 +537,20 @@ static int parse_list_as_bitmaps(PyObject *blades, int **bitmap){
     return size;
 }
 
+static PyObject* algebra_metric(PyAlgebraObject *self, PyObject *Py_UNUSED(ignored)){
+    Py_ssize_t size = Metric_SIZE(self);
+    PyObject *metric_list = PyList_New(size);
+
+    for(Py_ssize_t i = 0; i < size; i++){
+        PyObject *metrici = PyLong_FromLong((int)self->metric[i]);
+        PyList_SetItem(metric_list,i,metrici);
+    }
+
+    return metric_list;
+}
+
+
+
 static PyObject* algebra_grademap(PyAlgebraObject *self, PyObject *Py_UNUSED(ignored)){
     Py_ssize_t size = self->gm.size;
     PyObject *grade_list = PyList_New(size);
@@ -714,6 +728,8 @@ static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyOb
 
 
 static PyMethodDef algebra_methods[] = {
+    {"metric", (PyCFunction)algebra_metric, METH_NOARGS,
+     "returns the metric array of the algebra" },
     {"grademap", (PyCFunction)algebra_grademap, METH_NOARGS,
      "returns the grades, positions and grade sizes of the algebra" },
     {"cayley", (PyCFunction)algebra_cayley_table, METH_VARARGS,

@@ -3,27 +3,43 @@
 import gasparse
 import jinja2
 class algebra:
-    def __init__(self,bitmap,sign):
-        self.bitmap = bitmap
-        self.sign = sign
-        self.size = len(bitmap)
-        self.compute_zero_sign()
-    def grade(self,grade):
-        return bin(grade).count('1')
+    def __init__(self,ga,name):
+        self.name = name
+        self.product_names = ["geometric","inner","outer"]
+        self.signs = []
+        self.bitmaps = []
+        self.zerosigns = []
+        for names in self.product_names:
+            bitmap,sign = ga.cayley(names+"inverted")
+            self.signs.append(sign)
+            self.bitmaps.append(bitmap)
+            self.zerosigns.append(self.compute_zero_sign(sign))
+        self.metric = ga.metric()
+        self.metric_size = len(self.metric)
+        self.size = len(self.bitmaps[0])
+        self.nproducts = len(self.product_names)
+        self.grades,self.position,self.gradesize = ga.grademap()
+        self.ngrades = len(self.gradesize)
+        self.compute_gradesbitmap()
+        self.compute_reverse()
 
-    def set_grademap(self,position,gradesize):
-        self.position = position
-        self.gradesize = gradesize
-        self.ngrades = len(gradesize)
+    def GRADE(self,bitmap):
+        return bin(bitmap).count('1')
 
+    def compute_reverse(self):
+        self.reverse = [1]*self.ngrades
+        for i in range(self.ngrades):
+            if(i&2):
+                self.reverse[i] = -1
 
-    def compute_zero_sign(self):
-        self.zerosign = [False]*len(self.sign)
-        for j in range(len(self.sign)):
-            for i in range(len(self.sign)):
-                if(self.sign[i][j] != 0):
-                    self.zerosign[j] = True
+    def compute_zero_sign(self,sign):
+        zerosign = [False]*len(sign)
+        for j in range(len(sign)):
+            for i in range(len(sign)):
+                if(sign[i][j] != 0):
+                    zerosign[j] = True
                     break;
+        return zerosign
 
     def compute_gradesbitmap(self):
         lst = [0]*self.ngrades
@@ -34,18 +50,17 @@ class algebra:
             self.gradesbitmaplen[i] = self.gradesize[i]
 
         for i in range(len(self.position)):
-            lst[self.grade(i)][self.position[i]] = i;
+            lst[self.GRADE(i)][self.position[i]] = i;
 
         self.gradesbitmap = lst
 
 
-vga = gasparse.GA(3) # 3D VGA
-bitmap,sign = vga.cayley("innerinverted")
-grade,position,gradesize = vga.grademap()
 
-ga0 = algebra(bitmap,sign)
-ga0.set_grademap(position,gradesize)
-ga0.compute_gradesbitmap()
+vga = gasparse.GA(3) # 3D VGA
+
+ga0 = algebra(vga,"3DVGA")
+
+
 
 algebras = [ga0]
 nalgebras = len(algebras)
