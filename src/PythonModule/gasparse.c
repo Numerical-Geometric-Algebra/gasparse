@@ -717,8 +717,6 @@ static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyOb
             // raise warning saying the default type
         }
     }
-    Py_INCREF(self);
-    Py_INCREF((PyObject*)&PyMultivectorType);
     out = (PyObject*)init_multivector(bitmaps_int,values_float,size,self,&PyMultivectorType,type);
 
     PyMem_RawFree(values_float);

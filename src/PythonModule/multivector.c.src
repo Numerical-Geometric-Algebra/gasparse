@@ -304,27 +304,6 @@ static int blades_iter_next(PyMultivectorIter *iter){
     return 1;
 }
 
-
-static Py_ssize_t get_multivector_size(PyMultivectorObject *data){
-    switch(data->type){
-        case MultivectorType_sparse:;
-            SparseMultivector *sparse = (SparseMultivector*)data->data;
-            return sparse->size;
-            break;
-        case MultivectorType_dense:;
-            DenseMultivector *dense = (DenseMultivector*)data->data;
-            return dense->size;
-        case MultivectorType_blades:;
-            BladesMultivector *blades = (BladesMultivector*)data->data;
-            Py_ssize_t size = 0;
-            for(Py_ssize_t i = 0; i < blades->size; i++)
-                size += blades->data[i].size;
-            return size;
-        default:
-            return -1;
-    }
-}
-
 static void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size){
     for(Py_ssize_t i = 0; i < size; i++)
         if(iter[i].index)
@@ -332,42 +311,61 @@ static void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size){
     free(iter);
 }
 
+static PyMultivectorIter init_iter_sparse(PyMultivectorObject *data){
+    PyMultivectorIter iter;
+    SparseMultivector *sparse = (SparseMultivector*)data->data;
+    iter.data= data->data;
+    iter.bitmap = -1;
+    iter.value = 0;
+    iter.type = MultivectorType_sparse;
+    iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
+    iter.index[0] = 0;
+    iter.size = 1;
+    iter.niters = sparse->size;
+    iter.next = data->data_funcs.iter_next[MultivectorType_sparse];
+    return iter;
+}
+
+static PyMultivectorIter init_iter_dense(PyMultivectorObject *data){
+    PyMultivectorIter iter;
+    DenseMultivector *dense = (DenseMultivector*)data->data;
+    iter.data= data->data;
+    iter.bitmap = -1;
+    iter.value = 0;
+    iter.type = MultivectorType_dense;
+    iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
+    iter.index[0] = 0;
+    iter.size = 1;
+    iter.niters = dense->size;
+    iter.next = data->data_funcs.iter_next[MultivectorType_dense];
+    return iter;
+}
+
+static PyMultivectorIter init_iter_blades(PyMultivectorObject *data){
+    PyMultivectorIter iter;
+    BladesMultivector *blades = (BladesMultivector*)data->data;
+    iter.data= data->data;
+    iter.bitmap = -1;
+    iter.value = 0;
+    iter.type = MultivectorType_blades;
+    iter.index = (Py_ssize_t*)PyMem_RawMalloc(2*sizeof(Py_ssize_t));
+    iter.index[0] = 0;
+    iter.index[1] = 0;
+    iter.size = 2;
+    iter.niters = 0;
+    for(Py_ssize_t i = 0; i < blades->size; i++)
+        iter.niters += blades->data[i].size;
+
+    iter.next = data->data_funcs.iter_next[MultivectorType_blades];
+    return iter;
+}
 
 static PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ssize_t size){
     PyMultivectorIter *iter = (PyMultivectorIter*)PyMem_RawMalloc(size*sizeof(PyMultivectorIter));
     for(Py_ssize_t i = 0; i < size; i++){
-        /* iter[i].next = {sparse_iter_next,dense_iter_next,blades_iter_next,NULL}; */
-        iter[i].data = data[i].data;
-        iter[i].bitmap = -1;
-        iter[i].value = 0;
-        iter[i].grade = -1;
-        iter[i].type = data[i].type;
-        if(data[i].type == MultivectorType_blades){
-            iter[i].index = (Py_ssize_t*)PyMem_RawMalloc(2*sizeof(Py_ssize_t));
-            iter[i].index[0] = 0;
-            iter[i].index[1] = 0;
-            iter[i].size = 2;
-        }else{
-            iter[i].index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
-            iter[i].index[0] = 0;
-            iter[i].size = 1;
-        }
-        switch(data[i].type){
-            case MultivectorType_sparse:
-                iter[i].next = sparse_iter_next;
-                break;
-            case MultivectorType_dense:
-                iter[i].next = dense_iter_next;
-                break;
-            case MultivectorType_blades:
-                iter[i].next = blades_iter_next;
-                break;
-            default:
-                iter[i].next = NULL;
-                break;
-        }
+        gaiterinitfunc iter_init = data->data_funcs.iter_init[data[i].type];
+        iter[i] = iter_init(&data[i]);
     }
-
     return iter;
 }
 
@@ -397,11 +395,16 @@ static PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_s
 
             Py_ssize_t i = 0;
             while(iter->next(iter)){
+                // only skip small values if its not sparse or blades type
+                if(iter->type != MultivectorType_sparse && iter->type != MultivectorType_blades)
+                    // maybe should add this as an option when creating the algebra
+                    if(abs(iter->value) < 1e-12) continue; // don't print small values
+
                 char *value = PyOS_double_to_string((double)iter->value,'f',6,0,NULL);
                 if(iter->bitmap){
                     char *bitmap = bitmap_to_string(iter->bitmap);
                     Py_ssize_t size = strlen(bitmap) + strlen(value)+3;
-                    str_blade[i] = (char*)PyMem_RawMalloc(size*sizeof(char));
+                    str_blade[i] = (char*)PyMem_RawMalloc((size+100)*sizeof(char));
                     PyOS_snprintf(str_blade[i],size,"%s^%s",value,bitmap);
                     PyMem_RawFree(bitmap);
                     PyMem_Free(value);
@@ -414,7 +417,12 @@ static PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_s
                 len += strlen(str_blade[i]);
                 i++;
             }
-
+            if(iter->type != MultivectorType_sparse && iter->type != MultivectorType_blades)
+                dsize = i;
+            if(!dsize){
+                PyMem_RawFree(str_blade);
+                return Py_BuildValue("s","0.0");
+            }
             len += dsize*3 + 3;
             out_str = (char*)PyMem_RawMalloc(len*sizeof(char));
 
@@ -432,7 +440,7 @@ static PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_s
 
             for(Py_ssize_t i = 0; i < dsize; i++)
                 PyMem_RawFree(str_blade[i]);
-
+            PyMem_RawFree(str_blade);
             PyMem_RawFree(out_str);
 
             return out;
@@ -707,7 +715,6 @@ static SparseMultivector ternary_sparse_product_(SparseMultivector sparse0, Spar
 
     sparse_free_(dense0);
     sparse_free_(dense1);
-    Py_SET_REFCNT((PyObject*)&sparse,1);
     return sparse;
 }
 
@@ -741,7 +748,6 @@ static SparseMultivector unary_sparse_gradeproject_(SparseMultivector sparse0, P
     }
 
     PyMem_RawFree(g);
-    Py_SET_REFCNT((PyObject*)&sparse,1);
     return sparse;
 }
 
@@ -872,7 +878,6 @@ static BladesMultivector unary_blades_scalarproduct_(BladesMultivector blades0, 
     }
 
     sparse_free_(dense);
-    Py_SET_REFCNT((PyObject*)&sparse,1); // initialize reference count to 1
     return sparse;
 }
 
@@ -916,7 +921,6 @@ static BladesMultivector binary_blades_add_(BladesMultivector blades0, BladesMul
     }
 
     sparse_free_(dense);
-    Py_SET_REFCNT((PyObject*)&sparse,1); // initialize reference count to 1
     return sparse;
 }
 
@@ -962,8 +966,6 @@ static BladesMultivector binary_blades_product_(BladesMultivector blades0, Blade
     }
 
     sparse_free_(dense);
-    Py_SET_REFCNT((PyObject*)&sparse,1);
-
     return sparse;
 }
 
@@ -1203,7 +1205,6 @@ static DenseMultivector ternary_dense_product_(DenseMultivector dense0, DenseMul
         }
     }
     dense_free_(temp);
-
     return dense;
 }
 
@@ -1218,7 +1219,6 @@ static DenseMultivector unary_dense_gradeproject_(DenseMultivector dense0, PyAlg
             dense.value[i] = dense0.value[i];
 
     PyMem_RawFree(g);
-
     return dense;
 }
 
@@ -1787,7 +1787,7 @@ PyObject *multivector_repr(PyMultivectorObject *self){
     PrintTypeMV ptype = self->GA->print_type_mv;
 
     PyMultivectorIter *iter = init_multivector_iter(self,1);
-    mv_repr = type_iter_repr(iter,ptype,get_multivector_size(self));
+    mv_repr = type_iter_repr(iter,ptype,iter->niters);
     free_multivector_iter(iter,1);
 
     if(ptype == PrintTypeMV_normal){
@@ -1836,7 +1836,6 @@ static PyMultivectorObject* generate_empty_multivector(PyMultivectorObject *self
             out = new_multivector(self,self->type);
             DenseMultivector *dense = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
             *dense = init_dense_empty(((DenseMultivector*)self->data)->size);
-            Py_SET_REFCNT((PyObject*)dense,1);
             out->data = (void*)dense;
             return out;
         default:
@@ -2274,6 +2273,8 @@ static PyMultivectorMath_Funcs multivector_math_fn = {
 static PyMultivectorData_Funcs multivector_data_fn = {
     .free = {sparse_free,dense_free,blades_free},
     .init = {sparse_init,dense_init,blades_init},
+    .iter_init = {init_iter_sparse,init_iter_dense,init_iter_blades},
+    .iter_next = {sparse_iter_next,dense_iter_next,blades_iter_next},
 };
 
 PyMultivectorObject *init_multivector(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga, PyTypeObject *obj_type, MultivectorType type){
@@ -2296,7 +2297,6 @@ PyMultivectorObject *init_multivector(int *bitmap, ga_float *value, Py_ssize_t s
     Py_XINCREF(obj_type);
     self->GA = ga;
     Py_XINCREF((PyObject*)ga);
-    Py_SET_REFCNT((PyObject*)self->data,1);
     Py_SET_REFCNT((PyObject*)self,1);
     return self;
 }

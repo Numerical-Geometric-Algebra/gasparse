@@ -64,8 +64,25 @@ typedef struct PyGaArrayIterator{
     Py_ssize_t sizeof_data;
 }PyGaArrayIterator;
 
-
+// multivector iterator definitions
+typedef struct _PyMultivectorIter PyMultivectorIter;
 typedef struct _PyMultivectorObject PyMultivectorObject;
+
+typedef int (*gaiternextfunc)(PyMultivectorIter *iter);
+typedef PyMultivectorIter (*gaiterinitfunc)(PyMultivectorObject *data);
+typedef struct _PyMultivectorIter{
+    gaiternextfunc next;
+    void *data;
+    Py_ssize_t *index;
+    Py_ssize_t size;
+    Py_ssize_t niters; // number of iterations
+    int bitmap;
+    ga_float value;
+    Py_ssize_t grade;
+    MultivectorType type;
+}PyMultivectorIter;
+
+
 
 typedef PyMultivectorObject *(*gabinaryfunc)(PyMultivectorObject *left, PyMultivectorObject *right);
 typedef PyMultivectorObject *(*gaaddfunc)(PyMultivectorObject *left, PyMultivectorObject *right, int sign);
@@ -110,8 +127,8 @@ typedef struct PyMultivectorData_Funcs{
     gainitfunc init[MultivectorTypeMAX];
     gacastfunc to_sparse[MultivectorTypeMAX];
     gacastfunc to_dense[MultivectorTypeMAX];
-    // gaiternextfunc iter_next[MultivectorTypeMAX];
-    // gaiterinitfunc iter_init[MultivectorTypeMAX];
+    gaiternextfunc iter_next[MultivectorTypeMAX];
+    gaiterinitfunc iter_init[MultivectorTypeMAX];
 }PyMultivectorData_Funcs;
 
 
@@ -155,23 +172,6 @@ typedef struct DenseMultivector{
     ga_float *value; // fixed size array for all the algebra
     Py_ssize_t size;
 }DenseMultivector;
-
-// multivector iterator definitions
-typedef struct _PyMultivectorIter PyMultivectorIter;
-
-typedef int (*gaiternextfunc)(PyMultivectorIter *iter);
-
-typedef struct _PyMultivectorIter{
-    gaiternextfunc next;
-    void *data;
-    Py_ssize_t *index;
-    Py_ssize_t size;
-    int bitmap;
-    ga_float value;
-    Py_ssize_t grade;
-    MultivectorType type;
-}PyMultivectorIter;
-
 
 PyMultivectorObject *init_multivector(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga, PyTypeObject *obj_type, int type);
 
