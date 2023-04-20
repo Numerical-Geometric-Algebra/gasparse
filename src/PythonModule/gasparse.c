@@ -2,7 +2,7 @@
 #include <Python.h>
 #include "structmember.h"
 #include "gasparse.h"
-
+#include "multivector.h"
 
 // replace this with a builtin
 // returns true if abs(v) == p
@@ -272,7 +272,7 @@ static PyObject *algebra_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
             map_new(&self->product[i]);
 
     }
-    return (PyObject*) self;
+    return (PyObject*)self;
 }
 
 

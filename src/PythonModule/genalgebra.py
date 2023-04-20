@@ -57,22 +57,28 @@ class algebra:
 
 
 vga = gasparse.GA(3) # 3D VGA
+cga = gasparse.GA(4,1) # 3D CGA
+dga = gasparse.GA(0,0,1) # Dual Numbers
 
 ga0 = algebra(vga,"3DVGA")
+ga1 = algebra(cga,"3DCGA")
 
 
-
-algebras = [ga0]
+algebras = [ga0,ga1]
+# algebras = [ga0]
 nalgebras = len(algebras)
 
 templateLoader = jinja2.FileSystemLoader(searchpath="./")
 templateEnv = jinja2.Environment(loader=templateLoader,trim_blocks=True)
 
 
-multivectorgend = templateEnv.get_template("codegend_multivector.c.src")
+multivectorgend = templateEnv.get_template("multivector_gen.c.src")
 
-textmultivectorc = multivectorgend.render(algebras=algebras,nalgebras=nalgebras)
+types = ['dense','blades']
+Types = ['Dense','Blades']
+
+textmultivectorc = multivectorgend.render(algebras=algebras,nalgebras=nalgebras,types=types,Types=Types)
 
 # to save the results
-with open("codegend_multivector.c", "w") as fh:
+with open("multivector_gen.c", "w") as fh:
     fh.write(textmultivectorc)
