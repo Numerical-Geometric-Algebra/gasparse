@@ -1,8 +1,13 @@
 #define PY_SSIZE_T_CLEAN
+
 #include <Python.h>
 #include "structmember.h"
 #include "gasparse.h"
-#include "multivector.h"
+/* #include "multivector.h" */
+#ifdef INCLUDE_GENCODE
+#include "multivector_gen.h"
+#endif
+
 
 // replace this with a builtin
 // returns true if abs(v) == p
@@ -275,7 +280,7 @@ static PyObject *algebra_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     return (PyObject*)self;
 }
 
-
+#ifndef INCLUDE_CODEGEN
 static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
     static char *kwlist[] = {"p","q","r","metric","print_type","print_type_mv",NULL};
     int p = 0, q = 0, r = 0; PrintType print_type = PrintTypeMIN; PrintTypeMV print_type_mv = PrintTypeMVMIN;
@@ -349,8 +354,154 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
     if(print_type_mv < PrintTypeMVMAX && print_type_mv > PrintTypeMVMIN)
         self->print_type_mv = print_type_mv;
 
+
+    self->mixed = (PyMultivectorMixedMath_Funcs*)PyMem_RawMalloc(sizeof(PyMultivectorMixedMath_Funcs));
+    *self->mixed = multivector_mixed_fn;
+    self->types = (PyMultivectorSubType*)PyMem_RawMalloc(3*sizeof(PyMultivectorSubType));
+    self->tsize = 3;
+    for(Py_ssize_t i = 0; i < 3; i++)
+        self->types[i] = multivector_subtypes_array[i];
+
     return 0;
 }
+#else
+static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
+    static char *kwlist[] = {"p","q","r","metric","print_type","print_type_mv","generate_tables","name",NULL};
+    int p = 0, q = 0, r = 0; PrintType print_type = PrintTypeMIN; PrintTypeMV print_type_mv = PrintTypeMVMIN;
+    int gen_tables = 0;
+    PyObject *metric_obj = NULL;
+    char *name = NULL;
+    Py_ssize_t size = -1;
+    Py_ssize_t lsize = 3;
+    if(!PyArg_ParseTupleAndKeywords(args, kwds, "|iiiOiips", kwlist, &p, &q, &r, &metric_obj, &print_type, &print_type_mv, &gen_tables,&name))
+        return -1;
+    if(!metric_obj && !name){
+        if(p < 0 || q < 0 || r < 0)
+            return -1;
+        else if(p == 0 && q == 0 && r == 0)
+            p = 3;
+
+        self->metric = (char*)PyMem_RawMalloc((p+q+r)*sizeof(char));
+        for(Py_ssize_t i = 0; i < p; i++) self->metric[i] = 1;
+        for(Py_ssize_t i = p; i < p + q; i++) self->metric[i] = -1;
+        for(Py_ssize_t i = p + q; i < p + q + r; i++) self->metric[i] = 0;
+    }else if(!name){
+        p = 0, q = 0, r = 0;
+        if(!PyList_Check(metric_obj)){
+            PyErr_SetString(PyExc_TypeError,"metric must be a list");
+            return -1;
+        }
+        size = PyList_Size(metric_obj);
+        self->metric = (char*)PyMem_RawMalloc(size*sizeof(char));
+
+        for(Py_ssize_t i = 0; i < size; i++){
+            PyObject *value = PyList_GetItem(metric_obj,i);
+            if(!PyLong_Check(value)){
+                PyErr_SetString(PyExc_TypeError,"items of the list metric must be of type int");
+                PyMem_RawFree(self->metric);
+                return -1;
+            }else {
+                int overflow;
+                self->metric[i] = (char)PyLong_AsLongAndOverflow(value,&overflow);
+                if(overflow){
+                    PyMem_RawFree(self->metric);
+                    PyErr_SetString(PyExc_ValueError,"metric can only have values -1,1,0.");
+                    return -1;
+                }
+                if(self->metric[i] == 1){
+                    p++;
+                }else if(self->metric[i] == -1){
+                    q++;
+                }else if(self->metric[i] == 0){
+                    r++;
+                }else {
+                    PyMem_RawFree(self->metric);
+                    PyErr_SetString(PyExc_ValueError,"metric can only have values -1,1,0.");
+                    return -1;
+                }
+            }
+        }
+    }
+
+    Py_ssize_t k = 0;
+    Py_ssize_t index[10] = {-1};
+    if(name && !self->metric){
+        for(Py_size_t i = 0; i < N_GEN_SUBTYPES; i++)
+            if(!strcmp(gen_subtypes_array[i].name,name))
+                index[k++] = i;
+    }else if(self->metric){
+        for(Py_size_t i = 0; i < N_GEN_SUBTYPES; i++){
+            if(METRIC_SIZE(self) == gen_subtypes_array[i].msize){
+                int *metric = gen_subtypes_array[i].metric;
+                int check = 1;
+                size = gen_subtypes_array[i].msize;
+                for(Py_ssize_t j = 0; j < size; j++){
+                    if(metric[j] != self.metric[j]){
+                        check = 0;
+                        break;
+                    }
+                }
+                if(check) index[k++] = i;
+            }
+        }
+    }
+
+    if(!gen_tables && k)
+        lsize = 0;
+    if(!k)// if there is no found generated code for the specified algebra
+        gen_tables = 1; // generate the maps
+
+    self->mixed = (PyMultivectorMixedMath_Funcs*)PyMem_RawMalloc(sizeof(PyMultivectorMixedMath_Funcs));
+    self->types = (PyMultivectorSubType*)PyMem_RawMalloc((lsize+k)*sizeof(PyMultivectorSubType));
+
+    *self->mixed = multivector_mixed_fn;
+    self->tsize = lsize+k;
+
+
+    // populate the subtypes table
+    for(Py_ssize_t i = 0; i < lsize; i++)
+        self->types[i] = multivector_subtypes_array[i];
+    for(Py_size_t i = 0; i < k; i++)
+        self->types[i+lsize] = gen_subtypes_array[index[i]];
+
+    if(!self->metric && k){
+        size = self->types[lsize].msize;
+        self->metric = (char*)PyMem_RawMalloc(size*sizeof(char));
+        for(Py_ssize_t i = 0; i < size; i++){
+            self->metric[i] = self->types[lsize].metric[i];
+            if(self->metric[i] == 1) self->p++;
+            if(self->metric[i] == -1) self->q++;
+            if(self->metric[i] == 0) self->r++;
+        }
+    }
+
+    // set ga print type
+    self->print_type = PrintType_metric_array;
+    if(print_type < PrintTypeMAX && print_type > PrintTypeMIN)
+        self->print_type = print_type;
+
+    // set multivector print type
+    self->print_type_mv = PrintTypeMV_reduced;
+    if(print_type_mv < PrintTypeMVMAX && print_type_mv > PrintTypeMVMIN)
+        self->print_type_mv = print_type_mv;
+
+    self->p = p; self->q = q; self->r = r; self->precision = 1e-6;
+
+    if(gen_tables){
+        map_init(&self->product[ProductType_geometric],self->metric,p+q+r);
+        grade_map_init(&self->gm,self->product[ProductType_geometric].size);
+        inner_map_init(self);
+        outer_map_init(self);
+
+        inverted_map_init(&self->product[ProductType_geometricinverted],&self->product[ProductType_geometric]);
+        inverted_map_init(&self->product[ProductType_innerinverted],&self->product[ProductType_inner]);
+        inverted_map_init(&self->product[ProductType_outerinverted],&self->product[ProductType_outer]);
+    }
+
+    return 0;
+}
+#endif
+
 
 
 
@@ -370,14 +521,14 @@ static PyObject *algebra_add_basis(PyAlgebraObject *self, PyObject *args, PyObje
             return NULL;
         }
 
-        metric = (char*)PyMem_RawMalloc((Metric_SIZE(self) + p + q + r)*sizeof(char));
-        for(Py_ssize_t i = 0; i < Metric_SIZE(self); i++)
+        metric = (char*)PyMem_RawMalloc((METRIC_SIZE(self) + p + q + r)*sizeof(char));
+        for(Py_ssize_t i = 0; i < METRIC_SIZE(self); i++)
             metric[i] = self->metric[i];
-        for(Py_ssize_t i = Metric_SIZE(self); i < p + Metric_SIZE(self); i++)
+        for(Py_ssize_t i = METRIC_SIZE(self); i < p + METRIC_SIZE(self); i++)
             metric[i] = 1;
-        for(Py_ssize_t i = p + Metric_SIZE(self); i < p + q + Metric_SIZE(self); i++)
+        for(Py_ssize_t i = p + METRIC_SIZE(self); i < p + q + METRIC_SIZE(self); i++)
             metric[i] = -1;
-        for(Py_ssize_t i = p + q + Metric_SIZE(self); i < p + q + r + Metric_SIZE(self); i++)
+        for(Py_ssize_t i = p + q + METRIC_SIZE(self); i < p + q + r + METRIC_SIZE(self); i++)
             metric[i] = 0;
         PyMem_RawFree(self->metric);
         self->metric = metric;
@@ -387,9 +538,9 @@ static PyObject *algebra_add_basis(PyAlgebraObject *self, PyObject *args, PyObje
             return NULL;
         }
         Py_ssize_t size = PyList_Size(metric_obj);
-        metric = (char*)PyMem_RawMalloc((Metric_SIZE(self) + size)*sizeof(char));
+        metric = (char*)PyMem_RawMalloc((METRIC_SIZE(self) + size)*sizeof(char));
 
-        for(Py_ssize_t i = 0; i < Metric_SIZE(self); i++)
+        for(Py_ssize_t i = 0; i < METRIC_SIZE(self); i++)
             metric[i] = self->metric[i];
 
         for(Py_ssize_t i = 0; i < size; i++){
@@ -400,7 +551,7 @@ static PyObject *algebra_add_basis(PyAlgebraObject *self, PyObject *args, PyObje
                 return NULL;
             }else {
                 int overflow;
-                metric[i + Metric_SIZE(self)] = (char)PyLong_AsLongAndOverflow(value,&overflow);
+                metric[i + METRIC_SIZE(self)] = (char)PyLong_AsLongAndOverflow(value,&overflow);
                 if(overflow){
                     PyMem_RawFree(metric);
                     PyErr_SetString(PyExc_ValueError,"metric can only have values -1,1,0.");
@@ -421,7 +572,7 @@ static PyObject *algebra_add_basis(PyAlgebraObject *self, PyObject *args, PyObje
         }
     }
 
-    map_add_basis(&self->product[ProductType_geometric],metric,Metric_SIZE(self) + p + q + r, Metric_SIZE(self));
+    map_add_basis(&self->product[ProductType_geometric],metric,METRIC_SIZE(self) + p + q + r, METRIC_SIZE(self));
     // PyMem_RawFree old product maps
     for(Py_ssize_t i = ProductType_geometric + 1; i < ProductTypeMAX; i++)
         map_dealloc(&self->product[i]);
@@ -450,11 +601,11 @@ static PyObject *algebra_repr(PyAlgebraObject *self){
         return Py_BuildValue("s",str);
     }else if(self->print_type == PrintType_metric_array){
         PyObject *out;
-        Py_ssize_t size = 3*Metric_SIZE(self) + 2;
+        Py_ssize_t size = 3*METRIC_SIZE(self) + 2;
         char *str_temp = (char*)PyMem_RawMalloc(size*sizeof(char));
-        char **str_value = (char**)PyMem_RawMalloc(Metric_SIZE(self)*sizeof(char*));
+        char **str_value = (char**)PyMem_RawMalloc(METRIC_SIZE(self)*sizeof(char*));
         Py_ssize_t i;
-        for(i = 0; i < Metric_SIZE(self)-1; i++){
+        for(i = 0; i < METRIC_SIZE(self)-1; i++){
             str_value[i] = (char*)PyMem_RawMalloc(4*sizeof(char));
             PyOS_snprintf(str_value[i],4,"%+d,",(int)self->metric[i]);
         }
@@ -462,7 +613,7 @@ static PyObject *algebra_repr(PyAlgebraObject *self){
         PyOS_snprintf(str_value[i],4,"%+d",(int)self->metric[i]);
 
         Py_ssize_t j = 0;
-        for(i = 0; i < Metric_SIZE(self); i++){
+        for(i = 0; i < METRIC_SIZE(self); i++){
             strcpy(str_temp + j,str_value[i]);
             j += strlen(str_value[i]);
         }
@@ -470,7 +621,7 @@ static PyObject *algebra_repr(PyAlgebraObject *self){
         PyOS_snprintf(str,100,"GA(metric=[%s])",str_temp);
         out = Py_BuildValue("s",str);
 
-        for(Py_ssize_t i = 0; i < Metric_SIZE(self); i++){
+        for(Py_ssize_t i = 0; i < METRIC_SIZE(self); i++){
             PyMem_RawFree(str_value[i]);
         }PyMem_RawFree(str_value);
         PyMem_RawFree(str_temp);
@@ -479,9 +630,9 @@ static PyObject *algebra_repr(PyAlgebraObject *self){
     }else if(self->print_type == PrintType_vectors){
         PyObject *out;
         char str_temp[100];
-        char **str_value = (char**)PyMem_RawMalloc(Metric_SIZE(self)*sizeof(char*));
+        char **str_value = (char**)PyMem_RawMalloc(METRIC_SIZE(self)*sizeof(char*));
         Py_ssize_t i;
-        for(i = 0; i < Metric_SIZE(self)-1; i++){
+        for(i = 0; i < METRIC_SIZE(self)-1; i++){
             str_value[i] = (char*)PyMem_RawMalloc(7*sizeof(char));
             PyOS_snprintf(str_value[i],7,"e%lu:%+d,",i,(int)self->metric[i]);
         }
@@ -489,7 +640,7 @@ static PyObject *algebra_repr(PyAlgebraObject *self){
         PyOS_snprintf(str_value[i],7,"e%lu:%+d",i,(int)self->metric[i]);
 
         Py_ssize_t j = 0;
-        for(i = 0; i < Metric_SIZE(self); i++){
+        for(i = 0; i < METRIC_SIZE(self); i++){
             strcpy(str_temp + j, str_value[i]);
             j += strlen(str_value[i]);
         }
@@ -497,7 +648,7 @@ static PyObject *algebra_repr(PyAlgebraObject *self){
         PyOS_snprintf(str,100,"GA(vectors=[%s])",str_temp);
         out = Py_BuildValue("s",str);
 
-        for(Py_ssize_t i = 0; i < Metric_SIZE(self); i++){
+        for(Py_ssize_t i = 0; i < METRIC_SIZE(self); i++){
             PyMem_RawFree(str_value[i]);
         }PyMem_RawFree(str_value);
 
@@ -538,7 +689,7 @@ static int parse_list_as_bitmaps(PyObject *blades, int **bitmap){
 }
 
 static PyObject* algebra_metric(PyAlgebraObject *self, PyObject *Py_UNUSED(ignored)){
-    Py_ssize_t size = Metric_SIZE(self);
+    Py_ssize_t size = METRIC_SIZE(self);
     PyObject *metric_list = PyList_New(size);
 
     for(Py_ssize_t i = 0; i < size; i++){
@@ -666,15 +817,17 @@ static PyTypeObject PyMultivectorType = {
 
 
 static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
-    static char *kwlist[] = {"values","blades","precision","dtype","addmethod",NULL};
-    PyObject *values = NULL, *blades = NULL, *dtype = NULL, *addmethod = NULL, *out = NULL;
+    static char *kwlist[] = {"values","blades","precision","dtype","addmethod","prefer_generated",NULL};
+    PyObject *values = NULL, *blades = NULL, *dtype = NULL, *addmethod = NULL;
     int precision;
     int *bitmaps_int = NULL;
+    int pref_gend = 1; // prefers generated code by default
     ga_float *values_float;
     Py_ssize_t size;
-    MultivectorType type = MultivectorType_sparse; // default type
+    PyMultivectorObject *multivector;
+    Py_ssize_t type = -1; // default type
 
-    if(!PyArg_ParseTupleAndKeywords(args, kwds, "OO|iOO", kwlist, &values,&blades,&precision,&dtype,&addmethod))
+    if(!PyArg_ParseTupleAndKeywords(args, kwds, "OO|iOOp", kwlist, &values,&blades,&precision,&dtype,&addmethod,&pref_gend))
         return NULL;
     if(!values)
         return NULL;
@@ -707,21 +860,44 @@ static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyOb
 
     if(dtype && PyUnicode_Check(dtype)){
         const char *dtype_str = PyUnicode_AsUTF8(dtype);
-        if(!strcmp(dtype_str,"sparse")){
-            type = MultivectorType_sparse;
-        }else if(!strcmp(dtype_str,"dense")){
-            type = MultivectorType_dense;
-        }else if(!strcmp(dtype_str,"blades")){
-            type = MultivectorType_blades;
-        }else {
-            // raise warning saying the default type
+        Py_ssize_t othertype = -1;
+        for(Py_ssize_t i = 0; i < self->tsize; i++){
+            if(!strncmp(self->types[i].type_name,dtype_str,strlen(dtype_str))){
+                if(self->types[i].generated && pref_gend){
+                    type = i; break;
+                }else if(!self->types[i].generated && !pref_gend){ // I don't want the generated version
+                    type = i; break;
+                }else{
+                    othertype = i;
+                }
+            }
         }
+        if(type == -1) // couldn't find the prefered type
+            type = othertype;
     }
-    out = (PyObject*)init_multivector(bitmaps_int,values_float,size,self,&PyMultivectorType,type);
+
+    if(type == -1) type = 0; // raise warning couldn't find the asked type
+
+    multivector = (PyMultivectorObject*)PyMem_RawMalloc(sizeof(PyMultivectorObject));
+    multivector->type = self->types[type];
+    multivector->mixed = *self->mixed;
+
+    gainitfunc init = multivector->type.data_funcs.init;
+    if(init)
+        multivector->data = init(bitmaps_int,values_float,size,self);
+    else
+        return NULL; // raise not implemented error
+
+    Py_SET_TYPE(multivector,&PyMultivectorType);
+    Py_XINCREF(&PyMultivectorType);
+    multivector->GA = self;
+    Py_XINCREF((PyObject*)self);
+    Py_SET_REFCNT((PyObject*)multivector,1);
 
     PyMem_RawFree(values_float);
     PyMem_RawFree(bitmaps_int);
-    return out;
+
+    return (PyObject*)multivector;
 }
 
 

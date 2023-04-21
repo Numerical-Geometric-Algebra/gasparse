@@ -5,6 +5,11 @@
 
 {% for i in range(nalgebras) %}
 {% set algebra = algebras[i] %}
+{% set bladeszero %}
+{{"{"}}{0}{% for j in range(algebra.ngrades-1) -%},{0}{% endfor %}{{"}"}}
+{% endset %}
+#define blades{{i}}zero {{bladeszero}}
+
 typedef struct _gen{{i}}_DenseMultivector{
     ga_float value[{{algebra.size}}];
 }gen{{i}}_DenseMultivector;
@@ -80,6 +85,20 @@ static gen{{i}}_BladesGradeProject_func gen{{i}}bladesproject = {
 {% endfor %}
 };
 
+{% for type in types %}
+{% set Type = Types[loop.index0] %}
+static int gen{{i}}_{{type}}_gradeproject(gen{{i}}_{{Type}}Multivector *{{type}}, gen{{i}}_{{Type}}Multivector *{{type}}0, int *grades, Py_ssize_t size){
+    for(Py_ssize_t i = 0; i < size; i++){
+        gen{{i}}{{type}}gradeprojectfunc gradeproject =
+                            gen{{i}}{{type}}project.gradeproject[grades[i]];
+        if(gradeproject)
+            gradeproject({{type}}0,{{type}});
+        else return -1;
+    }
+    return 0;
+}
+{% endfor %}
+
 static gen{{i}}_DenseMultivector dense{{i}}_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
     gen{{i}}_DenseMultivector dense = {{"{{"}}0{{"}}"}};
     for(Py_ssize_t i = 0; i < size; i++){
@@ -113,12 +132,13 @@ static PyMultivectorIter dense{{i}}_iterinit(PyMultivectorObject *data){
     iter.data = data->data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type; // don't know what is the type of this
+    iter.type = data->type.ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.size = 1;
     iter.niters = {{algebra.size}};
-    iter.next = data->data_funcs.iter_next[data->type];
+    iter.next = data->type.data_funcs.iter_next;
+    iter.type_name = data->type.type_name;
     return iter;
 }
 
@@ -127,13 +147,14 @@ static PyMultivectorIter blades{{i}}_iterinit(PyMultivectorObject *data){
     iter.data= data->data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type;
+    iter.type = data->type.ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(2*sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.index[1] = 0;
     iter.size = 2;
     iter.niters = {{algebra.size}};
-    iter.next = data->data_funcs.iter_next[data->type];
+    iter.next = data->type.data_funcs.iter_next;
+    iter.type_name = data->type.type_name;
     return iter;
 }
 
@@ -202,6 +223,45 @@ static gen{{i}}_DenseMultivector gen{{i}}_dense_{{product_name}}product(gen{{i}}
 {% endfor %};
 {% endif %}
 {% endfor %}
+    return dense;
+}
+
+// grade projection of the product of two multivectors <ab>_r
+{% for r in range(algebra.ngrades) %}
+{# static void gen{{i}}_dense_grade{{r}}{{product_name}}product(gen{{i}}_DenseMultivector *dense, gen{{i}}_DenseMultivector dense0, gen{{i}}_DenseMultivector dense1){ #}
+#define GEN{{i}}_DENSE_GRADE{{r}}{{product_name|upper}}PRODUCT(dense,dense0,dense1){\
+{% for j in range(algebra.size) %}
+{% if algebra.GRADE(j) == r %}
+{% if zerosign[j] == True %}
+    dense.value[{{j}}] =\
+{% for k in range(algebra.size) %}
+{% set bitmap = bitmaps[k][j] %}
+{% set sign = signs[k][j] %}
+{% if sign == -1 %}
+    -dense0.value[{{k}}]*dense1.value[{{bitmap}}]\
+{% elif sign == 1 %}
+    +dense0.value[{{k}}]*dense1.value[{{bitmap}}]\
+{% endif %}
+{% endfor %};\
+{% endif %}
+{% endif %}
+{% endfor %}
+}
+{% endfor %}
+
+static gen{{i}}_DenseMultivector gen{{i}}_dense_grade{{product_name}}product(gen{{i}}_DenseMultivector dense0, gen{{i}}_DenseMultivector dense1, int *grades, Py_ssize_t size){
+    gen{{i}}_DenseMultivector dense = {% raw -%}{{0}}{%- endraw %};
+    for(Py_ssize_t i = 0; i < size; i++){
+        switch(grades[i]){
+{% for r in range(algebra.ngrades) %}
+            case {{r}}:
+                GEN{{i}}_DENSE_GRADE{{r}}{{product_name|upper}}PRODUCT(dense,dense0,dense1);
+                break;
+{% endfor %}
+            default:// do nothing for different values
+                break;
+        }
+    }
     return dense;
 }
 
@@ -311,6 +371,47 @@ static gen{{i}}_BladesMultivector gen{{i}}_blades_{{product_name}}product(gen{{i
 {% endfor %};
 {% endif %}
 {% endfor %}
+    return blades;
+}
+
+{% for r in range(algebra.ngrades) %}
+{# static void gen{{i}}_blades_grade{{r}}{{product_name}}product(gen{{i}}_BladesMultivector *blades, gen{{i}}_BladesMultivector blades0, gen{{i}}_BladesMultivector blades1){ #}
+#define GEN{{i}}_BLADES_GRADE{{r}}{{product_name|upper}}PRODUCT(blades,blades0,blades1){\
+{% for j in range(algebra.size) %}
+{% if algebra.GRADE(j) == r %}
+{% set pj = algebra.position[j] %}
+{% if zerosign[j] == True %}
+    blades.value{{algebra.GRADE(j)}}[{{pj}}] =\
+{% for k in range(algebra.size) %}
+{% set bitmap = bitmaps[k][j]%}
+{% set pk = algebra.position[k] %}
+{% set pbitmap = algebra.position[bitmap] %}
+{% set sign = signs[k][j] %}
+{% if sign == -1 %}
+    -blades0.value{{algebra.GRADE(k)}}[{{pk}}]*blades1.value{{algebra.GRADE(bitmap)}}[{{pbitmap}}]\
+{% elif sign == 1 %}
+    +blades0.value{{algebra.GRADE(k)}}[{{pk}}]*blades1.value{{algebra.GRADE(bitmap)}}[{{pbitmap}}]\
+{% endif %}
+{% endfor %};\
+{% endif %}
+{% endif %}
+{% endfor %}
+}
+{% endfor %}
+
+static gen{{i}}_BladesMultivector gen{{i}}_blades_grade{{product_name}}product(gen{{i}}_BladesMultivector blades0, gen{{i}}_BladesMultivector blades1, int *grades, Py_ssize_t size){
+    gen{{i}}_BladesMultivector blades = blades{{i}}zero;
+    for(Py_ssize_t i = 0; i < size; i++){
+        switch(grades[i]){
+{% for r in range(algebra.ngrades) %}
+            case {{r}}:
+                GEN{{i}}_BLADES_GRADE{{r}}{{product_name|upper}}PRODUCT(blades,blades0,blades1);
+                break;
+{% endfor %}
+            default:// do nothing for different values
+                break;
+        }
+    }
     return blades;
 }
 
@@ -449,6 +550,48 @@ static PyMultivectorObject *binary_{{type}}{{i}}_product(PyMultivectorObject *da
 }
 {% endfor %}
 
+
+{% for type in types %}
+{% set Type = Types[loop.index0] %}
+static PyMultivectorObject *binary_{{type}}{{i}}_gradeproduct(PyMultivectorObject *data0, PyMultivectorObject *data1, ProductType ptype, GradeProjectMap gpmap){
+    gen{{i}}_{{Type}}Multivector *p{{type}}0 = (gen{{i}}_{{Type}}Multivector*)data0->data;
+    gen{{i}}_{{Type}}Multivector *p{{type}}1 = (gen{{i}}_{{Type}}Multivector*)data1->data;
+    gen{{i}}_{{Type}}Multivector *p{{type}}  = (gen{{i}}_{{Type}}Multivector*)PyMem_RawMalloc(sizeof(gen{{i}}_{{Type}}Multivector));
+
+    gen{{i}}_{{Type}}Multivector proj{{type}}0 = {% if type == "dense" %}{% raw -%}{{0}}{%- endraw %}{% else %} blades{{i}}zero{% endif %};
+    gen{{i}}_{{Type}}Multivector proj{{type}}1 = {% if type == "dense" %}{% raw -%}{{0}}{%- endraw %}{% else %} blades{{i}}zero{% endif %};
+
+    PyMultivectorObject *out = new_multivector(data0,-1);
+    if(!p{{type}}0 || !p{{type}}1 || !p{{type}} || !out){
+        PyMem_RawFree(p{{type}});
+        free_multivector(out);
+        return NULL; // raise error
+    }
+    // grade projection of the input
+    if(gen{{i}}_{{type}}_gradeproject(&proj{{type}}0,p{{type}}0,gpmap.grades0,gpmap.size0) == -1) return NULL;
+    if(gen{{i}}_{{type}}_gradeproject(&proj{{type}}1,p{{type}}1,gpmap.grades0,gpmap.size0) == -1) return NULL;
+
+
+    switch(ptype){
+{% for product_name in algebra.product_names %}
+        case ProductType_{{product_name}}:
+            *p{{type}} = gen{{i}}_{{type}}_grade{{product_name}}product(proj{{type}}0,proj{{type}}1,gpmap.grades,gpmap.size);
+            break;
+{% endfor %}
+        default:
+            PyMem_RawFree(p{{type}});
+            free_multivector(out);
+            return NULL;
+    }
+
+    out->data = (void*)p{{type}};
+    Py_SET_REFCNT(out,1);
+    return out;
+}
+{% endfor %}
+
+
+
 {% for type in types %}
 {% set Type = Types[loop.index0] %}
 static PyMultivectorObject *ternary_{{type}}{{i}}_product(PyMultivectorObject *data0, PyMultivectorObject *data1, PyMultivectorObject *data2,ProductType ptype){
@@ -482,51 +625,25 @@ static PyMultivectorObject *ternary_{{type}}{{i}}_product(PyMultivectorObject *d
 }
 {% endfor %}
 
-static PyMultivectorObject *unary_dense{{i}}_gradeproject(PyMultivectorObject *self, int *grades, Py_ssize_t size){
+{% for type in types %}
+{% set Type = Types[loop.index0] %}
+static PyMultivectorObject *unary_{{type}}{{i}}_gradeproject(PyMultivectorObject *self, int *grades, Py_ssize_t size){
     PyMultivectorObject *out = NULL;
-    gen{{i}}_DenseMultivector dense = {% raw -%}{{0}}{%- endraw %};
-    gen{{i}}_DenseMultivector *pdense;
-    gen{{i}}_DenseMultivector *pdense0 = (gen{{i}}_DenseMultivector*)self->data;
+    gen{{i}}_{{Type}}Multivector {{type}} = {% if type == "dense" %}{% raw -%}{{0}}{%- endraw %}{% else %} blades{{i}}zero{% endif %};
+    gen{{i}}_{{Type}}Multivector *p{{type}};
+    gen{{i}}_{{Type}}Multivector *p{{type}}0 = (gen{{i}}_{{Type}}Multivector*)self->data;
 
-    for(Py_ssize_t i = 0; i < size; i++){
-        gen{{i}}densegradeprojectfunc gradeproject =
-                    gen{{i}}denseproject.gradeproject[grades[i]];
-        if(gradeproject != NULL)
-            gradeproject(pdense0,&dense);
-        else
-            return NULL; // raise not implemented error
-    }
-    // should allocate all the necessary memory and also set the reference count to 1
+    if(gen{{i}}_{{type}}_gradeproject(&{{type}},p{{type}}0,grades,size) == -1) return NULL;
+
     out = new_multivector(self,-1); // pass -1 to inherit type of self
-    pdense = (gen{{i}}_DenseMultivector*)PyMem_RawMalloc(sizeof(gen{{i}}_DenseMultivector));
-    *pdense = dense;
-    out->data = (void*)pdense;
+    p{{type}} = (gen{{i}}_{{Type}}Multivector*)PyMem_RawMalloc(sizeof(gen{{i}}_{{Type}}Multivector));
+    *p{{type}} = {{type}};
+    out->data = (void*)p{{type}};
     PyMem_RawFree(grades);
     return out;
 }
+{% endfor %}
 
-static PyMultivectorObject *unary_blades{{i}}_gradeproject(PyMultivectorObject *self, int *grades, Py_ssize_t size){
-    PyMultivectorObject *out = NULL;
-
-    gen{{i}}_BladesMultivector blades = {{"{"}}{% for j in range(algebra.ngrades) -%}{0},{% endfor %}{{"};"}}
-    gen{{i}}_BladesMultivector *pblades;
-    gen{{i}}_BladesMultivector *pblades0 = (gen{{i}}_BladesMultivector*)self->data;
-
-    for(Py_ssize_t i = 0; i < size; i++){
-        gen{{i}}bladesgradeprojectfunc gradeproject =
-                    gen{{i}}bladesproject.gradeproject[grades[i]];
-        if(gradeproject != NULL)
-            gradeproject(pblades0,&blades);
-        else
-            return NULL; // raise not implemented error
-    }
-    // should allocate all the necessary memory and also set the reference count to 1
-    out = new_multivector(self,-1); // pass -1 to inherit type of self
-    pblades = (gen{{i}}_BladesMultivector*)PyMem_RawMalloc(sizeof(gen{{i}}_BladesMultivector));
-    *pblades = blades;
-    out->data = (void*)pblades;
-    return out;
-}
 
 {% for type in types %}
 {% set Type = Types[loop.index0] %}
@@ -676,6 +793,7 @@ static const PyMultivectorMath_Funcs {{type}}{{i}}_math_funcs = {
     .scalar_add = (gascalaraddfunc) binary_{{type}}{{i}}_scalaradd,
     .reverse = (gaunaryfunc) unary_{{type}}{{i}}_reverse,
     .ternary_product = (gaternaryprodfunc) ternary_{{type}}{{i}}_product,
+    .graded_product = (gabinarygradefunc) binary_{{type}}{{i}}_gradeproduct,
 };
 
 {% endfor %}
@@ -694,11 +812,11 @@ static const PyMultivectorSubType {{type}}{{i}}_subtype = {
     .math_funcs = {{type}}{{i}}_math_funcs,
     .data_funcs = {{type}}{{i}}_data_funcs,
     .name = "{{algebra.name}}",
-    .type_name = "{{type}}",
+    .type_name = "{{type}}{{i}}",
     .generated = 1,
     .metric = {{"{"}}{% for v in algebra.metric -%}{{v}},{%- endfor %}{{"}"}},
-    .metric_size = {{algebra.metric_size}},
-    .ntype = {{3 + (loop.index0*nalgebras) + i}},
+    .msize = {{algebra.metric_size}},
+    .ntype = {{typemin + 1 + i*2 + loop.index0}},
 };
 
 {% endfor %}

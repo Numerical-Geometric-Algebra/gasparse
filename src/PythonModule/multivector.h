@@ -25,9 +25,17 @@ typedef struct _PyMultivectorIter{
     int bitmap;
     ga_float value;
     Py_ssize_t grade;
-    MultivectorType type;
+    int type;
 }PyMultivectorIter;
 
+typedef struct GradeProjectMap{
+  int *grades0;
+  int *grades1;
+  int *grades;
+  Py_ssize_t size0;
+  Py_ssize_t size1;
+  Py_ssize_t size;
+}GradeProjectMap;
 
 typedef PyMultivectorObject *(*gabinaryfunc)(PyMultivectorObject *left, PyMultivectorObject *right);
 typedef PyMultivectorObject *(*gaaddfunc)(PyMultivectorObject *left, PyMultivectorObject *right, int sign);
@@ -38,7 +46,7 @@ typedef PyMultivectorObject *(*gaunaryfunc)(PyMultivectorObject *self);
 typedef PyMultivectorObject *(*gaatomicfunc)(PyMultivectorObject *data, Py_ssize_t size);
 typedef PyMultivectorObject *(*gaatomicprodfunc)(PyMultivectorObject *data, Py_ssize_t size,ProductType ptype);
 typedef PyMultivectorObject *(*gacastfunc)(PyMultivectorObject *self);
-typedef PyMultivectorObject *(*gabinarygradefunc)(PyMultivectorObject *left, PyMultivectorObject *right, GradeMap grades);
+typedef PyMultivectorObject *(*gabinarygradefunc)(PyMultivectorObject *left, PyMultivectorObject *right, ProductType ptype, GradeProjectMap gpmap);
 typedef PyMultivectorObject *(*gascalarfunc)(PyMultivectorObject *self, ga_float value);
 typedef PyMultivectorObject *(*gascalaraddfunc)(PyMultivectorObject *self, ga_float value, int sign);
 
@@ -78,7 +86,7 @@ typedef struct PyMultivectorData_Funcs{
     gaiterinitfunc iter_init;
 }PyMultivectorData_Funcs;
 
-typedef struct PyMultivectorSubType{
+typedef struct _PyMultivectorSubType{
     PyMultivectorMath_Funcs math_funcs;
     PyMultivectorData_Funcs data_funcs;
     int generated;
@@ -89,7 +97,7 @@ typedef struct PyMultivectorSubType{
     int ntype;// this is the type identifier use this to compare types
 }PyMultivectorSubType;
 
-/* extern PyMultivectorSubType algebra_types_array[3]; */
+extern PyMultivectorSubType multivector_subtypes_array[3];
 
 typedef struct _PyMultivectorObject{
     PyObject_HEAD

@@ -64,6 +64,8 @@ ga0 = algebra(vga,"3DVGA")
 ga1 = algebra(cga,"3DCGA")
 
 
+typemin = 2
+
 algebras = [ga0,ga1]
 # algebras = [ga0]
 nalgebras = len(algebras)
@@ -73,12 +75,17 @@ templateEnv = jinja2.Environment(loader=templateLoader,trim_blocks=True)
 
 
 multivectorgend = templateEnv.get_template("multivector_gen.c.src")
+multivectorgend_h = templateEnv.get_template("multivector_gen.h.src")
 
 types = ['dense','blades']
 Types = ['Dense','Blades']
 
-textmultivectorc = multivectorgend.render(algebras=algebras,nalgebras=nalgebras,types=types,Types=Types)
+textmultivectorc = multivectorgend.render(algebras=algebras,nalgebras=nalgebras,types=types,Types=Types,typemin=typemin)
+textmultivectorh = multivectorgend_h.render(algebras=algebras,nalgebras=nalgebras,types=types,Types=Types,typemin=typemin)
 
 # to save the results
 with open("multivector_gen.c", "w") as fh:
     fh.write(textmultivectorc)
+
+with open("multivector_gen.h", "w") as fh:
+    fh.write(textmultivectorh)

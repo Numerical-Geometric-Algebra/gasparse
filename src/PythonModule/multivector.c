@@ -1,6 +1,6 @@
 #include <Python.h>
 #include "gasparse.h"
-#include "multivector.h"
+/* #include "multivector.h" */
 
 
 // returns true if abs(v) < p
@@ -305,12 +305,13 @@ static PyMultivectorIter sparse_iter_init(PyMultivectorObject *data){
     iter.data= data->data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = MultivectorType_sparse;
+    iter.type = data->type.ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.size = 1;
     iter.niters = sparse->size;
     iter.next = data->type.data_funcs.iter_next;
+    iter.type_name = data->type.type_name;
     return iter;
 }
 
@@ -320,12 +321,13 @@ static PyMultivectorIter dense_iter_init(PyMultivectorObject *data){
     iter.data= data->data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = MultivectorType_dense;
+    iter.type = data->type.ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.size = 1;
     iter.niters = dense->size;
     iter.next = data->type.data_funcs.iter_next;
+    iter.type_name = data->type.type_name;
     return iter;
 }
 
@@ -335,12 +337,13 @@ static PyMultivectorIter blades_iter_init(PyMultivectorObject *data){
     iter.data= data->data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = MultivectorType_blades;
+    iter.type = data->type.ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(2*sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.index[1] = 0;
     iter.size = 2;
     iter.niters = 0;
+    iter.type_name = data->type.type_name;
     for(Py_ssize_t i = 0; i < blades->size; i++)
         iter.niters += blades->data[i].size;
 
@@ -471,27 +474,11 @@ static PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_s
             k += strlen(str_value[i]);
             format_value[k] = '\0';
 
-            char type_str[10];
-            switch(iter->type){
-                case MultivectorType_sparse:
-                    strcpy(type_str,"sparse");
-                    break;
-                case MultivectorType_blades:
-                    strcpy(type_str,"blades");
-                    break;
-                case MultivectorType_dense:
-                    strcpy(type_str,"dense");
-                    break;
-                default:
-                    strcpy(type_str,"???");
-                    break;
-            }
-
             char *format = ".multivector([%s],blades=[%s],dtype=%s)";
             size_t size = len_value + len_bitmap + strlen(format);
             char *format_out = (char*)PyMem_RawMalloc(size*sizeof(char));
 
-            PyOS_snprintf(format_out,size,format,format_value,format_bitmap,type_str);
+            PyOS_snprintf(format_out,size,format,format_value,format_bitmap,iter->type_name);
             out = Py_BuildValue("s",format_out);
 
             for(Py_ssize_t i = 0; i < dsize; i++){
@@ -2796,7 +2783,7 @@ void multivector_dealloc(PyMultivectorObject *self){
     PyMem_RawFree(self);
 }
 
-static const PyMultivectorMixedMath_Funcs multivector_mixed_fn = {
+PyMultivectorMixedMath_Funcs multivector_mixed_fn = {
   .add = binary_mixed_add,
   .product = binary_mixed_product,
   .atomic_add = atomic_mixed_add,
@@ -2867,7 +2854,7 @@ static const PyMultivectorSubType sparse_subtype = {
     .type_name = "sparse",
     .generated = 0,
     .metric = {-2},
-    .metric_size = -1,
+    .msize = -1,
     .ntype = MultivectorType_sparse,
 };
 static const PyMultivectorSubType blades_subtype = {
@@ -2877,7 +2864,7 @@ static const PyMultivectorSubType blades_subtype = {
     .type_name = "blades",
     .generated = 0,
     .metric = {-2},
-    .metric_size = -1,
+    .msize = -1,
     .ntype = MultivectorType_blades,
 };
 static const PyMultivectorSubType dense_subtype = {
@@ -2887,12 +2874,12 @@ static const PyMultivectorSubType dense_subtype = {
     .type_name = "dense",
     .generated = 0,
     .metric = {-2},
-    .metric_size = -1,
+    .msize = -1,
     .ntype = MultivectorType_dense,
 };
 
 
-static PyMultivectorSubType multivector_subtypes_array[3] = {sparse_subtype,dense_subtype,blades_subtype};
+PyMultivectorSubType multivector_subtypes_array[3] = {sparse_subtype,dense_subtype,blades_subtype};
 
 PyMultivectorObject *new_multivector(PyMultivectorObject *old, MultivectorType type){ // return a multivector of type type
     PyMultivectorObject *self = (PyMultivectorObject*)PyMem_RawMalloc(sizeof(PyMultivectorObject));
@@ -2914,27 +2901,4 @@ void free_multivector(PyMultivectorObject *self){
     Py_XDECREF((PyObject*)self->GA);
     Py_XDECREF(Py_TYPE(self));
     PyMem_RawFree(self);
-}
-
-
-PyMultivectorObject *init_multivector(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga, PyTypeObject *obj_type, MultivectorType type){
-
-    PyMultivectorObject *self = (PyMultivectorObject*)PyMem_RawMalloc(sizeof(PyMultivectorObject));
-    if(type <= MultivectorTypeMIN || type >= MultivectorTypeMAX)
-        return NULL; // raise error
-    self->type = multivector_subtypes_array[type];
-    self->mixed = multivector_mixed_fn;
-
-    gainitfunc init = self->type.data_funcs.init;
-    if(init)
-        self->data = init(bitmap,value,size,ga);
-    else
-        return NULL; // raise not implemented error
-
-    Py_SET_TYPE(self,obj_type);
-    Py_XINCREF(obj_type);
-    self->GA = ga;
-    Py_XINCREF((PyObject*)ga);
-    Py_SET_REFCNT((PyObject*)self,1);
-    return self;
 }

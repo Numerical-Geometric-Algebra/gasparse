@@ -1,0 +1,19 @@
+#ifndef MULTIVECTOR_GEN_H_
+#define MULTIVECTOR_GEN_H_
+
+#define N_GEN_SUBTYPES {{2*nalgebras}}
+
+// enum with all the different types
+typedef enum {
+  gen_MultivectorTypeMIN = {{typemin}},
+{% for i in range(nalgebras) %}
+{% for type in types %}
+  gen_MultivectorType_{{type}}{{i}} = {{typemin + 1 + i*2 + loop.index0}},
+{% endfor %}
+{% endfor %}
+  gen_MultivectorTypeMAX} gen_MultivectorType;
+
+// code generate the size of this array
+extern PyMultivectorSubType gen_subtypes_array[N_GEN_SUBTYPES];
+
+#endif // MULTIVECTOR_GEN_H_
