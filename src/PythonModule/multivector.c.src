@@ -232,7 +232,7 @@ static BladesMultivector blades_init_(int *bitmap, ga_float *value, Py_ssize_t s
 }
 
 static DenseMultivector dense_init_(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
-    Py_ssize_t algebra_size = ga->product[ProductType_geometric].size;
+    Py_ssize_t algebra_size = ga->asize;
     DenseMultivector dense = {.value = NULL, .size = -1};
     dense.value = (ga_float*)PyMem_RawMalloc(algebra_size*sizeof(ga_float));
     dense.size = algebra_size;
@@ -558,7 +558,7 @@ static SparseMultivector unary_sparse_scalaradd_(SparseMultivector sparse0, PyAl
 
 static SparseMultivector unary_sparse_scalarproduct_(SparseMultivector sparse0, PyAlgebraObject *ga, ga_float sign){
     SparseMultivector sparse = {.size = -1};
-    SparseMultivector dense = init_sparse_empty(ga->product[ProductType_geometric].size);
+    SparseMultivector dense = init_sparse_empty(ga->asize);
     if(dense.size == -1)
         return sparse;
     Py_ssize_t size = 0;
@@ -580,7 +580,7 @@ static SparseMultivector unary_sparse_scalarproduct_(SparseMultivector sparse0, 
 static SparseMultivector binary_sparse_add_(SparseMultivector sparse0, SparseMultivector sparse1, PyAlgebraObject *ga, int sign){
     Py_ssize_t size = 0;
     SparseMultivector sparse = {.size = -1};
-    SparseMultivector dense = init_sparse_empty(ga->product[ProductType_geometric].size);
+    SparseMultivector dense = init_sparse_empty(ga->asize);
     if(dense.size == -1)
         return sparse;
 
@@ -824,41 +824,23 @@ static BladesMultivector unary_blades_scalaradd_(BladesMultivector blades0, PyAl
 
 
 static BladesMultivector unary_blades_scalarproduct_(BladesMultivector blades0, PyAlgebraObject *ga, ga_float value){
-    BladesMultivector sparse = {.size = -1};
-    SparseMultivector dense = init_sparse_empty(ga->product[ProductType_geometric].size);
-    if(dense.size == -1)
-        return sparse;
-    SparseMultivector sub;
-    Py_ssize_t bitmap;
-    ga_float precision = ga->precision;
+    BladesMultivector sparse = init_blades_empty(blades0.size);
+    if(sparse.size == -1) return sparse;
 
     for(Py_ssize_t i = 0; i < blades0.size; i++){
-        sub = blades0.data[i];
-        for(Py_ssize_t j = 0; j < sub.size; j++){
-            bitmap = sub.bitmap[j];
-            dense.bitmap[bitmap] = bitmap;
-            dense.value[bitmap] += value*sub.value[j];
+        sparse.data[i] = init_sparse_empty(blades0.data[i].size);
+        for(Py_ssize_t j = 0; j < blades0.data[i].size; j++){
+            sparse.data[i].bitmap[j] = blades0.data[i].bitmap[j];
+            sparse.data[i].value[j] = value*blades0.data[i].value[j];
         }
     }
 
-    // remove small values
-    for(Py_ssize_t i = 0; i < dense.size; i++)
-        if(dense.bitmap[i] != -1 && comp_abs(dense.value[i],precision))
-            dense.bitmap[i] = -1;
-
-    sparse = sparse_dense_to_blades_sparse(dense,ga->gm);
-    if(sparse.size == -1){
-        sparse_free_(dense);
-        return sparse;
-    }
-
-    sparse_free_(dense);
     return sparse;
 }
 
 static BladesMultivector binary_blades_add_(BladesMultivector blades0, BladesMultivector blades1,  PyAlgebraObject *ga, int sign){
     BladesMultivector sparse = {.size = -1};
-    SparseMultivector dense = init_sparse_empty(ga->product[ProductType_geometric].size);
+    SparseMultivector dense = init_sparse_empty(ga->asize);
     if(dense.size == -1)
         return sparse;
 
@@ -1130,9 +1112,22 @@ static DenseMultivector unary_dense_scalarproduct_(DenseMultivector dense0, PyAl
 
 static DenseMultivector binary_dense_add_(DenseMultivector dense0, DenseMultivector dense1, PyAlgebraObject *ga, int sign){
     DenseMultivector dense = {.size = -1};
-    dense = init_dense_empty(dense0.size);
+    Py_ssize_t ssize = -1;
+    dense = init_dense_empty(ga->asize);
     if(dense.size == -1) return dense;
-    for(Py_ssize_t i = 0; i < dense.size; i++)
+
+    // determine which resides in the smaller algebra
+    if(dense0.size > dense1.size){
+        ssize = dense1.size;
+        for(Py_ssize_t i = ssize; i < dense0.size; i++)
+            dense.value[i] = dense0.value[i];
+    }else{
+        ssize = dense0.size;
+        for(Py_ssize_t i = ssize; i <  dense1.size; i++)
+            dense.value[i] = sign*dense1.value[i];
+    }
+
+    for(Py_ssize_t i = 0; i < ssize; i++)
         dense.value[i] += dense0.value[i] + sign*dense1.value[i];
 
     return dense;
@@ -1144,8 +1139,8 @@ static DenseMultivector binary_dense_product_(DenseMultivector dense0, DenseMult
     dense = init_dense_empty(m.size);
     if(dense.size == -1) return dense;
     int sign;
-    for(Py_ssize_t i = 0; i < m.size; i++){
-        for(Py_ssize_t j = 0; j < m.size; j++){
+    for(Py_ssize_t i = 0; i < dense0.size; i++){
+        for(Py_ssize_t j = 0; j < dense1.size; j++){
             sign = m.sign[i][j];
             if(!sign) continue;
             dense.value[m.bitmap[i][j]] += dense0.value[i]*dense1.value[j]*sign;
@@ -1263,7 +1258,7 @@ static PyMultivectorObject *{{args_str}}_{{type}}_{{operation}}(PyMultivectorObj
 {% endfor %}
 
 static SparseMultivector atomic_sparse_add_(SparseMultivector *data, Py_ssize_t dsize, PyAlgebraObject *ga){
-    SparseMultivector dense = init_sparse_empty(ga->product[ProductType_geometric].size);
+    SparseMultivector dense = init_sparse_empty(ga->asize);
     if(dense.size == -1) return dense;
     SparseMultivector sparse;
     Py_ssize_t size = 0;
@@ -1346,7 +1341,7 @@ static SparseMultivector atomic_sparse_product_(SparseMultivector *data, Py_ssiz
 
 static BladesMultivector atomic_blades_add_(BladesMultivector *data, Py_ssize_t size, PyAlgebraObject *ga){
     BladesMultivector sparse = {.size = -1};
-    SparseMultivector dense = init_sparse_empty(ga->product[ProductType_geometric].size);
+    SparseMultivector dense = init_sparse_empty(ga->asize);
     if(dense.size == -1) return sparse;
     SparseMultivector sub;
     Py_ssize_t bitmap;
@@ -1420,7 +1415,7 @@ static BladesMultivector atomic_blades_product_(BladesMultivector *data, Py_ssiz
 }
 
 static DenseMultivector atomic_dense_add_(DenseMultivector *data, Py_ssize_t size,  PyAlgebraObject *ga){
-    DenseMultivector dense = init_dense_empty(ga->product[ProductType_geometric].size);
+    DenseMultivector dense = init_dense_empty(ga->asize);
     if(dense.size == -1) return dense;
     ga_float value;
     for(Py_ssize_t i = 0; i < dense.size; i++){
@@ -1509,7 +1504,7 @@ static PyMultivectorObject *atomic_{{type}}_{{operation}}(PyMultivectorObject *d
 
 static SparseMultivector binary_mixed_add_(PyMultivectorIter *iter0, PyMultivectorIter *iter1, PyAlgebraObject *ga, int sign){
     SparseMultivector sparse;
-    SparseMultivector dense = init_sparse_empty(ga->product[ProductType_geometric].size);
+    SparseMultivector dense = init_sparse_empty(ga->asize);
     if(dense.size == -1) return dense;
 
     Py_ssize_t size = 0;
@@ -1613,7 +1608,7 @@ static PyMultivectorObject *binary_mixed_{{operation}}(PyMultivectorObject *data
 
 
 static SparseMultivector atomic_mixed_add_(PyMultivectorIter *iter, Py_ssize_t dsize, PyAlgebraObject *ga){
-    SparseMultivector dense = init_sparse_empty(ga->product[ProductType_geometric].size);
+    SparseMultivector dense = init_sparse_empty(ga->asize);
     if(dense.size == -1) return dense;
     SparseMultivector sparse;
 

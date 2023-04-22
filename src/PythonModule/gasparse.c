@@ -1,5 +1,4 @@
 #define PY_SSIZE_T_CLEAN
-
 #include <Python.h>
 #include "structmember.h"
 #include "gasparse.h"
@@ -280,7 +279,7 @@ static PyObject *algebra_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     return (PyObject*)self;
 }
 
-#ifndef INCLUDE_CODEGEN
+#ifndef INCLUDE_GENCODE
 static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
     static char *kwlist[] = {"p","q","r","metric","print_type","print_type_mv",NULL};
     int p = 0, q = 0, r = 0; PrintType print_type = PrintTypeMIN; PrintTypeMV print_type_mv = PrintTypeMVMIN;
@@ -334,15 +333,19 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
             }
         }
     }
+
+    self->p = p; self->q = q; self->r = r; self->precision = 1e-6;
+
     map_init(&self->product[ProductType_geometric],self->metric,p+q+r);
-    grade_map_init(&self->gm,self->product[ProductType_geometric].size);
+    self->asize = self->product[ProductType_geometric].size;
+
+    grade_map_init(&self->gm,self->asize);
     inner_map_init(self);
     outer_map_init(self);
 
     inverted_map_init(&self->product[ProductType_geometricinverted],&self->product[ProductType_geometric]);
     inverted_map_init(&self->product[ProductType_innerinverted],&self->product[ProductType_inner]);
     inverted_map_init(&self->product[ProductType_outerinverted],&self->product[ProductType_outer]);
-    self->p = p; self->q = q; self->r = r; self->precision = 1e-6;
 
     // set ga print type
     self->print_type = PrintType_metric_array;
@@ -426,17 +429,17 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
     Py_ssize_t k = 0;
     Py_ssize_t index[10] = {-1};
     if(name && !self->metric){
-        for(Py_size_t i = 0; i < N_GEN_SUBTYPES; i++)
+        for(Py_ssize_t i = 0; i < N_GEN_SUBTYPES; i++)
             if(!strcmp(gen_subtypes_array[i].name,name))
                 index[k++] = i;
     }else if(self->metric){
-        for(Py_size_t i = 0; i < N_GEN_SUBTYPES; i++){
-            if(METRIC_SIZE(self) == gen_subtypes_array[i].msize){
-                int *metric = gen_subtypes_array[i].metric;
+        for(Py_ssize_t i = 0; i < N_GEN_SUBTYPES; i++){
+            if(p + q + r == gen_subtypes_array[i].msize){
+                char *metric = gen_subtypes_array[i].metric;
                 int check = 1;
                 size = gen_subtypes_array[i].msize;
                 for(Py_ssize_t j = 0; j < size; j++){
-                    if(metric[j] != self.metric[j]){
+                    if(metric[j] != self->metric[j]){
                         check = 0;
                         break;
                     }
@@ -456,14 +459,13 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
 
     *self->mixed = multivector_mixed_fn;
     self->tsize = lsize+k;
-
-
     // populate the subtypes table
     for(Py_ssize_t i = 0; i < lsize; i++)
         self->types[i] = multivector_subtypes_array[i];
-    for(Py_size_t i = 0; i < k; i++)
+    for(Py_ssize_t i = 0; i < k; i++)
         self->types[i+lsize] = gen_subtypes_array[index[i]];
 
+    // if the metric is not defined and a generated algebra was found
     if(!self->metric && k){
         size = self->types[lsize].msize;
         self->metric = (char*)PyMem_RawMalloc(size*sizeof(char));
@@ -473,6 +475,7 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
             if(self->metric[i] == -1) self->q++;
             if(self->metric[i] == 0) self->r++;
         }
+        self->asize = self->types[lsize].asize;
     }
 
     // set ga print type
@@ -489,6 +492,7 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
 
     if(gen_tables){
         map_init(&self->product[ProductType_geometric],self->metric,p+q+r);
+        self->asize = self->product[ProductType_geometric].size;
         grade_map_init(&self->gm,self->product[ProductType_geometric].size);
         inner_map_init(self);
         outer_map_init(self);
@@ -679,13 +683,27 @@ static int parse_list_as_bitmaps(PyObject *blades, int **bitmap){
             j++;
         Py_ssize_t bitmap_i = 0;
         for(; j < len; j++){
-            if(!Is_NonZero(blade_str[j]))
+            if(!IS_NONZERO(blade_str[j]))
                 return -1;
             bitmap_i += 1 << (int)(blade_str[j] - '1');
         }
         (*bitmap)[i] = bitmap_i;
     }
     return size;
+}
+
+// checks if the algebras are compatible
+// they are compatible if the smaller algebra have the same metric of the bigger algebra until the size of the smaller algebra
+PyAlgebraObject *algebra_comp_metrics(PyAlgebraObject *ga1, PyAlgebraObject *ga2){
+    Py_ssize_t msize = METRIC_SIZE(ga1) < METRIC_SIZE(ga2) ? METRIC_SIZE(ga1) : METRIC_SIZE(ga2);
+    for(Py_ssize_t i = 0; i < msize; i++){
+        if(ga1->metric[i] != ga2->metric[i])
+            return NULL;
+    }
+
+    if(METRIC_SIZE(ga1) < METRIC_SIZE(ga2))
+        return ga1;
+    else return ga2;
 }
 
 static PyObject* algebra_metric(PyAlgebraObject *self, PyObject *Py_UNUSED(ignored)){
@@ -857,7 +875,6 @@ static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyOb
             return NULL;
         }
     }
-
     if(dtype && PyUnicode_Check(dtype)){
         const char *dtype_str = PyUnicode_AsUTF8(dtype);
         Py_ssize_t othertype = -1;
@@ -899,7 +916,6 @@ static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyOb
 
     return (PyObject*)multivector;
 }
-
 
 static PyMethodDef algebra_methods[] = {
     {"metric", (PyCFunction)algebra_metric, METH_NOARGS,

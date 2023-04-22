@@ -4,7 +4,7 @@
 #include "common.h"
 
 #define METRIC_SIZE(s) (s->p + s->q + s->r)
-#define Is_NonZero(s) (s <= '9' && s >= '1')
+#define IS_NONZERO(s) (s <= '9' && s >= '1')
 #define MAX_SHAPE_SIZE 10
 
 typedef enum {
@@ -31,13 +31,18 @@ typedef enum {
   PrintTypeMV_normal,
   PrintTypeMVMAX} PrintTypeMV;
 
+typedef enum {
+  MultivectorTypeMIN=-1,
+  MultivectorType_sparse,
+  MultivectorType_dense,
+  MultivectorType_blades,
+  MultivectorTypeMAX} MultivectorType;
 
 typedef struct CliffordMap{
     char **sign;
     Py_ssize_t **bitmap;
     Py_ssize_t size;
 }CliffordMap;
-
 
 typedef struct GradeMap{ // used to map bitmap to position and grade
     Py_ssize_t *grade;
@@ -65,16 +70,12 @@ typedef struct PyAlgebraObject {
     ga_float precision;
     PyMultivectorSubType *types;
     PyMultivectorMixedMath_Funcs *mixed;
-    Py_ssize_t tsize;
+    Py_ssize_t tsize; // number of types
+    Py_ssize_t asize; // sizeof the algebra
 }_PyAlgebraObject;
 
 
-typedef enum {
-  MultivectorTypeMIN=-1,
-  MultivectorType_sparse,
-  MultivectorType_dense,
-  MultivectorType_blades,
-  MultivectorTypeMAX} MultivectorType;
+PyAlgebraObject *algebra_comp_metrics(PyAlgebraObject *ga1, PyAlgebraObject *ga2);
 
 typedef int (*gaiternextfunc)(PyMultivectorIter *iter);
 typedef PyMultivectorIter (*gaiterinitfunc)(PyMultivectorObject *data);
@@ -156,7 +157,8 @@ typedef struct PyMultivectorSubType{
     char metric[32];
     char name[32];
     char type_name[32];
-    Py_ssize_t msize;
+    Py_ssize_t msize; // metric array size number of basis vector
+    Py_ssize_t asize; // algebra size number of basis blades
     int ntype;// this is the type identifier use this to compare types
 }_PyMultivectorSubType;
 

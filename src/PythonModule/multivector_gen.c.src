@@ -1,6 +1,6 @@
 #include <Python.h>
 #include "gasparse.h"
-#include "multivector.h"
+/* #include "multivector.h" */
 #include "multivector_gen.h"
 
 {% for i in range(nalgebras) %}
@@ -99,7 +99,7 @@ static int gen{{i}}_{{type}}_gradeproject(gen{{i}}_{{Type}}Multivector *{{type}}
 }
 {% endfor %}
 
-static gen{{i}}_DenseMultivector dense{{i}}_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
+static gen{{i}}_DenseMultivector dense{{i}}_init_(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
     gen{{i}}_DenseMultivector dense = {{"{{"}}0{{"}}"}};
     for(Py_ssize_t i = 0; i < size; i++){
         if(bitmap[i] >= {{algebra.size}}){
@@ -110,7 +110,7 @@ static gen{{i}}_DenseMultivector dense{{i}}_init(int *bitmap, ga_float *value, P
     return dense;
 }
 
-static gen{{i}}_BladesMultivector blades{{i}}_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
+static gen{{i}}_BladesMultivector blades{{i}}_init_(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
     gen{{i}}_BladesMultivector blades = {{"{"}}{% for j in range(algebra.ngrades) -%}{0},{% endfor %}{{"};"}}
 
     for(Py_ssize_t i = 0; i < size; i++){
@@ -126,6 +126,20 @@ static gen{{i}}_BladesMultivector blades{{i}}_init(int *bitmap, ga_float *value,
     }
     return blades;
 }
+
+{% for j in range(2)%} {# iterate over types #}
+{% set type = types[j] %}
+{% set Type = Types[j] %}
+
+static void* {{type}}{{i}}_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
+    gen{{i}}_{{Type}}Multivector *{{type}} = (gen{{i}}_{{Type}}Multivector*)PyMem_RawMalloc(sizeof(gen{{i}}_{{Type}}Multivector));
+    *{{type}} = {{type}}{{i}}_init_(bitmap,value,size,ga);
+    return (void*){{type}};
+}
+
+{% endfor %}
+
+
 
 static PyMultivectorIter dense{{i}}_iterinit(PyMultivectorObject *data){
     PyMultivectorIter iter;
@@ -173,7 +187,7 @@ static int blades{{i}}_iternext(PyMultivectorIter *iter){
                 iter->index[1] = 0;
                 (*iter->index)++;
             }
-            break;
+            return 1;
 {% endfor %}
         default: // reset indices
             iter->index[1] = 0;
@@ -817,6 +831,7 @@ static const PyMultivectorSubType {{type}}{{i}}_subtype = {
     .metric = {{"{"}}{% for v in algebra.metric -%}{{v}},{%- endfor %}{{"}"}},
     .msize = {{algebra.metric_size}},
     .ntype = {{typemin + 1 + i*2 + loop.index0}},
+    .asize = {{algebra.size}},
 };
 
 {% endfor %}

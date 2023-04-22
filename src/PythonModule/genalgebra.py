@@ -66,8 +66,8 @@ ga1 = algebra(cga,"3DCGA")
 
 typemin = 2
 
-algebras = [ga0,ga1]
-# algebras = [ga0]
+# algebras = [ga0,ga1]
+algebras = [ga0]
 nalgebras = len(algebras)
 
 templateLoader = jinja2.FileSystemLoader(searchpath="./")

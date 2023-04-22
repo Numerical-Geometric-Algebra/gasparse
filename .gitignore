@@ -2,3 +2,4 @@
 /src/\\
 /src/PythonModule/build/
 src/PythonModule/gasparse.cpython-39-x86_64-linux-gnu.so
+__pycache__
