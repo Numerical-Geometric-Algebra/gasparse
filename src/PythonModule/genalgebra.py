@@ -14,6 +14,7 @@ class algebra:
             self.signs.append(sign)
             self.bitmaps.append(bitmap)
             self.zerosigns.append(self.compute_zero_sign(sign))
+        self.dualbitmap,self.dualsign = ga.dualmap()
         self.metric = ga.metric()
         self.metric_size = len(self.metric)
         self.size = len(self.bitmaps[0])
@@ -22,9 +23,19 @@ class algebra:
         self.ngrades = len(self.gradesize)
         self.compute_gradesbitmap()
         self.compute_reverse()
+        self.compute_undual()
 
     def GRADE(self,bitmap):
         return bin(bitmap).count('1')
+
+    def compute_undual(self):
+        self.undualbitmap = self.dualbitmap
+        self.undualsign = [0]*self.size
+        sign = 1
+        if self.metric_size & 2:
+            sign = -1
+        for i in range(len(self.undualsign)):
+            self.undualsign[i] = sign*self.dualsign[i]
 
     def compute_reverse(self):
         self.reverse = [1]*self.ngrades

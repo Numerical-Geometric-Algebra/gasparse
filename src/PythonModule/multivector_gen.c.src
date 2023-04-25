@@ -358,6 +358,33 @@ static gen{{i}}_DenseMultivector gen{{i}}_dense_reverse(gen{{i}}_DenseMultivecto
     return dense;
 }
 
+static gen{{i}}_DenseMultivector gen{{i}}_dense_dual(gen{{i}}_DenseMultivector dense0){
+    gen{{i}}_DenseMultivector dense = {{"{{"}}0{{"}}"}};
+
+{% for j in range(algebra.size) %}
+{% if algebra.dualsign[j] == -1 %}
+    dense.value[{{algebra.dualbitmap[j]}}] = -dense0.value[{{j}}];
+{% else %}
+    dense.value[{{algebra.dualbitmap[j]}}] = dense0.value[{{j}}];
+{% endif %}
+{% endfor %}
+
+    return dense;
+}
+
+static gen{{i}}_DenseMultivector gen{{i}}_dense_undual(gen{{i}}_DenseMultivector dense0){
+    gen{{i}}_DenseMultivector dense = {{"{{"}}0{{"}}"}};
+
+{% for j in range(algebra.size) %}
+{% if algebra.undualsign[j] == -1 %}
+    dense.value[{{algebra.undualbitmap[j]}}] = -dense0.value[{{j}}];
+{% else %}
+    dense.value[{{algebra.undualbitmap[j]}}] = dense0.value[{{j}}];
+{% endif %}
+{% endfor %}
+
+    return dense;
+}
 
 {% for pindex in range(algebra.nproducts) %}
 {% set product_name = algebra.product_names[pindex] %}
@@ -531,6 +558,43 @@ static gen{{i}}_BladesMultivector gen{{i}}_blades_reverse(gen{{i}}_BladesMultive
 {% endfor %}
     return blades;
 }
+
+
+static gen{{i}}_BladesMultivector gen{{i}}_blades_dual(gen{{i}}_BladesMultivector blades0){
+    gen{{i}}_BladesMultivector blades = {{"{"}}{% for j in range(algebra.ngrades) -%}{0},{% endfor %}{{"};"}}
+
+{% for j in range(algebra.size) %}
+{% set gradein = algebra.GRADE(j) %}
+{% set gradeout = algebra.metric_size - algebra.GRADE(j) %}
+{% set positionin = algebra.position[j] %}
+{% set positionout = algebra.position[algebra.dualbitmap[j]] %}
+{% if algebra.dualsign[j] == -1 %}
+    blades.value{{gradeout}}[{{positionout}}] = -blades0.value{{gradein}}[{{positionin}}];
+{% else %}
+    blades.value{{gradeout}}[{{positionout}}] =  blades0.value{{gradein}}[{{positionin}}];
+{% endif %}
+{% endfor %}
+    return blades;
+}
+
+static gen{{i}}_BladesMultivector gen{{i}}_blades_undual(gen{{i}}_BladesMultivector blades0){
+    gen{{i}}_BladesMultivector blades = {{"{"}}{% for j in range(algebra.ngrades) -%}{0},{% endfor %}{{"};"}}
+
+{% for j in range(algebra.size) %}
+{% set gradein = algebra.GRADE(j) %}
+{% set gradeout = algebra.metric_size - algebra.GRADE(j) %}
+{% set positionin = algebra.position[j] %}
+{% set positionout = algebra.position[algebra.undualbitmap[j]] %}
+{% if algebra.undualsign[j] == -1 %}
+    blades.value{{gradeout}}[{{positionout}}] = -blades0.value{{gradein}}[{{positionin}}];
+{% else %}
+    blades.value{{gradeout}}[{{positionout}}] =  blades0.value{{gradein}}[{{positionin}}];
+{% endif %}
+{% endfor %}
+    return blades;
+}
+
+
 
 
 {% for type in types %}
@@ -772,10 +836,11 @@ static PyMultivectorObject *binary_{{type}}{{i}}_scalaradd(PyMultivectorObject *
     return out;
 }
 {% endfor %}
-
+{% set unary_operations = ['reverse','dual','undual'] %}
 {% for type in types %}
 {% set Type = Types[loop.index0] %}
-static PyMultivectorObject *unary_{{type}}{{i}}_reverse(PyMultivectorObject *self){
+{% for op in unary_operations %}
+static PyMultivectorObject *unary_{{type}}{{i}}_{{op}}(PyMultivectorObject *self){
     PyMultivectorObject *out = new_multivector(self,-1);
     gen{{i}}_{{Type}}Multivector *p{{type}}0 = (gen{{i}}_{{Type}}Multivector*)self->data;
     gen{{i}}_{{Type}}Multivector *p{{type}} = (gen{{i}}_{{Type}}Multivector*)PyMem_RawMalloc(sizeof(gen{{i}}_{{Type}}Multivector));
@@ -784,12 +849,14 @@ static PyMultivectorObject *unary_{{type}}{{i}}_reverse(PyMultivectorObject *sel
         free_multivector(out);
         return NULL; // raise memory error
     }
-    *p{{type}} = gen{{i}}_{{type}}_reverse(*p{{type}}0); // revert the order of the basis vectors of the multivector
+    *p{{type}} = gen{{i}}_{{type}}_{{op}}(*p{{type}}0); // revert the order of the basis vectors of the multivector
     out->data = (void*)p{{type}};
     Py_SET_REFCNT(out,1);
     return out;
 }
 {% endfor %}
+{% endfor %}
+
 {% endfor %}
 
 
@@ -806,6 +873,8 @@ static const PyMultivectorMath_Funcs {{type}}{{i}}_math_funcs = {
     .scalar_product = (gascalarfunc) binary_{{type}}{{i}}_scalarproduct,
     .scalar_add = (gascalaraddfunc) binary_{{type}}{{i}}_scalaradd,
     .reverse = (gaunaryfunc) unary_{{type}}{{i}}_reverse,
+    .dual = (gaunaryfunc) unary_{{type}}{{i}}_dual,
+    .undual = (gaunaryfunc) unary_{{type}}{{i}}_undual,
     .ternary_product = (gaternaryprodfunc) ternary_{{type}}{{i}}_product,
     .graded_product = (gabinarygradefunc) binary_{{type}}{{i}}_gradeproduct,
 };

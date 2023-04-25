@@ -860,6 +860,35 @@ static gen0_DenseMultivector gen0_dense_reverse(gen0_DenseMultivector dense0){
     return dense;
 }
 
+static gen0_DenseMultivector gen0_dense_dual(gen0_DenseMultivector dense0){
+    gen0_DenseMultivector dense = {{0}};
+
+    dense.value[7] = -dense0.value[0];
+    dense.value[6] = -dense0.value[1];
+    dense.value[5] = dense0.value[2];
+    dense.value[4] = dense0.value[3];
+    dense.value[3] = -dense0.value[4];
+    dense.value[2] = -dense0.value[5];
+    dense.value[1] = dense0.value[6];
+    dense.value[0] = dense0.value[7];
+
+    return dense;
+}
+
+static gen0_DenseMultivector gen0_dense_undual(gen0_DenseMultivector dense0){
+    gen0_DenseMultivector dense = {{0}};
+
+    dense.value[7] = dense0.value[0];
+    dense.value[6] = dense0.value[1];
+    dense.value[5] = -dense0.value[2];
+    dense.value[4] = -dense0.value[3];
+    dense.value[3] = dense0.value[4];
+    dense.value[2] = dense0.value[5];
+    dense.value[1] = -dense0.value[6];
+    dense.value[0] = -dense0.value[7];
+
+    return dense;
+}
 
 
 static gen0_BladesMultivector gen0_blades_geometricproduct(gen0_BladesMultivector blades0, gen0_BladesMultivector blades1){
@@ -1431,6 +1460,37 @@ static gen0_BladesMultivector gen0_blades_reverse(gen0_BladesMultivector blades0
 }
 
 
+static gen0_BladesMultivector gen0_blades_dual(gen0_BladesMultivector blades0){
+    gen0_BladesMultivector blades = {{0},{0},{0},{0},};
+
+    blades.value3[0] = -blades0.value0[0];
+    blades.value2[2] = -blades0.value1[0];
+    blades.value2[1] =  blades0.value1[1];
+    blades.value1[2] =  blades0.value2[0];
+    blades.value2[0] = -blades0.value1[2];
+    blades.value1[1] = -blades0.value2[1];
+    blades.value1[0] =  blades0.value2[2];
+    blades.value0[0] =  blades0.value3[0];
+    return blades;
+}
+
+static gen0_BladesMultivector gen0_blades_undual(gen0_BladesMultivector blades0){
+    gen0_BladesMultivector blades = {{0},{0},{0},{0},};
+
+    blades.value3[0] =  blades0.value0[0];
+    blades.value2[2] =  blades0.value1[0];
+    blades.value2[1] = -blades0.value1[1];
+    blades.value1[2] = -blades0.value2[0];
+    blades.value2[0] =  blades0.value1[2];
+    blades.value1[1] =  blades0.value2[1];
+    blades.value1[0] = -blades0.value2[2];
+    blades.value0[0] = -blades0.value3[0];
+    return blades;
+}
+
+
+
+
 static PyMultivectorObject *binary_dense0_product(PyMultivectorObject *data0, PyMultivectorObject *data1,ProductType ptype){
     gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)data0->data;
     gen0_DenseMultivector *pdense1 = (gen0_DenseMultivector*)data1->data;
@@ -1906,7 +1966,6 @@ static PyMultivectorObject *binary_blades0_scalaradd(PyMultivectorObject *self, 
     Py_SET_REFCNT(out,1);
     return out;
 }
-
 static PyMultivectorObject *unary_dense0_reverse(PyMultivectorObject *self){
     PyMultivectorObject *out = new_multivector(self,-1);
     gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)self->data;
@@ -1917,6 +1976,34 @@ static PyMultivectorObject *unary_dense0_reverse(PyMultivectorObject *self){
         return NULL; // raise memory error
     }
     *pdense = gen0_dense_reverse(*pdense0); // revert the order of the basis vectors of the multivector
+    out->data = (void*)pdense;
+    Py_SET_REFCNT(out,1);
+    return out;
+}
+static PyMultivectorObject *unary_dense0_dual(PyMultivectorObject *self){
+    PyMultivectorObject *out = new_multivector(self,-1);
+    gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)self->data;
+    gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
+    if(!out || !pdense0 || !pdense){
+        PyMem_RawFree(pdense);
+        free_multivector(out);
+        return NULL; // raise memory error
+    }
+    *pdense = gen0_dense_dual(*pdense0); // revert the order of the basis vectors of the multivector
+    out->data = (void*)pdense;
+    Py_SET_REFCNT(out,1);
+    return out;
+}
+static PyMultivectorObject *unary_dense0_undual(PyMultivectorObject *self){
+    PyMultivectorObject *out = new_multivector(self,-1);
+    gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)self->data;
+    gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
+    if(!out || !pdense0 || !pdense){
+        PyMem_RawFree(pdense);
+        free_multivector(out);
+        return NULL; // raise memory error
+    }
+    *pdense = gen0_dense_undual(*pdense0); // revert the order of the basis vectors of the multivector
     out->data = (void*)pdense;
     Py_SET_REFCNT(out,1);
     return out;
@@ -1935,6 +2022,35 @@ static PyMultivectorObject *unary_blades0_reverse(PyMultivectorObject *self){
     Py_SET_REFCNT(out,1);
     return out;
 }
+static PyMultivectorObject *unary_blades0_dual(PyMultivectorObject *self){
+    PyMultivectorObject *out = new_multivector(self,-1);
+    gen0_BladesMultivector *pblades0 = (gen0_BladesMultivector*)self->data;
+    gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
+    if(!out || !pblades0 || !pblades){
+        PyMem_RawFree(pblades);
+        free_multivector(out);
+        return NULL; // raise memory error
+    }
+    *pblades = gen0_blades_dual(*pblades0); // revert the order of the basis vectors of the multivector
+    out->data = (void*)pblades;
+    Py_SET_REFCNT(out,1);
+    return out;
+}
+static PyMultivectorObject *unary_blades0_undual(PyMultivectorObject *self){
+    PyMultivectorObject *out = new_multivector(self,-1);
+    gen0_BladesMultivector *pblades0 = (gen0_BladesMultivector*)self->data;
+    gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
+    if(!out || !pblades0 || !pblades){
+        PyMem_RawFree(pblades);
+        free_multivector(out);
+        return NULL; // raise memory error
+    }
+    *pblades = gen0_blades_undual(*pblades0); // revert the order of the basis vectors of the multivector
+    out->data = (void*)pblades;
+    Py_SET_REFCNT(out,1);
+    return out;
+}
+
 
 
 
@@ -1947,6 +2063,8 @@ static const PyMultivectorMath_Funcs dense0_math_funcs = {
     .scalar_product = (gascalarfunc) binary_dense0_scalarproduct,
     .scalar_add = (gascalaraddfunc) binary_dense0_scalaradd,
     .reverse = (gaunaryfunc) unary_dense0_reverse,
+    .dual = (gaunaryfunc) unary_dense0_dual,
+    .undual = (gaunaryfunc) unary_dense0_undual,
     .ternary_product = (gaternaryprodfunc) ternary_dense0_product,
     .graded_product = (gabinarygradefunc) binary_dense0_gradeproduct,
 };
@@ -1960,6 +2078,8 @@ static const PyMultivectorMath_Funcs blades0_math_funcs = {
     .scalar_product = (gascalarfunc) binary_blades0_scalarproduct,
     .scalar_add = (gascalaraddfunc) binary_blades0_scalaradd,
     .reverse = (gaunaryfunc) unary_blades0_reverse,
+    .dual = (gaunaryfunc) unary_blades0_dual,
+    .undual = (gaunaryfunc) unary_blades0_undual,
     .ternary_product = (gaternaryprodfunc) ternary_blades0_product,
     .graded_product = (gabinarygradefunc) binary_blades0_gradeproduct,
 };

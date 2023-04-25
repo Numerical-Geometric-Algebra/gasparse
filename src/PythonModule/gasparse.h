@@ -4,6 +4,7 @@
 #include "common.h"
 
 #define METRIC_SIZE(s) (s->p + s->q + s->r)
+#define MAX_GRADE(s) (s->p + s->q + s->r)
 #define IS_NONZERO(s) (s <= '9' && s >= '1')
 #define MAX_SHAPE_SIZE 10
 
@@ -52,6 +53,11 @@ typedef struct GradeMap{ // used to map bitmap to position and grade
     Py_ssize_t size;
 }GradeMap;
 
+typedef struct DualMap{
+    char *sign;
+    Py_ssize_t *bitmap;
+    Py_ssize_t size;
+}DualMap;
 
 typedef struct PyMultivectorSubType PyMultivectorSubType;
 typedef struct PyAlgebraObject PyAlgebraObject;
@@ -62,6 +68,7 @@ typedef struct PyMultivectorMixedMath_Funcs PyMultivectorMixedMath_Funcs;
 typedef struct PyAlgebraObject {
     PyObject_HEAD
     GradeMap gm;
+    DualMap dm;
     CliffordMap product[ProductTypeMAX];
     Py_ssize_t p,q,r;
     char *metric;
@@ -101,6 +108,9 @@ typedef struct GradeProjectMap{
   Py_ssize_t size;
 }GradeProjectMap;
 
+/* typedef int (*compbitmapfunc)(Py_ssize_t,Py_ssize_t,Py_ssize_t); */
+
+
 typedef PyMultivectorObject *(*gabinaryfunc)(PyMultivectorObject *left, PyMultivectorObject *right);
 typedef PyMultivectorObject *(*gaaddfunc)(PyMultivectorObject *left, PyMultivectorObject *right, int sign);
 typedef PyMultivectorObject *(*gaunarygradefunc)(PyMultivectorObject *self, int *grades, Py_ssize_t size);
@@ -129,6 +139,8 @@ typedef struct PyMultivectorMath_Funcs{
     gascalarfunc scalar_product;
     gascalaraddfunc scalar_add;
     gaunaryfunc reverse;
+    gaunaryfunc dual;
+    gaunaryfunc undual;
     gaternaryprodfunc ternary_product;
 }PyMultivectorMath_Funcs;
 
@@ -151,8 +163,8 @@ typedef struct PyMultivectorData_Funcs{
 }PyMultivectorData_Funcs;
 
 typedef struct PyMultivectorSubType{
-    PyMultivectorMath_Funcs math_funcs;
-    PyMultivectorData_Funcs data_funcs;
+    PyMultivectorMath_Funcs *math_funcs;
+    PyMultivectorData_Funcs *data_funcs;
     int generated;
     char metric[32];
     char name[32];
@@ -165,10 +177,15 @@ typedef struct PyMultivectorSubType{
 extern PyMultivectorSubType multivector_subtypes_array[3];
 extern PyMultivectorMixedMath_Funcs multivector_mixed_fn;
 
+// large multivectors
+extern PyMultivectorMixedMath_Funcs largemultivector_mixed_fn;
+extern PyMultivectorSubType largemultivector_subtypes_array[3];
+void fill_missing_funcs(void);
+
 typedef struct PyMultivectorObject{
     PyObject_HEAD
     void *data;
-    PyMultivectorMixedMath_Funcs mixed;
+    PyMultivectorMixedMath_Funcs *mixed;
     PyAlgebraObject *GA;
     PyMultivectorSubType type;
 }_PyMultivectorObject;
@@ -209,12 +226,29 @@ PyObject *multivector_add(PyObject *left, PyObject *right);
 PyObject *multivector_subtract(PyObject *left, PyObject *right);
 PyObject *multivector_negative(PyMultivectorObject *self);
 PyObject *multivector_positive(PyMultivectorObject *self);
-// tp_methods
+// tp_methods class methods
 PyObject* multivector_atomic_add(PyObject *self, PyObject *args);
 PyObject* multivector_atomic_geometric_product(PyObject *self, PyObject *args);
 PyObject* multivector_atomic_outer_product(PyObject *self, PyObject *args);
+// other methods
+PyObject* multivector_dual(PyMultivectorObject *self, PyObject *args);
+PyObject* multivector_undual(PyMultivectorObject *self, PyObject *args);
 
+// TYPE methods
+int comp_abs(ga_float v, ga_float p);
+int ga_check_value_precision(PyAlgebraObject *ga, ga_float v);
+SparseMultivector init_sparse_empty(Py_ssize_t size);
+DenseMultivector init_dense_empty(Py_ssize_t size);
+BladesMultivector init_blades_empty(Py_ssize_t size);
+void sparse_free_(SparseMultivector sparse);
+void blades_free_(BladesMultivector blades);
+void dense_free_(DenseMultivector dense);
 
+void sparse_remove_small(SparseMultivector y, ga_float precision, Py_ssize_t *size);
+SparseMultivector sparse_dense_to_sparse_sparse(SparseMultivector dense, Py_ssize_t size);
+Py_ssize_t* get_grade_bool(int *grades, Py_ssize_t size, Py_ssize_t n_grades);
 
+PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ssize_t size);
+void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size);
 
 #endif // GASPARSE_H_
