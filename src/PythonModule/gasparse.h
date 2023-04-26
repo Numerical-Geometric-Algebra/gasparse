@@ -6,6 +6,7 @@
 #define METRIC_SIZE(s) (s->p + s->q + s->r)
 #define MAX_GRADE(s) (s->p + s->q + s->r)
 #define IS_NONZERO(s) (s <= '9' && s >= '1')
+#define ABS(value) (((value) < 0) ? -(value): (value))
 #define MAX_SHAPE_SIZE 10
 
 typedef enum {
@@ -24,6 +25,7 @@ typedef enum {
     ProductType_geometricinverted,
     ProductType_innerinverted,
     ProductType_outerinverted,
+    ProductType_regressiveinverted,
     ProductTypeMAX} ProductType;
 
 typedef enum {
@@ -65,7 +67,12 @@ typedef struct PyMultivectorIter PyMultivectorIter;
 typedef struct PyMultivectorObject PyMultivectorObject;
 typedef struct PyMultivectorMixedMath_Funcs PyMultivectorMixedMath_Funcs;
 
-typedef struct PyAlgebraObject {
+typedef struct MultivectorDefaults{
+    int prefer_generated_types;
+    char *type_name;
+}MultivectorDefaults;
+
+typedef struct PyAlgebraObject{
     PyObject_HEAD
     GradeMap gm;
     DualMap dm;
@@ -79,6 +86,7 @@ typedef struct PyAlgebraObject {
     PyMultivectorMixedMath_Funcs *mixed;
     Py_ssize_t tsize; // number of types
     Py_ssize_t asize; // sizeof the algebra
+    MultivectorDefaults mdefault;
 }_PyAlgebraObject;
 
 
@@ -222,6 +230,7 @@ PyObject *multivector_invert(PyMultivectorObject *self);
 PyObject *multivector_geometric_product(PyObject *left, PyObject *right);
 PyObject *multivector_inner_product(PyObject *left, PyObject *right);
 PyObject *multivector_outer_product(PyObject *left, PyObject *right);
+PyObject *multivector_regressive_product(PyObject *left, PyObject *right);
 PyObject *multivector_add(PyObject *left, PyObject *right);
 PyObject *multivector_subtract(PyObject *left, PyObject *right);
 PyObject *multivector_negative(PyMultivectorObject *self);
@@ -244,9 +253,11 @@ void sparse_free_(SparseMultivector sparse);
 void blades_free_(BladesMultivector blades);
 void dense_free_(DenseMultivector dense);
 
+Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades);
 void sparse_remove_small(SparseMultivector y, ga_float precision, Py_ssize_t *size);
 SparseMultivector sparse_dense_to_sparse_sparse(SparseMultivector dense, Py_ssize_t size);
 Py_ssize_t* get_grade_bool(int *grades, Py_ssize_t size, Py_ssize_t n_grades);
+char *bitmap_to_string(int bitmap);
 
 PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ssize_t size);
 void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size);

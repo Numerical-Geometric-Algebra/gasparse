@@ -151,7 +151,7 @@ static PyMultivectorIter dense{{i}}_iterinit(PyMultivectorObject *data){
     iter.index[0] = 0;
     iter.size = 1;
     iter.niters = {{algebra.size}};
-    iter.next = data->type.data_funcs.iter_next;
+    iter.next = data->type.data_funcs->iter_next;
     iter.type_name = data->type.type_name;
     return iter;
 }
@@ -167,7 +167,7 @@ static PyMultivectorIter blades{{i}}_iterinit(PyMultivectorObject *data){
     iter.index[1] = 0;
     iter.size = 2;
     iter.niters = {{algebra.size}};
-    iter.next = data->type.data_funcs.iter_next;
+    iter.next = data->type.data_funcs->iter_next;
     iter.type_name = data->type.type_name;
     return iter;
 }
@@ -864,7 +864,7 @@ static PyMultivectorObject *unary_{{type}}{{i}}_{{op}}(PyMultivectorObject *self
 {% set algebra = algebras[i] %}
 
 {% for type in types %}
-static const PyMultivectorMath_Funcs {{type}}{{i}}_math_funcs = {
+static PyMultivectorMath_Funcs {{type}}{{i}}_math_funcs = {
     .atomic_add = (gaatomicfunc)atomic_{{type}}{{i}}_add,
     .atomic_product = (gaatomicprodfunc) atomic_{{type}}{{i}}_product,
     .add = (gaaddfunc) binary_{{type}}{{i}}_add,
@@ -882,7 +882,7 @@ static const PyMultivectorMath_Funcs {{type}}{{i}}_math_funcs = {
 {% endfor %}
 
 {% for type in types %}
-static const PyMultivectorData_Funcs {{type}}{{i}}_data_funcs = {
+static PyMultivectorData_Funcs {{type}}{{i}}_data_funcs = {
   .iter_next = (gaiternextfunc) {{type}}{{i}}_iternext,
   .iter_init = (gaiterinitfunc) {{type}}{{i}}_iterinit,
   .init = (gainitfunc) {{type}}{{i}}_init,
@@ -892,8 +892,8 @@ static const PyMultivectorData_Funcs {{type}}{{i}}_data_funcs = {
 
 {% for type in types %}
 static const PyMultivectorSubType {{type}}{{i}}_subtype = {
-    .math_funcs = {{type}}{{i}}_math_funcs,
-    .data_funcs = {{type}}{{i}}_data_funcs,
+    .math_funcs = &{{type}}{{i}}_math_funcs,
+    .data_funcs = &{{type}}{{i}}_data_funcs,
     .name = "{{algebra.name}}",
     .type_name = "{{type}}{{i}}",
     .generated = 1,

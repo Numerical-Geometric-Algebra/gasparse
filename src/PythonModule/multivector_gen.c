@@ -202,7 +202,7 @@ static PyMultivectorIter dense0_iterinit(PyMultivectorObject *data){
     iter.index[0] = 0;
     iter.size = 1;
     iter.niters = 8;
-    iter.next = data->type.data_funcs.iter_next;
+    iter.next = data->type.data_funcs->iter_next;
     iter.type_name = data->type.type_name;
     return iter;
 }
@@ -218,7 +218,7 @@ static PyMultivectorIter blades0_iterinit(PyMultivectorObject *data){
     iter.index[1] = 0;
     iter.size = 2;
     iter.niters = 8;
-    iter.next = data->type.data_funcs.iter_next;
+    iter.next = data->type.data_funcs->iter_next;
     iter.type_name = data->type.type_name;
     return iter;
 }
@@ -733,6 +733,135 @@ static gen0_DenseMultivector gen0_dense_gradeouterproduct(gen0_DenseMultivector 
                 break;
             case 3:
                 GEN0_DENSE_GRADE3OUTERPRODUCT(dense,dense0,dense1);
+                break;
+            default:// do nothing for different values
+                break;
+        }
+    }
+    return dense;
+}
+
+
+static gen0_DenseMultivector gen0_dense_regressiveproduct(gen0_DenseMultivector dense0, gen0_DenseMultivector dense1){
+    gen0_DenseMultivector dense = {{0}};
+    dense.value[0] =
+    +dense0.value[0]*dense1.value[7]
+    +dense0.value[1]*dense1.value[6]
+    -dense0.value[2]*dense1.value[5]
+    +dense0.value[3]*dense1.value[4]
+    +dense0.value[4]*dense1.value[3]
+    -dense0.value[5]*dense1.value[2]
+    +dense0.value[6]*dense1.value[1]
+;
+    dense.value[1] =
+    +dense0.value[0]*dense1.value[6]
+    +dense0.value[1]*dense1.value[7]
+    +dense0.value[2]*dense1.value[4]
+    -dense0.value[3]*dense1.value[5]
+    -dense0.value[4]*dense1.value[2]
+    +dense0.value[5]*dense1.value[3]
+;
+    dense.value[2] =
+    -dense0.value[0]*dense1.value[5]
+    -dense0.value[1]*dense1.value[4]
+    +dense0.value[2]*dense1.value[7]
+    -dense0.value[3]*dense1.value[6]
+    +dense0.value[4]*dense1.value[1]
+    +dense0.value[6]*dense1.value[3]
+;
+    dense.value[3] =
+    -dense0.value[0]*dense1.value[4]
+    +dense0.value[3]*dense1.value[7]
+;
+    dense.value[4] =
+    +dense0.value[0]*dense1.value[3]
+    +dense0.value[1]*dense1.value[2]
+    -dense0.value[2]*dense1.value[1]
+    +dense0.value[4]*dense1.value[7]
+    -dense0.value[5]*dense1.value[6]
+    +dense0.value[6]*dense1.value[5]
+;
+    dense.value[5] =
+    +dense0.value[0]*dense1.value[2]
+    +dense0.value[5]*dense1.value[7]
+;
+    dense.value[6] =
+    -dense0.value[0]*dense1.value[1]
+    +dense0.value[6]*dense1.value[7]
+;
+    return dense;
+}
+
+// grade projection of the product of two multivectors <ab>_r
+#define GEN0_DENSE_GRADE0REGRESSIVEPRODUCT(dense,dense0,dense1){\
+    dense.value[0] =\
+    +dense0.value[0]*dense1.value[7]\
+    +dense0.value[1]*dense1.value[6]\
+    -dense0.value[2]*dense1.value[5]\
+    +dense0.value[3]*dense1.value[4]\
+    +dense0.value[4]*dense1.value[3]\
+    -dense0.value[5]*dense1.value[2]\
+    +dense0.value[6]*dense1.value[1]\
+;\
+}
+#define GEN0_DENSE_GRADE1REGRESSIVEPRODUCT(dense,dense0,dense1){\
+    dense.value[1] =\
+    +dense0.value[0]*dense1.value[6]\
+    +dense0.value[1]*dense1.value[7]\
+    +dense0.value[2]*dense1.value[4]\
+    -dense0.value[3]*dense1.value[5]\
+    -dense0.value[4]*dense1.value[2]\
+    +dense0.value[5]*dense1.value[3]\
+;\
+    dense.value[2] =\
+    -dense0.value[0]*dense1.value[5]\
+    -dense0.value[1]*dense1.value[4]\
+    +dense0.value[2]*dense1.value[7]\
+    -dense0.value[3]*dense1.value[6]\
+    +dense0.value[4]*dense1.value[1]\
+    +dense0.value[6]*dense1.value[3]\
+;\
+    dense.value[4] =\
+    +dense0.value[0]*dense1.value[3]\
+    +dense0.value[1]*dense1.value[2]\
+    -dense0.value[2]*dense1.value[1]\
+    +dense0.value[4]*dense1.value[7]\
+    -dense0.value[5]*dense1.value[6]\
+    +dense0.value[6]*dense1.value[5]\
+;\
+}
+#define GEN0_DENSE_GRADE2REGRESSIVEPRODUCT(dense,dense0,dense1){\
+    dense.value[3] =\
+    -dense0.value[0]*dense1.value[4]\
+    +dense0.value[3]*dense1.value[7]\
+;\
+    dense.value[5] =\
+    +dense0.value[0]*dense1.value[2]\
+    +dense0.value[5]*dense1.value[7]\
+;\
+    dense.value[6] =\
+    -dense0.value[0]*dense1.value[1]\
+    +dense0.value[6]*dense1.value[7]\
+;\
+}
+#define GEN0_DENSE_GRADE3REGRESSIVEPRODUCT(dense,dense0,dense1){\
+}
+
+static gen0_DenseMultivector gen0_dense_graderegressiveproduct(gen0_DenseMultivector dense0, gen0_DenseMultivector dense1, int *grades, Py_ssize_t size){
+    gen0_DenseMultivector dense = {{0}};
+    for(Py_ssize_t i = 0; i < size; i++){
+        switch(grades[i]){
+            case 0:
+                GEN0_DENSE_GRADE0REGRESSIVEPRODUCT(dense,dense0,dense1);
+                break;
+            case 1:
+                GEN0_DENSE_GRADE1REGRESSIVEPRODUCT(dense,dense0,dense1);
+                break;
+            case 2:
+                GEN0_DENSE_GRADE2REGRESSIVEPRODUCT(dense,dense0,dense1);
+                break;
+            case 3:
+                GEN0_DENSE_GRADE3REGRESSIVEPRODUCT(dense,dense0,dense1);
                 break;
             default:// do nothing for different values
                 break;
@@ -1344,6 +1473,135 @@ static gen0_BladesMultivector gen0_blades_gradeouterproduct(gen0_BladesMultivect
 }
 
 
+static gen0_BladesMultivector gen0_blades_regressiveproduct(gen0_BladesMultivector blades0, gen0_BladesMultivector blades1){
+    gen0_BladesMultivector blades = {{0},{0},{0},{0},};
+
+    blades.value0[0] =
+    +blades0.value0[0]*blades1.value3[0]
+    +blades0.value1[0]*blades1.value2[2]
+    -blades0.value1[1]*blades1.value2[1]
+    +blades0.value2[0]*blades1.value1[2]
+    +blades0.value1[2]*blades1.value2[0]
+    -blades0.value2[1]*blades1.value1[1]
+    +blades0.value2[2]*blades1.value1[0]
+;
+    blades.value1[0] =
+    +blades0.value0[0]*blades1.value2[2]
+    +blades0.value1[0]*blades1.value3[0]
+    +blades0.value1[1]*blades1.value1[2]
+    -blades0.value2[0]*blades1.value2[1]
+    -blades0.value1[2]*blades1.value1[1]
+    +blades0.value2[1]*blades1.value2[0]
+;
+    blades.value1[1] =
+    -blades0.value0[0]*blades1.value2[1]
+    -blades0.value1[0]*blades1.value1[2]
+    +blades0.value1[1]*blades1.value3[0]
+    -blades0.value2[0]*blades1.value2[2]
+    +blades0.value1[2]*blades1.value1[0]
+    +blades0.value2[2]*blades1.value2[0]
+;
+    blades.value2[0] =
+    -blades0.value0[0]*blades1.value1[2]
+    +blades0.value2[0]*blades1.value3[0]
+;
+    blades.value1[2] =
+    +blades0.value0[0]*blades1.value2[0]
+    +blades0.value1[0]*blades1.value1[1]
+    -blades0.value1[1]*blades1.value1[0]
+    +blades0.value1[2]*blades1.value3[0]
+    -blades0.value2[1]*blades1.value2[2]
+    +blades0.value2[2]*blades1.value2[1]
+;
+    blades.value2[1] =
+    +blades0.value0[0]*blades1.value1[1]
+    +blades0.value2[1]*blades1.value3[0]
+;
+    blades.value2[2] =
+    -blades0.value0[0]*blades1.value1[0]
+    +blades0.value2[2]*blades1.value3[0]
+;
+    return blades;
+}
+
+#define GEN0_BLADES_GRADE0REGRESSIVEPRODUCT(blades,blades0,blades1){\
+    blades.value0[0] =\
+    +blades0.value0[0]*blades1.value3[0]\
+    +blades0.value1[0]*blades1.value2[2]\
+    -blades0.value1[1]*blades1.value2[1]\
+    +blades0.value2[0]*blades1.value1[2]\
+    +blades0.value1[2]*blades1.value2[0]\
+    -blades0.value2[1]*blades1.value1[1]\
+    +blades0.value2[2]*blades1.value1[0]\
+;\
+}
+#define GEN0_BLADES_GRADE1REGRESSIVEPRODUCT(blades,blades0,blades1){\
+    blades.value1[0] =\
+    +blades0.value0[0]*blades1.value2[2]\
+    +blades0.value1[0]*blades1.value3[0]\
+    +blades0.value1[1]*blades1.value1[2]\
+    -blades0.value2[0]*blades1.value2[1]\
+    -blades0.value1[2]*blades1.value1[1]\
+    +blades0.value2[1]*blades1.value2[0]\
+;\
+    blades.value1[1] =\
+    -blades0.value0[0]*blades1.value2[1]\
+    -blades0.value1[0]*blades1.value1[2]\
+    +blades0.value1[1]*blades1.value3[0]\
+    -blades0.value2[0]*blades1.value2[2]\
+    +blades0.value1[2]*blades1.value1[0]\
+    +blades0.value2[2]*blades1.value2[0]\
+;\
+    blades.value1[2] =\
+    +blades0.value0[0]*blades1.value2[0]\
+    +blades0.value1[0]*blades1.value1[1]\
+    -blades0.value1[1]*blades1.value1[0]\
+    +blades0.value1[2]*blades1.value3[0]\
+    -blades0.value2[1]*blades1.value2[2]\
+    +blades0.value2[2]*blades1.value2[1]\
+;\
+}
+#define GEN0_BLADES_GRADE2REGRESSIVEPRODUCT(blades,blades0,blades1){\
+    blades.value2[0] =\
+    -blades0.value0[0]*blades1.value1[2]\
+    +blades0.value2[0]*blades1.value3[0]\
+;\
+    blades.value2[1] =\
+    +blades0.value0[0]*blades1.value1[1]\
+    +blades0.value2[1]*blades1.value3[0]\
+;\
+    blades.value2[2] =\
+    -blades0.value0[0]*blades1.value1[0]\
+    +blades0.value2[2]*blades1.value3[0]\
+;\
+}
+#define GEN0_BLADES_GRADE3REGRESSIVEPRODUCT(blades,blades0,blades1){\
+}
+
+static gen0_BladesMultivector gen0_blades_graderegressiveproduct(gen0_BladesMultivector blades0, gen0_BladesMultivector blades1, int *grades, Py_ssize_t size){
+    gen0_BladesMultivector blades = blades0zero;
+    for(Py_ssize_t i = 0; i < size; i++){
+        switch(grades[i]){
+            case 0:
+                GEN0_BLADES_GRADE0REGRESSIVEPRODUCT(blades,blades0,blades1);
+                break;
+            case 1:
+                GEN0_BLADES_GRADE1REGRESSIVEPRODUCT(blades,blades0,blades1);
+                break;
+            case 2:
+                GEN0_BLADES_GRADE2REGRESSIVEPRODUCT(blades,blades0,blades1);
+                break;
+            case 3:
+                GEN0_BLADES_GRADE3REGRESSIVEPRODUCT(blades,blades0,blades1);
+                break;
+            default:// do nothing for different values
+                break;
+        }
+    }
+    return blades;
+}
+
+
 static gen0_BladesMultivector gen0_blades_atomicadd(gen0_BladesMultivector *blades_array, Py_ssize_t size){
     gen0_BladesMultivector blades = {{0},{0},{0},{0},};
 
@@ -1512,6 +1770,9 @@ static PyMultivectorObject *binary_dense0_product(PyMultivectorObject *data0, Py
         case ProductType_outer:
             *pdense = gen0_dense_outerproduct(*pdense0,*pdense1);
             break;
+        case ProductType_regressive:
+            *pdense = gen0_dense_regressiveproduct(*pdense0,*pdense1);
+            break;
         default:
             PyMem_RawFree(pdense);
             free_multivector(out);
@@ -1542,6 +1803,9 @@ static PyMultivectorObject *binary_blades0_product(PyMultivectorObject *data0, P
             break;
         case ProductType_outer:
             *pblades = gen0_blades_outerproduct(*pblades0,*pblades1);
+            break;
+        case ProductType_regressive:
+            *pblades = gen0_blades_regressiveproduct(*pblades0,*pblades1);
             break;
         default:
             PyMem_RawFree(pblades);
@@ -1584,6 +1848,9 @@ static PyMultivectorObject *binary_dense0_gradeproduct(PyMultivectorObject *data
         case ProductType_outer:
             *pdense = gen0_dense_gradeouterproduct(projdense0,projdense1,gpmap.grades,gpmap.size);
             break;
+        case ProductType_regressive:
+            *pdense = gen0_dense_graderegressiveproduct(projdense0,projdense1,gpmap.grades,gpmap.size);
+            break;
         default:
             PyMem_RawFree(pdense);
             free_multivector(out);
@@ -1623,6 +1890,9 @@ static PyMultivectorObject *binary_blades0_gradeproduct(PyMultivectorObject *dat
         case ProductType_outer:
             *pblades = gen0_blades_gradeouterproduct(projblades0,projblades1,gpmap.grades,gpmap.size);
             break;
+        case ProductType_regressive:
+            *pblades = gen0_blades_graderegressiveproduct(projblades0,projblades1,gpmap.grades,gpmap.size);
+            break;
         default:
             PyMem_RawFree(pblades);
             free_multivector(out);
@@ -1661,6 +1931,10 @@ static PyMultivectorObject *ternary_dense0_product(PyMultivectorObject *data0, P
             *pdense = gen0_dense_outerproduct(*pdense0,*pdense1);
             *pdense = gen0_dense_outerproduct(*pdense,*pdense2);
             break;
+        case ProductType_regressive:
+            *pdense = gen0_dense_regressiveproduct(*pdense0,*pdense1);
+            *pdense = gen0_dense_regressiveproduct(*pdense,*pdense2);
+            break;
         default:
             PyMem_RawFree(pdense);
             free_multivector(out);
@@ -1695,6 +1969,10 @@ static PyMultivectorObject *ternary_blades0_product(PyMultivectorObject *data0, 
         case ProductType_outer:
             *pblades = gen0_blades_outerproduct(*pblades0,*pblades1);
             *pblades = gen0_blades_outerproduct(*pblades,*pblades2);
+            break;
+        case ProductType_regressive:
+            *pblades = gen0_blades_regressiveproduct(*pblades0,*pblades1);
+            *pblades = gen0_blades_regressiveproduct(*pblades,*pblades2);
             break;
         default:
             PyMem_RawFree(pblades);
@@ -1847,6 +2125,16 @@ static PyMultivectorObject* atomic_dense0_product(PyMultivectorObject *data, Py_
                           *((gen0_DenseMultivector*)data[i].data));
             }
             break;
+        case ProductType_regressive:
+            dense = gen0_dense_regressiveproduct(
+                      *((gen0_DenseMultivector*)data[0].data),
+                      *((gen0_DenseMultivector*)data[1].data));
+            for(Py_ssize_t i = 2; i < size; i++){
+                dense = gen0_dense_regressiveproduct(
+                          dense,
+                          *((gen0_DenseMultivector*)data[i].data));
+            }
+            break;
         default:
             PyMem_RawFree(pdense);
             free_multivector(out);
@@ -1894,6 +2182,16 @@ static PyMultivectorObject* atomic_blades0_product(PyMultivectorObject *data, Py
                       *((gen0_BladesMultivector*)data[1].data));
             for(Py_ssize_t i = 2; i < size; i++){
                 blades = gen0_blades_outerproduct(
+                          blades,
+                          *((gen0_BladesMultivector*)data[i].data));
+            }
+            break;
+        case ProductType_regressive:
+            blades = gen0_blades_regressiveproduct(
+                      *((gen0_BladesMultivector*)data[0].data),
+                      *((gen0_BladesMultivector*)data[1].data));
+            for(Py_ssize_t i = 2; i < size; i++){
+                blades = gen0_blades_regressiveproduct(
                           blades,
                           *((gen0_BladesMultivector*)data[i].data));
             }
@@ -2054,7 +2352,7 @@ static PyMultivectorObject *unary_blades0_undual(PyMultivectorObject *self){
 
 
 
-static const PyMultivectorMath_Funcs dense0_math_funcs = {
+static PyMultivectorMath_Funcs dense0_math_funcs = {
     .atomic_add = (gaatomicfunc)atomic_dense0_add,
     .atomic_product = (gaatomicprodfunc) atomic_dense0_product,
     .add = (gaaddfunc) binary_dense0_add,
@@ -2069,7 +2367,7 @@ static const PyMultivectorMath_Funcs dense0_math_funcs = {
     .graded_product = (gabinarygradefunc) binary_dense0_gradeproduct,
 };
 
-static const PyMultivectorMath_Funcs blades0_math_funcs = {
+static PyMultivectorMath_Funcs blades0_math_funcs = {
     .atomic_add = (gaatomicfunc)atomic_blades0_add,
     .atomic_product = (gaatomicprodfunc) atomic_blades0_product,
     .add = (gaaddfunc) binary_blades0_add,
@@ -2085,13 +2383,13 @@ static const PyMultivectorMath_Funcs blades0_math_funcs = {
 };
 
 
-static const PyMultivectorData_Funcs dense0_data_funcs = {
+static PyMultivectorData_Funcs dense0_data_funcs = {
   .iter_next = (gaiternextfunc) dense0_iternext,
   .iter_init = (gaiterinitfunc) dense0_iterinit,
   .init = (gainitfunc) dense0_init,
 };
 
-static const PyMultivectorData_Funcs blades0_data_funcs = {
+static PyMultivectorData_Funcs blades0_data_funcs = {
   .iter_next = (gaiternextfunc) blades0_iternext,
   .iter_init = (gaiterinitfunc) blades0_iterinit,
   .init = (gainitfunc) blades0_init,
@@ -2099,8 +2397,8 @@ static const PyMultivectorData_Funcs blades0_data_funcs = {
 
 
 static const PyMultivectorSubType dense0_subtype = {
-    .math_funcs = dense0_math_funcs,
-    .data_funcs = dense0_data_funcs,
+    .math_funcs = &dense0_math_funcs,
+    .data_funcs = &dense0_data_funcs,
     .name = "3DVGA",
     .type_name = "dense0",
     .generated = 1,
@@ -2111,8 +2409,8 @@ static const PyMultivectorSubType dense0_subtype = {
 };
 
 static const PyMultivectorSubType blades0_subtype = {
-    .math_funcs = blades0_math_funcs,
-    .data_funcs = blades0_data_funcs,
+    .math_funcs = &blades0_math_funcs,
+    .data_funcs = &blades0_data_funcs,
     .name = "3DVGA",
     .type_name = "blades0",
     .generated = 1,

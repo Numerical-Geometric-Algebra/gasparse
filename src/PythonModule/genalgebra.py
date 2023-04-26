@@ -5,7 +5,7 @@ import jinja2
 class algebra:
     def __init__(self,ga,name):
         self.name = name
-        self.product_names = ["geometric","inner","outer"]
+        self.product_names = ["geometric","inner","outer","regressive"]
         self.signs = []
         self.bitmaps = []
         self.zerosigns = []

@@ -276,6 +276,31 @@ static void outer_map_init(PyAlgebraObject *self){
     }
 }
 
+static void regressive_map_init(PyAlgebraObject *self){
+    CliffordMap m = self->product[ProductType_inner];
+    Py_ssize_t size = m.size;
+    DualMap dm = self->dm;
+    Py_ssize_t lbitmap; int lsign;
+
+    if(dm.size <= 0 || m.size <= 0) return;
+    map_alloc(&self->product[ProductType_regressive],size);
+    for(Py_ssize_t i = 0; i < size; i++){ //iterate left multivectors
+        // compute dual
+        lbitmap = dm.bitmap[i];
+        lsign = dm.sign[i];
+        for(Py_ssize_t j = 0; j < size; j++){
+            if(m.bitmap[lbitmap][j] != -1){
+                self->product[ProductType_regressive].bitmap[i][j] = m.bitmap[lbitmap][j];
+                self->product[ProductType_regressive].sign[i][j] = lsign*m.sign[lbitmap][j];
+            }else{
+                self->product[ProductType_regressive].sign[i][j] = 0;
+                self->product[ProductType_regressive].bitmap[i][j] = -1;
+            }
+        }
+    }
+}
+
+
 static void inverted_map_init(CliffordMap *inv, CliffordMap *self){
     Py_ssize_t size = self->size;
     map_alloc(inv,size);
@@ -345,6 +370,7 @@ static void algebra_dealloc(PyAlgebraObject *self){
     PyMem_RawFree(self->metric); self->metric = NULL;
     PyMem_RawFree(self->dm.bitmap); self->dm.bitmap = NULL;
     PyMem_RawFree(self->dm.sign); self->dm.sign = NULL;
+    PyMem_RawFree(self->mdefault.type_name);
     Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
@@ -363,6 +389,7 @@ static PyObject *algebra_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
         self->dm.sign = NULL;
         self->dm.bitmap = NULL;
         self->metric = NULL;
+        self->mdefault.type_name = NULL;
         for(Py_ssize_t i = ProductTypeMIN + 1; i < ProductTypeMAX; i++)
             map_new(&self->product[i]);
 
@@ -479,6 +506,7 @@ static int get_generated_types_indices(PyAlgebraObject *self, char *name, Py_ssi
                 if(check) index[k++] = i;
             }
         }
+        if(k) self->asize = gen_subtypes_array[*index].asize;
     }
     return k;
 }
@@ -489,6 +517,7 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
     static char *kwlist[] = {"p","q","r","metric","print_type","print_type_mv","large",NULL};
     int p = 0, q = 0, r = 0; PrintType print_type = PrintTypeMIN; PrintTypeMV print_type_mv = PrintTypeMVMIN;
     PyObject *metric_obj = NULL;
+    const char *type_name = "sparse";
     int large = 0;
     if(!PyArg_ParseTupleAndKeywords(args, kwds, "|iiiOiip", kwlist, &p, &q, &r, &metric_obj, &print_type, &print_type_mv, &large))
         return -1;
@@ -505,15 +534,21 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
         grade_map_init(&self->gm,self->asize);
         inner_map_init(self);
         outer_map_init(self);
+        regressive_map_init(self);
 
         inverted_map_init(&self->product[ProductType_geometricinverted],&self->product[ProductType_geometric]);
         inverted_map_init(&self->product[ProductType_innerinverted],&self->product[ProductType_inner]);
         inverted_map_init(&self->product[ProductType_outerinverted],&self->product[ProductType_outer]);
+        inverted_map_init(&self->product[ProductType_regressiveinverted],&self->product[ProductType_regressive]);
     }else{
         map_sign_init(self->product,self->metric,METRIC_SIZE(self));
         self->dm = dual_map_sign_init(METRIC_SIZE(self));
         self->asize = self->product->size;
     }
+
+    self->mdefault.prefer_generated_types = 1;
+    self->mdefault.type_name = (char*)PyMem_RawMalloc((strlen(type_name)+1)*sizeof(char));
+    strcpy(self->mdefault.type_name,type_name);
 
 
     // set ga print type
@@ -538,9 +573,11 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
     static char *kwlist[] = {"p","q","r","metric","print_type","print_type_mv","large","generate_tables","name",NULL};
     int p = 0, q = 0, r = 0; PrintType print_type = PrintTypeMIN; PrintTypeMV print_type_mv = PrintTypeMVMIN;
     int gen_tables = 0;
+    const char *type_name = "sparse";
+    int large;
+
     PyObject *metric_obj = NULL;
     char *name = NULL;
-    Py_ssize_t size = -1;
     Py_ssize_t lsize = 3;
     if(!PyArg_ParseTupleAndKeywords(args, kwds, "|iiiOiips", kwlist, &p, &q, &r, &metric_obj, &print_type, &print_type_mv, &gen_tables,&name,&large))
         return -1;
@@ -579,22 +616,28 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
         self->print_type_mv = print_type_mv;
 
     self->precision = 1e-6;
+    self->mdefault.prefer_generated_types = 1;
+    self->mdefault.type_name = (char*)PyMem_RawMalloc((strlen(type_name)+1)*sizeof(char));
+    strcpy(self->mdefault.type_name,type_name);
 
     if(gen_tables){
         if(!large){
-            map_init(&self->product[ProductType_geometric],self->metric,p+q+r);
+            map_init(&self->product[ProductType_geometric],self->metric,METRIC_SIZE(self));
             self->asize = self->product[ProductType_geometric].size;
-            self->dm = dual_map_init(p+q+r);
+            self->dm = dual_map_init(METRIC_SIZE(self));
             grade_map_init(&self->gm,self->product[ProductType_geometric].size);
             inner_map_init(self);
             outer_map_init(self);
+            regressive_map_init(self);
 
             inverted_map_init(&self->product[ProductType_geometricinverted],&self->product[ProductType_geometric]);
             inverted_map_init(&self->product[ProductType_innerinverted],&self->product[ProductType_inner]);
             inverted_map_init(&self->product[ProductType_outerinverted],&self->product[ProductType_outer]);
+            inverted_map_init(&self->product[ProductType_regressiveinverted],&self->product[ProductType_regressive]);
         }else{
             map_sign_init(self->product,self->metric,METRIC_SIZE(self));
             self->dm = dual_map_sign_init(METRIC_SIZE(self));
+            self->asize = self->product->size;
         }
     }
 
@@ -877,12 +920,16 @@ static PyObject* algebra_cayley_table(PyAlgebraObject *self, PyObject *args){
             type = ProductType_inner;
         }else if(!strcmp("outer",type_str)){
             type = ProductType_outer;
+        }else if(!strcmp("regressive",type_str)){
+            type = ProductType_regressive;
         }else if(!strcmp("geometricinverted",type_str)){
             type = ProductType_geometricinverted;
         }else if(!strcmp("innerinverted",type_str)){
             type = ProductType_innerinverted;
         }else if(!strcmp("outerinverted",type_str)){
             type = ProductType_outerinverted;
+        }else if(!strcmp("regressiveinverted",type_str)){
+            type = ProductType_regressiveinverted;
         }
     }
     m = self->product[type];
@@ -909,6 +956,7 @@ static PyObject* algebra_cayley_table(PyAlgebraObject *self, PyObject *args){
 static PyNumberMethods PyMultivectorNumberMethods = {
     .nb_multiply = (binaryfunc) multivector_geometric_product,
     .nb_xor = (binaryfunc) multivector_outer_product,
+    .nb_and = (binaryfunc) multivector_regressive_product,
     .nb_or = (binaryfunc) multivector_inner_product,
     .nb_add = (binaryfunc) multivector_add,
     .nb_subtract = (binaryfunc) multivector_subtract,
@@ -950,56 +998,19 @@ static PyTypeObject PyMultivectorType = {
     .tp_methods = multivector_methods
 };
 
+static PyMultivectorObject *populate_multivector_types(PyAlgebraObject *self){
+    Py_ssize_t type = -1;
+    PyMultivectorObject *multivector = NULL;
+    char *dtype_str = self->mdefault.type_name;
+    int pgend = self->mdefault.prefer_generated_types;
 
-static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
-    static char *kwlist[] = {"values","blades","precision","dtype","addmethod","prefer_generated",NULL};
-    PyObject *values = NULL, *blades = NULL, *dtype = NULL, *addmethod = NULL;
-    int precision;
-    int *bitmaps_int = NULL;
-    int pref_gend = 1; // prefers generated code by default
-    ga_float *values_float;
-    Py_ssize_t size;
-    PyMultivectorObject *multivector;
-    Py_ssize_t type = -1; // default type
-
-    if(!PyArg_ParseTupleAndKeywords(args, kwds, "OO|iOOp", kwlist, &values,&blades,&precision,&dtype,&addmethod,&pref_gend))
-        return NULL;
-    if(!values)
-        return NULL;
-    if(!PyList_Check(values)){
-        PyErr_SetString(PyExc_TypeError,"values must be a list");
-        return NULL;
-    }
-    size = PyList_Size(values);
-    values_float = (ga_float*)PyMem_RawMalloc(size*sizeof(ga_float));
-    for(Py_ssize_t i = 0; i < size; i++){
-        PyObject *value_i = PyList_GetItem(values,i);
-        if(PyFloat_Check(value_i))
-            values_float[i] = (ga_float)PyFloat_AsDouble(value_i);
-        else if(PyLong_Check(value_i))
-            values_float[i] = (ga_float)PyLong_AsLong(value_i);
-        else{
-            PyErr_SetString(PyExc_TypeError,"Elements of the list of values must be ga_float");
-            PyMem_RawFree(values_float);
-            return NULL;
-        }
-    }
-
-    if(blades){
-        int size_bitmap = parse_list_as_bitmaps(blades,&bitmaps_int);
-        if(size_bitmap != (int)size){
-            PyErr_SetString(PyExc_TypeError,"blades must be of the same size as values");
-            return NULL;
-        }
-    }
-    if(dtype && PyUnicode_Check(dtype)){
-        const char *dtype_str = PyUnicode_AsUTF8(dtype);
+    if(dtype_str){
         Py_ssize_t othertype = -1;
         for(Py_ssize_t i = 0; i < self->tsize; i++){
             if(!strncmp(self->types[i].type_name,dtype_str,strlen(dtype_str))){
-                if(self->types[i].generated && pref_gend){
+                if(self->types[i].generated && pgend){
                     type = i; break;
-                }else if(!self->types[i].generated && !pref_gend){ // I don't want the generated version
+                }else if(!self->types[i].generated && !pgend){ // I don't want the generated version
                     type = i; break;
                 }else{
                     othertype = i;
@@ -1008,20 +1019,13 @@ static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyOb
         }
         if(type == -1) // couldn't find the prefered type
             type = othertype;
-    }
+    }else type = 0;
 
-    if(type == -1) type = 0; // raise warning couldn't find the asked type
-
+    if(type == -1) return NULL; // raise error couldn't find the type
 
     multivector = (PyMultivectorObject*)PyMem_RawMalloc(sizeof(PyMultivectorObject));
     multivector->type = self->types[type];
     multivector->mixed = self->mixed;
-
-    gainitfunc init = multivector->type.data_funcs->init;
-    if(init)
-        multivector->data = init(bitmaps_int,values_float,size,self);
-    else
-        return NULL; // raise not implemented error
 
     Py_SET_TYPE(multivector,&PyMultivectorType);
     Py_XINCREF(&PyMultivectorType);
@@ -1029,11 +1033,194 @@ static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyOb
     Py_XINCREF((PyObject*)self);
     Py_SET_REFCNT((PyObject*)multivector,1);
 
+    return multivector;
+}
+
+static Py_ssize_t parse_list_as_values(PyObject *values, ga_float **values_float){
+    if(!PyList_Check(values)){
+        PyErr_SetString(PyExc_TypeError,"values must be a list");
+        return -1;
+    }
+    Py_ssize_t size = PyList_Size(values);
+    if(size <= 0) return -1;
+    *values_float = (ga_float*)PyMem_RawMalloc(size*sizeof(ga_float));
+    for(Py_ssize_t i = 0; i < size; i++){
+        PyObject *value_i = PyList_GetItem(values,i);
+        if(PyFloat_Check(value_i))
+            (*values_float)[i] = (ga_float)PyFloat_AsDouble(value_i);
+        else if(PyLong_Check(value_i))
+            (*values_float)[i] = (ga_float)PyLong_AsLong(value_i);
+        else{
+            PyErr_SetString(PyExc_TypeError,"Elements of the list of values must be ga_float");
+            PyMem_RawFree(*values_float);
+            return -1;
+        }
+    }
+    return size;
+}
+
+static PyObject *algebra_set_multivector_defaults(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
+    static char *kwlist[] = {"dtype","prefer_generated",NULL};
+    char *dtype = NULL;
+    int pgented = -1;
+
+    if(!PyArg_ParseTupleAndKeywords(args, kwds, "sp", kwlist,&dtype,&pgented))
+        return NULL;
+
+    if(!dtype || pgented == -1)
+        return NULL;
+
+    self->mdefault.prefer_generated_types = pgented;
+
+    PyMem_RawFree(self->mdefault.type_name); // free previous
+
+    self->mdefault.type_name = (char*)PyMem_RawMalloc((strlen(dtype)+1)*sizeof(char));
+    strcpy(self->mdefault.type_name,dtype);
+
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
+    static char *kwlist[] = {"values","blades",NULL};
+    PyObject *values = NULL, *blades = NULL;
+    int *bitmaps_int = NULL;
+    ga_float *values_float = NULL;
+    Py_ssize_t size,bsize;
+    PyMultivectorObject *multivector;
+
+    if(!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &values,&blades))
+        return NULL;
+    if(!values || !blades)
+        return NULL;
+
+    size = parse_list_as_values(values,&values_float);
+    if(size <= 0) return NULL;
+    bsize = parse_list_as_bitmaps(blades,&bitmaps_int);
+    if(bsize != size){
+        PyErr_SetString(PyExc_TypeError,"blades must be of the same size as values");
+        return NULL;
+    }
+
+    multivector = populate_multivector_types(self);
+    if(!multivector) return NULL;
+
+    gainitfunc init = multivector->type.data_funcs->init;
+    if(init)
+        multivector->data = init(bitmaps_int,values_float,size,self);
+    else
+        return NULL; // raise not implemented error
+
     PyMem_RawFree(values_float);
     PyMem_RawFree(bitmaps_int);
 
     return (PyObject*)multivector;
 }
+
+static PyObject *algebra_blades(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
+    static char *kwlist[] = {"blades","grades",NULL};
+    PyObject *grades = NULL, *blades = NULL;
+    int *bitmap = NULL;
+    int *grade_array = NULL;
+    Py_ssize_t *grade_bool = NULL;
+    int **bitmap_array = NULL;
+    char **bitmap_char = NULL;
+    ga_float **value_array = NULL;
+    Py_ssize_t size,gsize;
+    PyMultivectorObject **multivectors = NULL;
+    PyObject *dict_blades;
+    if(!PyArg_ParseTupleAndKeywords(args, kwds, "|OO", kwlist,&blades,&grades))
+        return NULL;
+
+    if(blades && grades)
+        return NULL; // raise error
+
+    if(blades){
+        size = parse_list_as_bitmaps(blades,&bitmap);
+        value_array = (ga_float**)PyMem_RawMalloc(size*sizeof(ga_float*));
+        bitmap_array = (int**)PyMem_RawMalloc(size*sizeof(int*));
+        for(Py_ssize_t i = 0; i < size; i++){
+            value_array[i] = (ga_float*)PyMem_RawMalloc(sizeof(ga_float));
+            bitmap_array[i] = (int*)PyMem_RawMalloc(sizeof(int));
+            *(value_array[i]) = 1;
+            *(bitmap_array[i]) = bitmap[i];
+        }
+    }else if(grades){
+        gsize = parse_list_as_grades(self,grades,&grade_array);
+        if(gsize <= 0) return NULL;
+        grade_bool = get_grade_bool(grade_array,gsize,MAX_GRADE(self)+1);
+        size = self->asize - 1;
+        Py_ssize_t psize = 0;
+        for(Py_ssize_t i = 0; i < size; i++){
+            if(grade_bool[GRADE(i+1)])
+                psize++;
+        }
+        value_array = (ga_float**)PyMem_RawMalloc(psize*sizeof(ga_float*));
+        bitmap_array = (int**)PyMem_RawMalloc(psize*sizeof(int*));
+        Py_ssize_t j = 0;
+        for(Py_ssize_t i = 0; i < size; i++){
+            if(grade_bool[GRADE(i+1)] && j < psize){
+                value_array[j] = (ga_float*)PyMem_RawMalloc(sizeof(ga_float));
+                bitmap_array[j] = (int*)PyMem_RawMalloc(sizeof(int));
+                *(value_array[j]) = 1;
+                *(bitmap_array[j]) = i+1;
+                j++;
+            }else if(j>psize){
+                break;
+            }
+        }
+        size = psize;
+    }else{
+        size = self->asize - 1;
+        value_array = (ga_float**)PyMem_RawMalloc(size*sizeof(ga_float*));
+        bitmap_array = (int**)PyMem_RawMalloc(size*sizeof(int*));
+        for(Py_ssize_t i = 0; i < size; i++){
+            value_array[i] = (ga_float*)PyMem_RawMalloc(sizeof(ga_float));
+            bitmap_array[i] = (int*)PyMem_RawMalloc(sizeof(int));
+            *(value_array[i]) = 1;
+            *(bitmap_array[i]) = i+1;
+        }
+    }
+
+    bitmap_char = (char**)PyMem_RawMalloc(size*sizeof(char*));
+    if(!bitmap_char) return NULL;
+    for(Py_ssize_t i = 0; i < size; i++){
+        bitmap_char[i] = bitmap_to_string(*(bitmap_array[i]));
+        if(!bitmap_char[i]) return NULL;
+    }
+
+    multivectors = (PyMultivectorObject**)PyMem_RawMalloc(size*sizeof(PyMultivectorObject*));
+    if(!multivectors) return NULL;
+    for(Py_ssize_t i = 0; i < size; i++){
+        multivectors[i] = populate_multivector_types(self);
+        if(!multivectors[i]) return NULL;
+    }
+
+    gainitfunc init = (*multivectors)->type.data_funcs->init;
+    if(init)
+        for(Py_ssize_t i = 0; i < size; i++)
+            multivectors[i]->data = init(bitmap_array[i],value_array[i],1,self);
+    else return NULL;
+
+    dict_blades = PyDict_New();
+    for(Py_ssize_t i = 0; i < size; i++){
+        PyObject *key = Py_BuildValue("s",bitmap_char[i]);
+        PyDict_SetItem(dict_blades,key,(PyObject*)multivectors[i]);
+        Py_XDECREF(key);
+    }
+
+    for(Py_ssize_t i = 0; i < size; i++){
+        PyMem_RawFree(bitmap_array[i]);
+        PyMem_RawFree(value_array[i]);
+    }
+    PyMem_RawFree(bitmap_array);
+    PyMem_RawFree(value_array);
+    PyMem_RawFree(grade_bool);
+    PyMem_RawFree(bitmap);
+
+    return dict_blades;
+}
+
 
 static PyMethodDef algebra_methods[] = {
     {"metric", (PyCFunction)algebra_metric, METH_NOARGS,
@@ -1048,6 +1235,10 @@ static PyMethodDef algebra_methods[] = {
      "adds basis vectors to the algebra" },
     {"multivector",(PyCFunction) algebra_multivector, METH_VARARGS | METH_KEYWORDS,
      "generate a multivector" },
+    {"blades",(PyCFunction) algebra_blades, METH_VARARGS | METH_KEYWORDS,
+     "generate blades for the algebra" },
+    {"default",(PyCFunction) algebra_set_multivector_defaults, METH_VARARGS | METH_KEYWORDS,
+     "set the default types of the multivector" },
     {NULL}  /* Sentinel */
 };
 

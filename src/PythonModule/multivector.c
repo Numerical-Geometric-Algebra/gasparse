@@ -361,7 +361,7 @@ PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ssize_t s
 }
 
 
-static char *bitmap_to_string(int bitmap){
+char *bitmap_to_string(int bitmap){
     Py_ssize_t size = GRADE((Py_ssize_t)bitmap) + 2;
     char *str = (char*)PyMem_RawMalloc(size*sizeof(char));
     unsigned int x = (unsigned int)bitmap;
@@ -389,7 +389,7 @@ static PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_s
                 // only skip small values if its not sparse or blades type
                 if(iter->type != MultivectorType_sparse && iter->type != MultivectorType_blades)
                     // maybe should add this as an option when creating the algebra
-                    if(abs(iter->value) < 1e-12) continue; // don't print small values
+                    if(ABS(iter->value) < 1e-12) continue; // don't print small values
 
                 char *value = PyOS_double_to_string((double)iter->value,'f',6,0,NULL);
                 if(iter->bitmap){
@@ -2778,6 +2778,37 @@ PyObject *multivector_geometric_product(PyObject *left, PyObject *right){
     return multivector_product(left,right,ProductType_geometric);
 }
 
+PyObject *multivector_regressive_product(PyObject *left, PyObject *right){
+    return multivector_product(left,right,ProductType_regressive);
+}
+
+Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades){
+    Py_ssize_t size = -1;
+    if(PyLong_Check(grades_obj)){ // check if object is an integer
+        int grade = (int)PyLong_AsLong(grades_obj);
+        if(grade > MAX_GRADE(ga) || grade < 0) // not a valid grade
+            return -1; // raise error
+        *(grades) = (int*)PyMem_RawMalloc(sizeof(int));
+        **grades = grade;
+        size = 1;
+    }else if(PyList_Check(grades_obj)){ // check if object is a list type
+        size = PyList_Size(grades_obj);
+        if(!size) return -1;
+        *grades = (int*)PyMem_RawMalloc(size*sizeof(int));
+        for(Py_ssize_t i = 0; i < size; i++){
+            PyObject *grade_obj = PyList_GetItem(grades_obj,i);
+            if(!PyLong_Check(grade_obj))
+                return -1; // raise error
+            (*grades)[i] = (int)PyLong_AsLong(grade_obj);
+            if((*grades)[i] > MAX_GRADE(ga)){
+                PyMem_RawFree(grades);
+                return -1; // raise error
+            }
+        }
+    }
+    return size;
+}
+
 PyObject *multivector_grade_project(PyMultivectorObject *self, PyObject *args, PyObject *kwds){
     static char *kwlist[] = {"grades",NULL};
     int *grades = NULL;
@@ -2787,27 +2818,8 @@ PyObject *multivector_grade_project(PyMultivectorObject *self, PyObject *args, P
     if(!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &grades_obj))
         return NULL; // raise error
 
-    if(PyLong_Check(grades_obj)){ // check if object is an integer
-        int grade = (int)PyLong_AsLong(grades_obj);
-        if(grade > self->GA->gm.max_grade || grade < 0) // not a valid grade
-            return NULL; // raise error
-        grades = (int*)PyMem_RawMalloc(sizeof(int));
-        *grades = grade;
-        size = 1;
-    }else if(PyList_Check(grades_obj)){ // check if object is a list type
-        size = PyList_Size(grades_obj);
-        grades = (int*)PyMem_RawMalloc(size*sizeof(int));
-        for(Py_ssize_t i = 0; i < size; i++){
-            PyObject *grade_obj = PyList_GetItem(grades_obj,i);
-            if(!PyLong_Check(grade_obj))
-                return NULL; // raise error
-            grades[i] = (int)PyLong_AsLong(grade_obj);
-            if(grades[i] > self->GA->gm.max_grade){
-                PyMem_RawFree(grades);
-                return NULL; // raise error
-            }
-        }
-    }
+    size = parse_list_as_grades(self->GA,grades_obj,&grades);
+    if(size <= 0) return NULL;
 
     gaunarygradefunc grade_project = self->type.math_funcs->grade_project;
     if(grade_project){
