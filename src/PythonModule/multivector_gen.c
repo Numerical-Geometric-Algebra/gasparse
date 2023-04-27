@@ -175,6 +175,112 @@ static gen0_BladesMultivector blades0_init_(int *bitmap, ga_float *value, Py_ssi
     return blades;
 }
 
+static PyMultivectorObject *cast_to_blades0(PyMultivectorObject *data){
+    PyMultivectorIter *iter = init_multivector_iter(data,1);
+    gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
+    PyMultivectorObject *out = new_multivectorbyname(data,"blades0");
+    gen0_BladesMultivector blades =  {{0},{0},{0},{0},};
+    if(!iter || !pblades || !out){
+        free_multivector_iter(iter,1);
+        PyMem_RawFree(pblades);
+        free_multivector(out);
+        return NULL;
+    }
+    while(iter->next(iter)){
+        switch(iter->grade){
+            case 0:
+                blades.value0[gen0_grades_position[iter->bitmap]] += iter->value;
+                break;
+            case 1:
+                blades.value1[gen0_grades_position[iter->bitmap]] += iter->value;
+                break;
+            case 2:
+                blades.value2[gen0_grades_position[iter->bitmap]] += iter->value;
+                break;
+            case 3:
+                blades.value3[gen0_grades_position[iter->bitmap]] += iter->value;
+                break;
+            default:
+                free_multivector_iter(iter,1);
+                PyMem_RawFree(pblades);
+                free_multivector(out);
+                return NULL;
+        }
+    }
+    *pblades = blades;
+    out->data = (void*)pblades;
+    free_multivector_iter(iter,1);
+    return out;
+}
+
+static PyMultivectorObject *cast_to_dense0(PyMultivectorObject *data){
+    PyMultivectorIter *iter = init_multivector_iter(data,1);
+    gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
+    PyMultivectorObject *out = new_multivectorbyname(data,"dense0");
+    gen0_DenseMultivector dense =  {{0}};    if(!iter || !pdense || !out){
+        free_multivector_iter(iter,1);
+        PyMem_RawFree(pdense);
+        free_multivector(out);
+        return NULL;
+    }
+    while(iter->next(iter)){
+        if(iter->bitmap < 8)
+            dense.value[iter->bitmap] += iter->value;
+        else{
+            free_multivector_iter(iter,1);
+            PyMem_RawFree(pdense);
+            free_multivector(out);
+            return NULL;
+        }
+    }
+    *pdense = dense;
+    out->data = (void*)pdense;
+    free_multivector_iter(iter,1);
+    return out;
+}
+
+/*
+static gen0_BladesMultivector dense0_to_blades0_(gen0_DenseMultivector dense){
+    gen0_BladesMultivector blades = {{0},{0},{0},{0},};
+
+    blades.value0[0] = dense.value[0];
+    blades.value1[0] = dense.value[1];
+    blades.value1[1] = dense.value[2];
+    blades.value1[2] = dense.value[4];
+    blades.value2[0] = dense.value[3];
+    blades.value2[1] = dense.value[5];
+    blades.value2[2] = dense.value[6];
+    blades.value3[0] = dense.value[7];
+    return blades;
+}
+
+static gen0_DenseMultivector blades0_to_dense0_(gen0_BladesMultivector blades){
+    gen0_DenseMultivector dense;
+
+    dense.value[0] = blades.value0[0];
+    dense.value[1] = blades.value1[0];
+    dense.value[2] = blades.value1[1];
+    dense.value[4] = blades.value1[2];
+    dense.value[3] = blades.value2[0];
+    dense.value[5] = blades.value2[1];
+    dense.value[6] = blades.value2[2];
+    dense.value[7] = blades.value3[0];
+    return dense;
+}
+
+static void* dense0_to_blades0(void *dense){
+    gen0_BladesMultivector *blades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
+    *blades = dense0_to_blades0_(*((gen0_DenseMultivector*)dense));
+    return (void*)blades;
+}
+
+static void* blades0_to_dense0(void *blades){
+    gen0_DenseMultivector *dense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
+    *dense = blades0_to_dense0_(*((gen0_BladesMultivector*)blades));
+    return (void*)dense;
+}
+*/
+
  
 static void* dense0_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
     gen0_DenseMultivector *dense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
@@ -752,42 +858,40 @@ static gen0_DenseMultivector gen0_dense_regressiveproduct(gen0_DenseMultivector 
     +dense0.value[4]*dense1.value[3]
     -dense0.value[5]*dense1.value[2]
     +dense0.value[6]*dense1.value[1]
+    +dense0.value[7]*dense1.value[0]
 ;
     dense.value[1] =
-    +dense0.value[0]*dense1.value[6]
     +dense0.value[1]*dense1.value[7]
-    +dense0.value[2]*dense1.value[4]
     -dense0.value[3]*dense1.value[5]
-    -dense0.value[4]*dense1.value[2]
     +dense0.value[5]*dense1.value[3]
+    +dense0.value[7]*dense1.value[1]
 ;
     dense.value[2] =
-    -dense0.value[0]*dense1.value[5]
-    -dense0.value[1]*dense1.value[4]
-    +dense0.value[2]*dense1.value[7]
-    -dense0.value[3]*dense1.value[6]
-    +dense0.value[4]*dense1.value[1]
-    +dense0.value[6]*dense1.value[3]
+    -dense0.value[2]*dense1.value[7]
+    +dense0.value[3]*dense1.value[6]
+    -dense0.value[6]*dense1.value[3]
+    -dense0.value[7]*dense1.value[2]
 ;
     dense.value[3] =
-    -dense0.value[0]*dense1.value[4]
-    +dense0.value[3]*dense1.value[7]
+    -dense0.value[3]*dense1.value[7]
+    -dense0.value[7]*dense1.value[3]
 ;
     dense.value[4] =
-    +dense0.value[0]*dense1.value[3]
-    +dense0.value[1]*dense1.value[2]
-    -dense0.value[2]*dense1.value[1]
     +dense0.value[4]*dense1.value[7]
     -dense0.value[5]*dense1.value[6]
     +dense0.value[6]*dense1.value[5]
+    +dense0.value[7]*dense1.value[4]
 ;
     dense.value[5] =
-    +dense0.value[0]*dense1.value[2]
     +dense0.value[5]*dense1.value[7]
+    +dense0.value[7]*dense1.value[5]
 ;
     dense.value[6] =
-    -dense0.value[0]*dense1.value[1]
-    +dense0.value[6]*dense1.value[7]
+    -dense0.value[6]*dense1.value[7]
+    -dense0.value[7]*dense1.value[6]
+;
+    dense.value[7] =
+    -dense0.value[7]*dense1.value[7]
 ;
     return dense;
 }
@@ -802,49 +906,47 @@ static gen0_DenseMultivector gen0_dense_regressiveproduct(gen0_DenseMultivector 
     +dense0.value[4]*dense1.value[3]\
     -dense0.value[5]*dense1.value[2]\
     +dense0.value[6]*dense1.value[1]\
+    +dense0.value[7]*dense1.value[0]\
 ;\
 }
 #define GEN0_DENSE_GRADE1REGRESSIVEPRODUCT(dense,dense0,dense1){\
     dense.value[1] =\
-    +dense0.value[0]*dense1.value[6]\
     +dense0.value[1]*dense1.value[7]\
-    +dense0.value[2]*dense1.value[4]\
     -dense0.value[3]*dense1.value[5]\
-    -dense0.value[4]*dense1.value[2]\
     +dense0.value[5]*dense1.value[3]\
+    +dense0.value[7]*dense1.value[1]\
 ;\
     dense.value[2] =\
-    -dense0.value[0]*dense1.value[5]\
-    -dense0.value[1]*dense1.value[4]\
-    +dense0.value[2]*dense1.value[7]\
-    -dense0.value[3]*dense1.value[6]\
-    +dense0.value[4]*dense1.value[1]\
-    +dense0.value[6]*dense1.value[3]\
+    -dense0.value[2]*dense1.value[7]\
+    +dense0.value[3]*dense1.value[6]\
+    -dense0.value[6]*dense1.value[3]\
+    -dense0.value[7]*dense1.value[2]\
 ;\
     dense.value[4] =\
-    +dense0.value[0]*dense1.value[3]\
-    +dense0.value[1]*dense1.value[2]\
-    -dense0.value[2]*dense1.value[1]\
     +dense0.value[4]*dense1.value[7]\
     -dense0.value[5]*dense1.value[6]\
     +dense0.value[6]*dense1.value[5]\
+    +dense0.value[7]*dense1.value[4]\
 ;\
 }
 #define GEN0_DENSE_GRADE2REGRESSIVEPRODUCT(dense,dense0,dense1){\
     dense.value[3] =\
-    -dense0.value[0]*dense1.value[4]\
-    +dense0.value[3]*dense1.value[7]\
+    -dense0.value[3]*dense1.value[7]\
+    -dense0.value[7]*dense1.value[3]\
 ;\
     dense.value[5] =\
-    +dense0.value[0]*dense1.value[2]\
     +dense0.value[5]*dense1.value[7]\
+    +dense0.value[7]*dense1.value[5]\
 ;\
     dense.value[6] =\
-    -dense0.value[0]*dense1.value[1]\
-    +dense0.value[6]*dense1.value[7]\
+    -dense0.value[6]*dense1.value[7]\
+    -dense0.value[7]*dense1.value[6]\
 ;\
 }
 #define GEN0_DENSE_GRADE3REGRESSIVEPRODUCT(dense,dense0,dense1){\
+    dense.value[7] =\
+    -dense0.value[7]*dense1.value[7]\
+;\
 }
 
 static gen0_DenseMultivector gen0_dense_graderegressiveproduct(gen0_DenseMultivector dense0, gen0_DenseMultivector dense1, int *grades, Py_ssize_t size){
@@ -1484,42 +1586,40 @@ static gen0_BladesMultivector gen0_blades_regressiveproduct(gen0_BladesMultivect
     +blades0.value1[2]*blades1.value2[0]
     -blades0.value2[1]*blades1.value1[1]
     +blades0.value2[2]*blades1.value1[0]
+    +blades0.value3[0]*blades1.value0[0]
 ;
     blades.value1[0] =
-    +blades0.value0[0]*blades1.value2[2]
     +blades0.value1[0]*blades1.value3[0]
-    +blades0.value1[1]*blades1.value1[2]
     -blades0.value2[0]*blades1.value2[1]
-    -blades0.value1[2]*blades1.value1[1]
     +blades0.value2[1]*blades1.value2[0]
+    +blades0.value3[0]*blades1.value1[0]
 ;
     blades.value1[1] =
-    -blades0.value0[0]*blades1.value2[1]
-    -blades0.value1[0]*blades1.value1[2]
-    +blades0.value1[1]*blades1.value3[0]
-    -blades0.value2[0]*blades1.value2[2]
-    +blades0.value1[2]*blades1.value1[0]
-    +blades0.value2[2]*blades1.value2[0]
+    -blades0.value1[1]*blades1.value3[0]
+    +blades0.value2[0]*blades1.value2[2]
+    -blades0.value2[2]*blades1.value2[0]
+    -blades0.value3[0]*blades1.value1[1]
 ;
     blades.value2[0] =
-    -blades0.value0[0]*blades1.value1[2]
-    +blades0.value2[0]*blades1.value3[0]
+    -blades0.value2[0]*blades1.value3[0]
+    -blades0.value3[0]*blades1.value2[0]
 ;
     blades.value1[2] =
-    +blades0.value0[0]*blades1.value2[0]
-    +blades0.value1[0]*blades1.value1[1]
-    -blades0.value1[1]*blades1.value1[0]
     +blades0.value1[2]*blades1.value3[0]
     -blades0.value2[1]*blades1.value2[2]
     +blades0.value2[2]*blades1.value2[1]
+    +blades0.value3[0]*blades1.value1[2]
 ;
     blades.value2[1] =
-    +blades0.value0[0]*blades1.value1[1]
     +blades0.value2[1]*blades1.value3[0]
+    +blades0.value3[0]*blades1.value2[1]
 ;
     blades.value2[2] =
-    -blades0.value0[0]*blades1.value1[0]
-    +blades0.value2[2]*blades1.value3[0]
+    -blades0.value2[2]*blades1.value3[0]
+    -blades0.value3[0]*blades1.value2[2]
+;
+    blades.value3[0] =
+    -blades0.value3[0]*blades1.value3[0]
 ;
     return blades;
 }
@@ -1533,49 +1633,47 @@ static gen0_BladesMultivector gen0_blades_regressiveproduct(gen0_BladesMultivect
     +blades0.value1[2]*blades1.value2[0]\
     -blades0.value2[1]*blades1.value1[1]\
     +blades0.value2[2]*blades1.value1[0]\
+    +blades0.value3[0]*blades1.value0[0]\
 ;\
 }
 #define GEN0_BLADES_GRADE1REGRESSIVEPRODUCT(blades,blades0,blades1){\
     blades.value1[0] =\
-    +blades0.value0[0]*blades1.value2[2]\
     +blades0.value1[0]*blades1.value3[0]\
-    +blades0.value1[1]*blades1.value1[2]\
     -blades0.value2[0]*blades1.value2[1]\
-    -blades0.value1[2]*blades1.value1[1]\
     +blades0.value2[1]*blades1.value2[0]\
+    +blades0.value3[0]*blades1.value1[0]\
 ;\
     blades.value1[1] =\
-    -blades0.value0[0]*blades1.value2[1]\
-    -blades0.value1[0]*blades1.value1[2]\
-    +blades0.value1[1]*blades1.value3[0]\
-    -blades0.value2[0]*blades1.value2[2]\
-    +blades0.value1[2]*blades1.value1[0]\
-    +blades0.value2[2]*blades1.value2[0]\
+    -blades0.value1[1]*blades1.value3[0]\
+    +blades0.value2[0]*blades1.value2[2]\
+    -blades0.value2[2]*blades1.value2[0]\
+    -blades0.value3[0]*blades1.value1[1]\
 ;\
     blades.value1[2] =\
-    +blades0.value0[0]*blades1.value2[0]\
-    +blades0.value1[0]*blades1.value1[1]\
-    -blades0.value1[1]*blades1.value1[0]\
     +blades0.value1[2]*blades1.value3[0]\
     -blades0.value2[1]*blades1.value2[2]\
     +blades0.value2[2]*blades1.value2[1]\
+    +blades0.value3[0]*blades1.value1[2]\
 ;\
 }
 #define GEN0_BLADES_GRADE2REGRESSIVEPRODUCT(blades,blades0,blades1){\
     blades.value2[0] =\
-    -blades0.value0[0]*blades1.value1[2]\
-    +blades0.value2[0]*blades1.value3[0]\
+    -blades0.value2[0]*blades1.value3[0]\
+    -blades0.value3[0]*blades1.value2[0]\
 ;\
     blades.value2[1] =\
-    +blades0.value0[0]*blades1.value1[1]\
     +blades0.value2[1]*blades1.value3[0]\
+    +blades0.value3[0]*blades1.value2[1]\
 ;\
     blades.value2[2] =\
-    -blades0.value0[0]*blades1.value1[0]\
-    +blades0.value2[2]*blades1.value3[0]\
+    -blades0.value2[2]*blades1.value3[0]\
+    -blades0.value3[0]*blades1.value2[2]\
 ;\
 }
 #define GEN0_BLADES_GRADE3REGRESSIVEPRODUCT(blades,blades0,blades1){\
+    blades.value3[0] =\
+    -blades0.value3[0]*blades1.value3[0]\
+;\
 }
 
 static gen0_BladesMultivector gen0_blades_graderegressiveproduct(gen0_BladesMultivector blades0, gen0_BladesMultivector blades1, int *grades, Py_ssize_t size){
@@ -1753,7 +1851,7 @@ static PyMultivectorObject *binary_dense0_product(PyMultivectorObject *data0, Py
     gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)data0->data;
     gen0_DenseMultivector *pdense1 = (gen0_DenseMultivector*)data1->data;
     gen0_DenseMultivector *pdense  = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data0,NULL);
     if(!pdense0 || !pdense1 || !pdense || !out){
         PyMem_RawFree(pdense);
         free_multivector(out);
@@ -1787,7 +1885,7 @@ static PyMultivectorObject *binary_blades0_product(PyMultivectorObject *data0, P
     gen0_BladesMultivector *pblades0 = (gen0_BladesMultivector*)data0->data;
     gen0_BladesMultivector *pblades1 = (gen0_BladesMultivector*)data1->data;
     gen0_BladesMultivector *pblades  = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
-    PyMultivectorObject *out = new_multivector(data0,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data0,NULL);
     if(!pblades0 || !pblades1 || !pblades || !out){
         PyMem_RawFree(pblades);
         free_multivector(out);
@@ -1827,7 +1925,7 @@ static PyMultivectorObject *binary_dense0_gradeproduct(PyMultivectorObject *data
     gen0_DenseMultivector projdense0 = {{0}};
     gen0_DenseMultivector projdense1 = {{0}};
 
-    PyMultivectorObject *out = new_multivector(data0,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data0,NULL);
     if(!pdense0 || !pdense1 || !pdense || !out){
         PyMem_RawFree(pdense);
         free_multivector(out);
@@ -1869,7 +1967,7 @@ static PyMultivectorObject *binary_blades0_gradeproduct(PyMultivectorObject *dat
     gen0_BladesMultivector projblades0 =  blades0zero;
     gen0_BladesMultivector projblades1 =  blades0zero;
 
-    PyMultivectorObject *out = new_multivector(data0,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data0,NULL);
     if(!pblades0 || !pblades1 || !pblades || !out){
         PyMem_RawFree(pblades);
         free_multivector(out);
@@ -1911,7 +2009,7 @@ static PyMultivectorObject *ternary_dense0_product(PyMultivectorObject *data0, P
     gen0_DenseMultivector *pdense1 = (gen0_DenseMultivector*)data1->data;
     gen0_DenseMultivector *pdense2 = (gen0_DenseMultivector*)data2->data;
     gen0_DenseMultivector *pdense  = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
-    PyMultivectorObject *out = new_multivector(data0,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data0,NULL);
     if(!pdense0 || !pdense1 || !pdense2 || !pdense || !out){
         PyMem_RawFree(pdense);
         free_multivector(out);
@@ -1950,7 +2048,7 @@ static PyMultivectorObject *ternary_blades0_product(PyMultivectorObject *data0, 
     gen0_BladesMultivector *pblades1 = (gen0_BladesMultivector*)data1->data;
     gen0_BladesMultivector *pblades2 = (gen0_BladesMultivector*)data2->data;
     gen0_BladesMultivector *pblades  = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
-    PyMultivectorObject *out = new_multivector(data0,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data0,NULL);
     if(!pblades0 || !pblades1 || !pblades2 || !pblades || !out){
         PyMem_RawFree(pblades);
         free_multivector(out);
@@ -1993,11 +2091,10 @@ static PyMultivectorObject *unary_dense0_gradeproject(PyMultivectorObject *self,
 
     if(gen0_dense_gradeproject(&dense,pdense0,grades,size) == -1) return NULL;
 
-    out = new_multivector(self,-1); // pass -1 to inherit type of self
+    out = new_multivectorbyname(self,NULL); // pass -1 to inherit type of self
     pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
     *pdense = dense;
     out->data = (void*)pdense;
-    PyMem_RawFree(grades);
     return out;
 }
 static PyMultivectorObject *unary_blades0_gradeproject(PyMultivectorObject *self, int *grades, Py_ssize_t size){
@@ -2008,17 +2105,16 @@ static PyMultivectorObject *unary_blades0_gradeproject(PyMultivectorObject *self
 
     if(gen0_blades_gradeproject(&blades,pblades0,grades,size) == -1) return NULL;
 
-    out = new_multivector(self,-1); // pass -1 to inherit type of self
+    out = new_multivectorbyname(self,NULL); // pass -1 to inherit type of self
     pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
     *pblades = blades;
     out->data = (void*)pblades;
-    PyMem_RawFree(grades);
     return out;
 }
 
 
 static PyMultivectorObject* atomic_dense0_add(PyMultivectorObject *data, Py_ssize_t size){
-    PyMultivectorObject *out = new_multivector(data,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data,NULL);
     gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)PyMem_RawMalloc(size*sizeof(gen0_DenseMultivector));
     gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
     if(!out || !pdense0 || !pdense){
@@ -2035,7 +2131,7 @@ static PyMultivectorObject* atomic_dense0_add(PyMultivectorObject *data, Py_ssiz
     return out;
 }
 static PyMultivectorObject* atomic_blades0_add(PyMultivectorObject *data, Py_ssize_t size){
-    PyMultivectorObject *out = new_multivector(data,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data,NULL);
     gen0_BladesMultivector *pblades0 = (gen0_BladesMultivector*)PyMem_RawMalloc(size*sizeof(gen0_BladesMultivector));
     gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
     if(!out || !pblades0 || !pblades){
@@ -2053,7 +2149,7 @@ static PyMultivectorObject* atomic_blades0_add(PyMultivectorObject *data, Py_ssi
 }
 
 static PyMultivectorObject* binary_dense0_add(PyMultivectorObject *data0, PyMultivectorObject *data1, int sign){
-    PyMultivectorObject *out = new_multivector(data0,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data0,NULL);
     gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)data0->data;
     gen0_DenseMultivector *pdense1 = (gen0_DenseMultivector*)data1->data;
     gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
@@ -2068,7 +2164,7 @@ static PyMultivectorObject* binary_dense0_add(PyMultivectorObject *data0, PyMult
     return out;
 }
 static PyMultivectorObject* binary_blades0_add(PyMultivectorObject *data0, PyMultivectorObject *data1, int sign){
-    PyMultivectorObject *out = new_multivector(data0,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data0,NULL);
     gen0_BladesMultivector *pblades0 = (gen0_BladesMultivector*)data0->data;
     gen0_BladesMultivector *pblades1 = (gen0_BladesMultivector*)data1->data;
     gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
@@ -2083,10 +2179,9 @@ static PyMultivectorObject* binary_blades0_add(PyMultivectorObject *data0, PyMul
     return out;
 }
 
-
 static PyMultivectorObject* atomic_dense0_product(PyMultivectorObject *data, Py_ssize_t size, ProductType ptype){
     if(size < 2) return NULL;
-    PyMultivectorObject *out = new_multivector(data,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data,NULL);
     gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
     gen0_DenseMultivector dense;
     if(!out  || !pdense){
@@ -2147,7 +2242,7 @@ static PyMultivectorObject* atomic_dense0_product(PyMultivectorObject *data, Py_
 }
 static PyMultivectorObject* atomic_blades0_product(PyMultivectorObject *data, Py_ssize_t size, ProductType ptype){
     if(size < 2) return NULL;
-    PyMultivectorObject *out = new_multivector(data,-1);
+    PyMultivectorObject *out = new_multivectorbyname(data,NULL);
     gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
     gen0_BladesMultivector blades;
     if(!out  || !pblades){
@@ -2208,7 +2303,7 @@ static PyMultivectorObject* atomic_blades0_product(PyMultivectorObject *data, Py
 }
 
 static PyMultivectorObject *binary_dense0_scalarproduct(PyMultivectorObject *self, ga_float value){
-    PyMultivectorObject *out = new_multivector(self,-1);
+    PyMultivectorObject *out = new_multivectorbyname(self,NULL);
     gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)self->data;
     gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
     if(!out || !pdense0 || !pdense){
@@ -2222,7 +2317,7 @@ static PyMultivectorObject *binary_dense0_scalarproduct(PyMultivectorObject *sel
     return out;
 }
 static PyMultivectorObject *binary_blades0_scalarproduct(PyMultivectorObject *self, ga_float value){
-    PyMultivectorObject *out = new_multivector(self,-1);
+    PyMultivectorObject *out = new_multivectorbyname(self,NULL);
     gen0_BladesMultivector *pblades0 = (gen0_BladesMultivector*)self->data;
     gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
     if(!out || !pblades0 || !pblades){
@@ -2237,7 +2332,7 @@ static PyMultivectorObject *binary_blades0_scalarproduct(PyMultivectorObject *se
 }
 
 static PyMultivectorObject *binary_dense0_scalaradd(PyMultivectorObject *self, ga_float value, int sign){
-    PyMultivectorObject *out = new_multivector(self,-1);
+    PyMultivectorObject *out = new_multivectorbyname(self,NULL);
     gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)self->data;
     gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
     if(!out || !pdense0 || !pdense){
@@ -2251,7 +2346,7 @@ static PyMultivectorObject *binary_dense0_scalaradd(PyMultivectorObject *self, g
     return out;
 }
 static PyMultivectorObject *binary_blades0_scalaradd(PyMultivectorObject *self, ga_float value, int sign){
-    PyMultivectorObject *out = new_multivector(self,-1);
+    PyMultivectorObject *out = new_multivectorbyname(self,NULL);
     gen0_BladesMultivector *pblades0 = (gen0_BladesMultivector*)self->data;
     gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
     if(!out || !pblades0 || !pblades){
@@ -2265,7 +2360,7 @@ static PyMultivectorObject *binary_blades0_scalaradd(PyMultivectorObject *self, 
     return out;
 }
 static PyMultivectorObject *unary_dense0_reverse(PyMultivectorObject *self){
-    PyMultivectorObject *out = new_multivector(self,-1);
+    PyMultivectorObject *out = new_multivectorbyname(self,NULL);
     gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)self->data;
     gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
     if(!out || !pdense0 || !pdense){
@@ -2279,7 +2374,7 @@ static PyMultivectorObject *unary_dense0_reverse(PyMultivectorObject *self){
     return out;
 }
 static PyMultivectorObject *unary_dense0_dual(PyMultivectorObject *self){
-    PyMultivectorObject *out = new_multivector(self,-1);
+    PyMultivectorObject *out = new_multivectorbyname(self,NULL);
     gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)self->data;
     gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
     if(!out || !pdense0 || !pdense){
@@ -2293,7 +2388,7 @@ static PyMultivectorObject *unary_dense0_dual(PyMultivectorObject *self){
     return out;
 }
 static PyMultivectorObject *unary_dense0_undual(PyMultivectorObject *self){
-    PyMultivectorObject *out = new_multivector(self,-1);
+    PyMultivectorObject *out = new_multivectorbyname(self,NULL);
     gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)self->data;
     gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
     if(!out || !pdense0 || !pdense){
@@ -2307,7 +2402,7 @@ static PyMultivectorObject *unary_dense0_undual(PyMultivectorObject *self){
     return out;
 }
 static PyMultivectorObject *unary_blades0_reverse(PyMultivectorObject *self){
-    PyMultivectorObject *out = new_multivector(self,-1);
+    PyMultivectorObject *out = new_multivectorbyname(self,NULL);
     gen0_BladesMultivector *pblades0 = (gen0_BladesMultivector*)self->data;
     gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
     if(!out || !pblades0 || !pblades){
@@ -2321,7 +2416,7 @@ static PyMultivectorObject *unary_blades0_reverse(PyMultivectorObject *self){
     return out;
 }
 static PyMultivectorObject *unary_blades0_dual(PyMultivectorObject *self){
-    PyMultivectorObject *out = new_multivector(self,-1);
+    PyMultivectorObject *out = new_multivectorbyname(self,NULL);
     gen0_BladesMultivector *pblades0 = (gen0_BladesMultivector*)self->data;
     gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
     if(!out || !pblades0 || !pblades){
@@ -2335,7 +2430,7 @@ static PyMultivectorObject *unary_blades0_dual(PyMultivectorObject *self){
     return out;
 }
 static PyMultivectorObject *unary_blades0_undual(PyMultivectorObject *self){
-    PyMultivectorObject *out = new_multivector(self,-1);
+    PyMultivectorObject *out = new_multivectorbyname(self,NULL);
     gen0_BladesMultivector *pblades0 = (gen0_BladesMultivector*)self->data;
     gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
     if(!out || !pblades0 || !pblades){
@@ -2348,7 +2443,6 @@ static PyMultivectorObject *unary_blades0_undual(PyMultivectorObject *self){
     Py_SET_REFCNT(out,1);
     return out;
 }
-
 
 
 
@@ -2387,12 +2481,14 @@ static PyMultivectorData_Funcs dense0_data_funcs = {
   .iter_next = (gaiternextfunc) dense0_iternext,
   .iter_init = (gaiterinitfunc) dense0_iterinit,
   .init = (gainitfunc) dense0_init,
+  .cast = (gacastfunc) cast_to_dense0,
 };
 
 static PyMultivectorData_Funcs blades0_data_funcs = {
   .iter_next = (gaiternextfunc) blades0_iternext,
   .iter_init = (gaiterinitfunc) blades0_iterinit,
   .init = (gainitfunc) blades0_init,
+  .cast = (gacastfunc) cast_to_blades0,
 };
 
 
@@ -2421,7 +2517,12 @@ static const PyMultivectorSubType blades0_subtype = {
 };
 
 
-PyMultivectorSubType gen_subtypes_array[2] = {
-  dense0_subtype,
-  blades0_subtype,
+PyMultivectorSubType gen_subtypes_array[2] = {dense0_subtype,blades0_subtype,};
+
+PyMultivectorMixedMath_Funcs gen_multivector_mixed_fn = {
+  .add = NULL,
+  .product = NULL,
+  .atomic_add = NULL,
+  .atomic_product = NULL,
+  .type_names = {"dense0","blades0",NULL},
 };

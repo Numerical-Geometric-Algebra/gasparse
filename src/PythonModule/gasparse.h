@@ -41,6 +41,14 @@ typedef enum {
   MultivectorType_blades,
   MultivectorTypeMAX} MultivectorType;
 
+typedef enum {
+  ComputationModeMIN = -1,
+  ComputationMode_generated,
+  ComputationMode_large,
+  ComputationMode_generic,
+  ComputationMode_devgeneration,
+  ComputationModeMAX} ComputationMode;
+
 typedef struct CliffordMap{
     char **sign;
     Py_ssize_t **bitmap;
@@ -68,7 +76,6 @@ typedef struct PyMultivectorObject PyMultivectorObject;
 typedef struct PyMultivectorMixedMath_Funcs PyMultivectorMixedMath_Funcs;
 
 typedef struct MultivectorDefaults{
-    int prefer_generated_types;
     char *type_name;
 }MultivectorDefaults;
 
@@ -134,8 +141,6 @@ typedef PyMultivectorObject *(*gascalaraddfunc)(PyMultivectorObject *self, ga_fl
 
 typedef void *(*gainitfunc)(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga);
 typedef void (*gafreefunc)(void *data);
-typedef PyObject *(*gareprfunc)(void *data, PrintTypeMV ptype);
-
 
 typedef struct PyMultivectorMath_Funcs{
     gaatomicfunc atomic_add;
@@ -157,6 +162,7 @@ typedef struct PyMultivectorMixedMath_Funcs{
     gaprodfunc product;
     gaatomicfunc atomic_add;
     gaatomicprodfunc atomic_product;
+    char *type_names[]; // null terminated
 }_PyMultivectorMixedMath_Funcs;
 
 
@@ -164,8 +170,7 @@ typedef struct PyMultivectorData_Funcs{
     gabinaryfunc copy;
     gafreefunc free;
     gainitfunc init;
-    gacastfunc to_sparse;
-    gacastfunc to_dense;
+    gacastfunc cast;
     gaiternextfunc iter_next;
     gaiterinitfunc iter_init;
 }PyMultivectorData_Funcs;
@@ -182,12 +187,15 @@ typedef struct PyMultivectorSubType{
     int ntype;// this is the type identifier use this to compare types
 }_PyMultivectorSubType;
 
-extern PyMultivectorSubType multivector_subtypes_array[3];
+// mixed type operation tables
 extern PyMultivectorMixedMath_Funcs multivector_mixed_fn;
-
-// large multivectors
+extern PyMultivectorMixedMath_Funcs cast_multivector_mixed_fn;
 extern PyMultivectorMixedMath_Funcs largemultivector_mixed_fn;
+
+// same type operation tables
 extern PyMultivectorSubType largemultivector_subtypes_array[3];
+extern PyMultivectorSubType multivector_subtypes_array[3];
+
 void fill_missing_funcs(void);
 
 typedef struct PyMultivectorObject{
@@ -217,7 +225,7 @@ typedef struct DenseMultivector{
     Py_ssize_t size;
 }DenseMultivector;
 
-PyMultivectorObject *new_multivector(PyMultivectorObject *old, MultivectorType type);
+PyMultivectorObject *new_multivectorbyname(PyMultivectorObject *old, char *name);
 void free_multivector(PyMultivectorObject *self);
 PyMultivectorObject *init_multivector(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga, PyTypeObject *obj_type, int type);
 
