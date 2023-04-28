@@ -4,7 +4,7 @@ import gasparse
 from gasparse import multivector
 
 
-ga = gasparse.GA(3,computation_mode="generated")
+ga = gasparse.GA(3,compute_mode="generic")
 # dtypes = ['blades','sparse','dense']
 dtypes = ['blades','sparse','dense']
 

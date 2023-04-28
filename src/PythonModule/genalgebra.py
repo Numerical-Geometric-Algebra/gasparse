@@ -67,9 +67,9 @@ class algebra:
 
 
 # pass devgeneration to compute all the inverted tables
-vga = gasparse.GA(3,computation_mode="devgeneration") # 3D VGA
-cga = gasparse.GA(4,1,computation_mode="devgeneration") # 3D CGA
-dga = gasparse.GA(0,0,1,computation_mode="devgeneration") # Dual Numbers
+vga = gasparse.GA(3,compute_mode="devgeneration") # 3D VGA
+cga = gasparse.GA(4,1,compute_mode="devgeneration") # 3D CGA
+dga = gasparse.GA(0,0,1,compute_mode="devgeneration") # Dual Numbers
 
 ga0 = algebra(vga,"3DVGA")
 ga1 = algebra(cga,"3DCGA")

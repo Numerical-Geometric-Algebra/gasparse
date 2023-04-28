@@ -505,10 +505,8 @@ static int get_generated_types_indices(PyAlgebraObject *self, char *name, Py_ssi
 }
 #endif
 
-
-
 static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
-    static char *kwlist[] = {"p","q","r","metric","print_type","print_type_mv","computation_mode","name",NULL};
+    static char *kwlist[] = {"p","q","r","metric","print_type","print_type_mv","compute_mode","name",NULL};
     int p = 0, q = 0, r = 0; PrintType print_type = PrintTypeMIN; PrintTypeMV print_type_mv = PrintTypeMVMIN;
     PyObject *metric = NULL;
     char *mode_name = NULL, *algebra_name = NULL;
@@ -805,20 +803,6 @@ static int parse_list_as_bitmaps(PyObject *blades, int **bitmap){
         (*bitmap)[i] = bitmap_i;
     }
     return size;
-}
-
-// checks if the algebras are compatible
-// they are compatible if the smaller algebra have the same metric of the bigger algebra until the size of the smaller algebra
-PyAlgebraObject *algebra_comp_metrics(PyAlgebraObject *ga1, PyAlgebraObject *ga2){
-    Py_ssize_t msize = METRIC_SIZE(ga1) < METRIC_SIZE(ga2) ? METRIC_SIZE(ga1) : METRIC_SIZE(ga2);
-    for(Py_ssize_t i = 0; i < msize; i++){
-        if(ga1->metric[i] != ga2->metric[i])
-            return NULL;
-    }
-
-    if(METRIC_SIZE(ga1) < METRIC_SIZE(ga2))
-        return ga1;
-    else return ga2;
 }
 
 static PyObject* algebra_metric(PyAlgebraObject *self, PyObject *Py_UNUSED(ignored)){
@@ -1120,21 +1104,21 @@ static PyObject *algebra_blades(PyAlgebraObject *self, PyObject *args, PyObject 
         gsize = parse_list_as_grades(self,grades,&grade_array);
         if(gsize <= 0) return NULL;
         grade_bool = get_grade_bool(grade_array,gsize,MAX_GRADE(self)+1);
-        size = self->asize - 1;
+        size = self->asize;
         Py_ssize_t psize = 0;
         for(Py_ssize_t i = 0; i < size; i++){
-            if(grade_bool[GRADE(i+1)])
+            if(grade_bool[GRADE(i)])
                 psize++;
         }
         value_array = (ga_float**)PyMem_RawMalloc(psize*sizeof(ga_float*));
         bitmap_array = (int**)PyMem_RawMalloc(psize*sizeof(int*));
         Py_ssize_t j = 0;
         for(Py_ssize_t i = 0; i < size; i++){
-            if(grade_bool[GRADE(i+1)] && j < psize){
+            if(grade_bool[GRADE(i)] && j < psize){
                 value_array[j] = (ga_float*)PyMem_RawMalloc(sizeof(ga_float));
                 bitmap_array[j] = (int*)PyMem_RawMalloc(sizeof(int));
                 *(value_array[j]) = 1;
-                *(bitmap_array[j]) = i+1;
+                *(bitmap_array[j]) = i;
                 j++;
             }else if(j>psize){
                 break;
@@ -1142,14 +1126,14 @@ static PyObject *algebra_blades(PyAlgebraObject *self, PyObject *args, PyObject 
         }
         size = psize;
     }else{
-        size = self->asize - 1;
+        size = self->asize;
         value_array = (ga_float**)PyMem_RawMalloc(size*sizeof(ga_float*));
         bitmap_array = (int**)PyMem_RawMalloc(size*sizeof(int*));
         for(Py_ssize_t i = 0; i < size; i++){
             value_array[i] = (ga_float*)PyMem_RawMalloc(sizeof(ga_float));
             bitmap_array[i] = (int*)PyMem_RawMalloc(sizeof(int));
             *(value_array[i]) = 1;
-            *(bitmap_array[i]) = i+1;
+            *(bitmap_array[i]) = i;
         }
     }
 

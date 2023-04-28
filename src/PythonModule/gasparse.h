@@ -97,7 +97,6 @@ typedef struct PyAlgebraObject{
 }_PyAlgebraObject;
 
 
-PyAlgebraObject *algebra_comp_metrics(PyAlgebraObject *ga1, PyAlgebraObject *ga2);
 
 typedef int (*gaiternextfunc)(PyMultivectorIter *iter);
 typedef PyMultivectorIter (*gaiterinitfunc)(PyMultivectorObject *data);
@@ -134,13 +133,18 @@ typedef PyMultivectorObject *(*gaternaryprodfunc)(PyMultivectorObject *data0,PyM
 typedef PyMultivectorObject *(*gaunaryfunc)(PyMultivectorObject *self);
 typedef PyMultivectorObject *(*gaatomicfunc)(PyMultivectorObject *data, Py_ssize_t size);
 typedef PyMultivectorObject *(*gaatomicprodfunc)(PyMultivectorObject *data, Py_ssize_t size,ProductType ptype);
-typedef PyMultivectorObject *(*gacastfunc)(PyMultivectorObject *self);
+typedef PyMultivectorObject *(*gacastfunc)(PyMultivectorObject *from, PyMultivectorObject *to);
 typedef PyMultivectorObject *(*gabinarygradefunc)(PyMultivectorObject *left, PyMultivectorObject *right, ProductType ptype, GradeProjectMap gpmap);
 typedef PyMultivectorObject *(*gascalarfunc)(PyMultivectorObject *self, ga_float value);
 typedef PyMultivectorObject *(*gascalaraddfunc)(PyMultivectorObject *self, ga_float value, int sign);
 
 typedef void *(*gainitfunc)(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga);
 typedef void (*gafreefunc)(void *data);
+
+typedef PyMultivectorObject *(*gamixedaddfunc)(PyMultivectorObject *left, PyMultivectorObject *right, PyMultivectorObject *defdata, int sign);
+typedef PyMultivectorObject *(*gamixedprodfunc)(PyMultivectorObject *left,PyMultivectorObject *right, PyMultivectorObject *defdata, ProductType ptype);
+typedef PyMultivectorObject *(*gamixedatomicfunc)(PyMultivectorObject *data, Py_ssize_t size, PyMultivectorObject *defdata);
+typedef PyMultivectorObject *(*gamixedatomicprodfunc)(PyMultivectorObject *data, Py_ssize_t size, PyMultivectorObject *defdata, ProductType ptype);
 
 typedef struct PyMultivectorMath_Funcs{
     gaatomicfunc atomic_add;
@@ -158,10 +162,10 @@ typedef struct PyMultivectorMath_Funcs{
 }PyMultivectorMath_Funcs;
 
 typedef struct PyMultivectorMixedMath_Funcs{
-    gaaddfunc add;
-    gaprodfunc product;
-    gaatomicfunc atomic_add;
-    gaatomicprodfunc atomic_product;
+    gamixedaddfunc add;
+    gamixedprodfunc product;
+    gamixedatomicfunc atomic_add;
+    gamixedatomicprodfunc atomic_product;
     char *type_names[]; // null terminated
 }_PyMultivectorMixedMath_Funcs;
 

@@ -175,10 +175,10 @@ static gen0_BladesMultivector blades0_init_(int *bitmap, ga_float *value, Py_ssi
     return blades;
 }
 
-static PyMultivectorObject *cast_to_blades0(PyMultivectorObject *data){
+static PyMultivectorObject *cast_to_blades0(PyMultivectorObject *data, PyMultivectorObject *to){
     PyMultivectorIter *iter = init_multivector_iter(data,1);
     gen0_BladesMultivector *pblades = (gen0_BladesMultivector*)PyMem_RawMalloc(sizeof(gen0_BladesMultivector));
-    PyMultivectorObject *out = new_multivectorbyname(data,"blades0");
+    PyMultivectorObject *out = new_multivectorbyname(to,"blades0");
     gen0_BladesMultivector blades =  {{0},{0},{0},{0},};
     if(!iter || !pblades || !out){
         free_multivector_iter(iter,1);
@@ -213,10 +213,10 @@ static PyMultivectorObject *cast_to_blades0(PyMultivectorObject *data){
     return out;
 }
 
-static PyMultivectorObject *cast_to_dense0(PyMultivectorObject *data){
+static PyMultivectorObject *cast_to_dense0(PyMultivectorObject *data, PyMultivectorObject *to){
     PyMultivectorIter *iter = init_multivector_iter(data,1);
     gen0_DenseMultivector *pdense = (gen0_DenseMultivector*)PyMem_RawMalloc(sizeof(gen0_DenseMultivector));
-    PyMultivectorObject *out = new_multivectorbyname(data,"dense0");
+    PyMultivectorObject *out = new_multivectorbyname(to,"dense0");
     gen0_DenseMultivector dense =  {{0}};    if(!iter || !pdense || !out){
         free_multivector_iter(iter,1);
         PyMem_RawFree(pdense);

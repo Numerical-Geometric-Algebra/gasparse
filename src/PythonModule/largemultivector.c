@@ -81,10 +81,10 @@ static BladesMultivector blades_init_(int *bitmap, ga_float *value, Py_ssize_t s
     return sparse_dense_to_blades_sparse(ssparse,ga);
 }
 
-static PyMultivectorObject* cast_to_blades(PyMultivectorObject *data){
+static PyMultivectorObject* cast_to_blades(PyMultivectorObject *data, PyMultivectorObject *to){
     PyMultivectorIter *iter = init_multivector_iter(data,1);
     BladesMultivector *pblades = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivectorbyname(data,"blades");
+    PyMultivectorObject *out = new_multivectorbyname(to,"blades");
     if(!iter || !pblades || !out){
         free_multivector_iter(iter,1);
         PyMem_RawFree(pblades);
@@ -2537,43 +2537,46 @@ static PyMultivectorObject *atomic_blades_product(PyMultivectorObject *data0, Py
 
 
 
-static PyMultivectorObject *atomic_mixed_product(PyMultivectorObject *data0, Py_ssize_t size, ProductType ptype){
-    PyMultivectorIter *iter = init_multivector_iter(data0,size);
+static PyMultivectorObject *atomic_mixed_product(PyMultivectorObject *data, Py_ssize_t size,PyMultivectorObject *def, ProductType ptype){
+    PyMultivectorIter *iter = init_multivector_iter(data,size);
     SparseMultivector *psparse = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivectorbyname(data0,"sparselarge");
-    if(!iter || !psparse || !out){
+    PyMultivectorObject *out = new_multivectorbyname(def,"sparselarge");
+    if(!iter || !psparse || !out || !def){
         PyMem_RawFree(psparse);
         free_multivector(out);
+        free_multivector_iter(iter,size);
         return NULL; // raise error
     }
 
     switch(ptype){
         case ProductType_geometric:
-            *psparse = atomic_mixed_geometricproduct_(iter,size,data0->GA);
+            *psparse = atomic_mixed_geometricproduct_(iter,size,def->GA);
             break;
         case ProductType_inner:
-            *psparse = atomic_mixed_innerproduct_(iter,size,data0->GA);
+            *psparse = atomic_mixed_innerproduct_(iter,size,def->GA);
             break;
         case ProductType_outer:
-            *psparse = atomic_mixed_outerproduct_(iter,size,data0->GA);
+            *psparse = atomic_mixed_outerproduct_(iter,size,def->GA);
             break;
         default:
             PyMem_RawFree(psparse);
             free_multivector(out);
+            free_multivector_iter(iter,size);
             return NULL;
     }
 
+    free_multivector_iter(iter,size);
     out->data = (void*)psparse;
     Py_SET_REFCNT(out,1);
     return out;
 }
 
-static PyMultivectorObject *binary_mixed_product(PyMultivectorObject *data0, PyMultivectorObject *data1,ProductType ptype){
+static PyMultivectorObject *binary_mixed_product(PyMultivectorObject *data0, PyMultivectorObject *data1, PyMultivectorObject *def, ProductType ptype){
     PyMultivectorIter *iter0 = init_multivector_iter(data0,1);
     PyMultivectorIter *iter1 = init_multivector_iter(data1,1);
     SparseMultivector *psparse = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivectorbyname(data0,"sparselarge");
-    if(!iter1 || !iter0 || !psparse || !out){
+    PyMultivectorObject *out = new_multivectorbyname(def,"sparselarge");
+    if(!iter1 || !iter0 || !psparse || !out || !def){
         free_multivector_iter(iter1,1);
         free_multivector_iter(iter0,1);
         PyMem_RawFree(psparse);
@@ -2583,20 +2586,22 @@ static PyMultivectorObject *binary_mixed_product(PyMultivectorObject *data0, PyM
 
     switch(ptype){
         case ProductType_geometric:
-            *psparse = binary_mixed_geometricproduct_(iter0,iter1,data0->GA);
+            *psparse = binary_mixed_geometricproduct_(iter0,iter1,def->GA);
             break;
         case ProductType_inner:
-            *psparse = binary_mixed_innerproduct_(iter0,iter1,data0->GA);
+            *psparse = binary_mixed_innerproduct_(iter0,iter1,def->GA);
             break;
         case ProductType_outer:
-            *psparse = binary_mixed_outerproduct_(iter0,iter1,data0->GA);
+            *psparse = binary_mixed_outerproduct_(iter0,iter1,def->GA);
             break;
         case ProductType_regressive:
-            *psparse = binary_mixed_regressiveproduct_(iter0,iter1,data0->GA);
+            *psparse = binary_mixed_regressiveproduct_(iter0,iter1,def->GA);
             break;
         default:
             PyMem_RawFree(psparse);
             free_multivector(out);
+            free_multivector_iter(iter1,1);
+            free_multivector_iter(iter0,1);
             return NULL;
     }
 
