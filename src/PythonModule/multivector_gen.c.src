@@ -49,14 +49,14 @@ static void gen{{i}}_dense_grade{{j}}project(gen{{i}}_DenseMultivector *dense0, 
 
 {% for j in range(algebra.ngrades)%}
 static void gen{{i}}_blades_grade{{j}}project(gen{{i}}_BladesMultivector *blades0, gen{{i}}_BladesMultivector *blades){
-    memcpy(blades->value{{j}},blades0->value{{j}},{{algebra.gradesize[j]}});
+    memcpy(blades->value{{j}},blades0->value{{j}},sizeof(blades0->value{{j}}));
 }
 
 {% endfor %}
 
 {% for j in range(algebra.ngrades)%}
 #define GEN{{i}}_BLADES_GRADE{{j}}PROJECT(blades0,blades)\
-    (memcpy(blades->value{{j}},blades0->value{{j}},{{algebra.gradesize[j]}}))
+    (memcpy(blades->value{{j}},blades0->value{{j}},sizeof(blades0->value{{j}})))
 
 
 {% endfor %}
@@ -832,6 +832,7 @@ static PyMultivectorObject* atomic_{{type}}{{i}}_add(PyMultivectorObject *data, 
         p{{type}}0[i] = *((gen{{i}}_{{Type}}Multivector*)data[i].data);
 
     *p{{type}} = gen{{i}}_{{type}}_atomicadd(p{{type}}0,size);
+    PyMem_RawFree(p{{type}}0);
     out->data = (void*)p{{type}};
     return out;
 }

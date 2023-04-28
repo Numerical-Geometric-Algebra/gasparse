@@ -36,6 +36,8 @@ static BladesMultivector sparse_dense_to_blades_sparse(SparseMultivector dense, 
         sparse.data = NULL;
         sparse.grade = NULL;
         sparse.size = 0;
+        PyMem_RawFree(gsize);
+        PyMem_RawFree(gindex);
         return sparse;
     }
 
@@ -2419,6 +2421,7 @@ static PyMultivectorObject *atomic_sparse_product(PyMultivectorObject *data0, Py
     PyMultivectorObject *out = new_multivectorbyname(data0,NULL);
     if(!psparse0 || !psparse || !out){
         PyMem_RawFree(psparse);
+        PyMem_RawFree(psparse0);
         free_multivector(out);
         return NULL; // raise error
     }
@@ -2438,12 +2441,14 @@ static PyMultivectorObject *atomic_sparse_product(PyMultivectorObject *data0, Py
             break;
         default:
             PyMem_RawFree(psparse);
+            PyMem_RawFree(psparse0);
             free_multivector(out);
             return NULL;
     }
 
     out->data = (void*)psparse;
     Py_SET_REFCNT(out,1);
+    PyMem_RawFree(psparse0);
     return out;
 }
 static PyMultivectorObject *atomic_dense_product(PyMultivectorObject *data0, Py_ssize_t size, ProductType ptype){
@@ -2452,6 +2457,7 @@ static PyMultivectorObject *atomic_dense_product(PyMultivectorObject *data0, Py_
     PyMultivectorObject *out = new_multivectorbyname(data0,NULL);
     if(!pdense0 || !pdense || !out){
         PyMem_RawFree(pdense);
+        PyMem_RawFree(pdense0);
         free_multivector(out);
         return NULL; // raise error
     }
@@ -2471,12 +2477,14 @@ static PyMultivectorObject *atomic_dense_product(PyMultivectorObject *data0, Py_
             break;
         default:
             PyMem_RawFree(pdense);
+            PyMem_RawFree(pdense0);
             free_multivector(out);
             return NULL;
     }
 
     out->data = (void*)pdense;
     Py_SET_REFCNT(out,1);
+    PyMem_RawFree(pdense0);
     return out;
 }
 static PyMultivectorObject *atomic_blades_product(PyMultivectorObject *data0, Py_ssize_t size, ProductType ptype){
@@ -2485,6 +2493,7 @@ static PyMultivectorObject *atomic_blades_product(PyMultivectorObject *data0, Py
     PyMultivectorObject *out = new_multivectorbyname(data0,NULL);
     if(!pblades0 || !pblades || !out){
         PyMem_RawFree(pblades);
+        PyMem_RawFree(pblades0);
         free_multivector(out);
         return NULL; // raise error
     }
@@ -2504,12 +2513,14 @@ static PyMultivectorObject *atomic_blades_product(PyMultivectorObject *data0, Py
             break;
         default:
             PyMem_RawFree(pblades);
+            PyMem_RawFree(pblades0);
             free_multivector(out);
             return NULL;
     }
 
     out->data = (void*)pblades;
     Py_SET_REFCNT(out,1);
+    PyMem_RawFree(pblades0);
     return out;
 }
   static PyMultivectorObject *atomic_blades_add(PyMultivectorObject *data, Py_ssize_t size){
@@ -2772,5 +2783,5 @@ void fill_missing_funcs(void){
      }
 
      largemultivector_mixed_fn.add = multivector_mixed_fn.add;
-     largemultivector_mixed_fn.atomic_add = largemultivector_mixed_fn.atomic_add;
+     largemultivector_mixed_fn.atomic_add = multivector_mixed_fn.atomic_add;
 }

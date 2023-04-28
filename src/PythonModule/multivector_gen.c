@@ -60,36 +60,36 @@ static void gen0_dense_grade3project(gen0_DenseMultivector *dense0, gen0_DenseMu
 
 
 static void gen0_blades_grade0project(gen0_BladesMultivector *blades0, gen0_BladesMultivector *blades){
-    memcpy(blades->value0,blades0->value0,1);
+    memcpy(blades->value0,blades0->value0,sizeof(blades0->value0));
 }
 
 static void gen0_blades_grade1project(gen0_BladesMultivector *blades0, gen0_BladesMultivector *blades){
-    memcpy(blades->value1,blades0->value1,3);
+    memcpy(blades->value1,blades0->value1,sizeof(blades0->value1));
 }
 
 static void gen0_blades_grade2project(gen0_BladesMultivector *blades0, gen0_BladesMultivector *blades){
-    memcpy(blades->value2,blades0->value2,3);
+    memcpy(blades->value2,blades0->value2,sizeof(blades0->value2));
 }
 
 static void gen0_blades_grade3project(gen0_BladesMultivector *blades0, gen0_BladesMultivector *blades){
-    memcpy(blades->value3,blades0->value3,1);
+    memcpy(blades->value3,blades0->value3,sizeof(blades0->value3));
 }
 
 
 #define GEN0_BLADES_GRADE0PROJECT(blades0,blades)\
-    (memcpy(blades->value0,blades0->value0,1))
+    (memcpy(blades->value0,blades0->value0,sizeof(blades0->value0)))
 
 
 #define GEN0_BLADES_GRADE1PROJECT(blades0,blades)\
-    (memcpy(blades->value1,blades0->value1,3))
+    (memcpy(blades->value1,blades0->value1,sizeof(blades0->value1)))
 
 
 #define GEN0_BLADES_GRADE2PROJECT(blades0,blades)\
-    (memcpy(blades->value2,blades0->value2,3))
+    (memcpy(blades->value2,blades0->value2,sizeof(blades0->value2)))
 
 
 #define GEN0_BLADES_GRADE3PROJECT(blades0,blades)\
-    (memcpy(blades->value3,blades0->value3,1))
+    (memcpy(blades->value3,blades0->value3,sizeof(blades0->value3)))
 
 
 
@@ -2127,6 +2127,7 @@ static PyMultivectorObject* atomic_dense0_add(PyMultivectorObject *data, Py_ssiz
         pdense0[i] = *((gen0_DenseMultivector*)data[i].data);
 
     *pdense = gen0_dense_atomicadd(pdense0,size);
+    PyMem_RawFree(pdense0);
     out->data = (void*)pdense;
     return out;
 }
@@ -2144,6 +2145,7 @@ static PyMultivectorObject* atomic_blades0_add(PyMultivectorObject *data, Py_ssi
         pblades0[i] = *((gen0_BladesMultivector*)data[i].data);
 
     *pblades = gen0_blades_atomicadd(pblades0,size);
+    PyMem_RawFree(pblades0);
     out->data = (void*)pblades;
     return out;
 }

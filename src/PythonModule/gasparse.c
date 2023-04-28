@@ -374,6 +374,7 @@ static void algebra_dealloc(PyAlgebraObject *self){
     PyMem_RawFree(self->dm.bitmap); self->dm.bitmap = NULL;
     PyMem_RawFree(self->dm.sign); self->dm.sign = NULL;
     PyMem_RawFree(self->mdefault.type_name);
+    PyMem_RawFree(self->types);
     Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
@@ -1049,22 +1050,32 @@ static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyOb
     size = parse_list_as_values(values,&values_float);
     if(size <= 0){
         PyErr_SetString(PyExc_TypeError,"values must be a non empty list of integers or floats");
+        PyMem_RawFree(values_float);
         return NULL;
     }
     bsize = parse_list_as_bitmaps(blades,&bitmaps_int);
     if(bsize != size){
+        PyMem_RawFree(values_float);
+        PyMem_RawFree(bitmaps_int);
         PyErr_SetString(PyExc_TypeError,"blades must be of the same size as values");
         return NULL;
     }
 
     multivector = populate_multivector_types(self);
-    if(!multivector) return NULL;
+    if(!multivector){
+        PyMem_RawFree(values_float);
+        PyMem_RawFree(bitmaps_int);
+        return NULL;
+    }
 
     gainitfunc init = multivector->type.data_funcs->init;
     if(init)
         multivector->data = init(bitmaps_int,values_float,size,self);
-    else
+    else{
+        PyMem_RawFree(values_float);
+        PyMem_RawFree(bitmaps_int);
         return NULL; // raise not implemented error
+    }
 
     PyMem_RawFree(values_float);
     PyMem_RawFree(bitmaps_int);
@@ -1083,7 +1094,7 @@ static PyObject *algebra_blades(PyAlgebraObject *self, PyObject *args, PyObject 
     ga_float **value_array = NULL;
     Py_ssize_t size,gsize;
     PyMultivectorObject **multivectors = NULL;
-    PyObject *dict_blades;
+    PyObject *dict_blades = NULL;
     if(!PyArg_ParseTupleAndKeywords(args, kwds, "|OO", kwlist,&blades,&grades))
         return NULL;
 
@@ -1137,41 +1148,65 @@ static PyObject *algebra_blades(PyAlgebraObject *self, PyObject *args, PyObject 
         }
     }
 
-    bitmap_char = (char**)PyMem_RawMalloc(size*sizeof(char*));
-    if(!bitmap_char) return NULL;
-    for(Py_ssize_t i = 0; i < size; i++){
-        bitmap_char[i] = bitmap_to_string(*(bitmap_array[i]));
-        if(!bitmap_char[i]) return NULL;
-    }
-
     multivectors = (PyMultivectorObject**)PyMem_RawMalloc(size*sizeof(PyMultivectorObject*));
-    if(!multivectors) return NULL;
+    if(!multivectors) goto fail;
+    for(Py_ssize_t i = 0; i < size; i++)
+        multivectors[i] = NULL;
     for(Py_ssize_t i = 0; i < size; i++){
         multivectors[i] = populate_multivector_types(self);
-        if(!multivectors[i]) return NULL;
+        if(!multivectors[i])
+            goto fail;
+
+    }
+
+    bitmap_char = (char**)PyMem_RawMalloc(size*sizeof(char*));
+    if(!bitmap_char) goto fail;
+    for(Py_ssize_t i = 0; i < size; i++){
+        bitmap_char[i] = bitmap_to_string(*(bitmap_array[i]));
+        if(!bitmap_char[i])
+            goto fail;
     }
 
     gainitfunc init = (*multivectors)->type.data_funcs->init;
     if(init)
         for(Py_ssize_t i = 0; i < size; i++)
             multivectors[i]->data = init(bitmap_array[i],value_array[i],1,self);
-    else return NULL;
+    else
+        goto fail;
+
 
     dict_blades = PyDict_New();
     for(Py_ssize_t i = 0; i < size; i++){
         PyObject *key = Py_BuildValue("s",bitmap_char[i]);
         PyDict_SetItem(dict_blades,key,(PyObject*)multivectors[i]);
         Py_XDECREF(key);
+        Py_XDECREF((PyObject*)multivectors[i]);
     }
 
-    for(Py_ssize_t i = 0; i < size; i++){
-        PyMem_RawFree(bitmap_array[i]);
-        PyMem_RawFree(value_array[i]);
-    }
+    goto success;
+
+fail:
+    if(multivectors)
+        for(Py_ssize_t i = 0; i < size; i++)
+            Py_XDECREF(multivectors[i]);
+
+success:
+    if(bitmap_array)
+        for(Py_ssize_t i = 0; i < size; i++)
+            PyMem_RawFree(bitmap_array[i]);
+    if(value_array)
+        for(Py_ssize_t i = 0; i < size; i++)
+            PyMem_RawFree(value_array[i]);
+    if(bitmap_char)
+        for(Py_ssize_t i = 0; i < size; i++)
+            PyMem_RawFree(bitmap_char[i]);
+
     PyMem_RawFree(bitmap_array);
+    PyMem_RawFree(bitmap_char);
     PyMem_RawFree(value_array);
     PyMem_RawFree(grade_bool);
     PyMem_RawFree(bitmap);
+    PyMem_RawFree(multivectors);
 
     return dict_blades;
 }

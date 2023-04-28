@@ -133,6 +133,8 @@ static BladesMultivector sparse_dense_to_blades_sparse(SparseMultivector dense, 
         sparse.data = NULL;
         sparse.grade = NULL;
         sparse.size = 0;
+        PyMem_RawFree(gsize);
+        PyMem_RawFree(gindex);
         return sparse;
     }
 
@@ -1670,8 +1672,15 @@ static DenseMultivector atomic_dense_product_(DenseMultivector *data, Py_ssize_t
 {% set operation = op_list[k] %}
 static PyMultivectorObject *atomic_{{type}}_{{operation}}(PyMultivectorObject *data, Py_ssize_t size{{OP_args}}){
     {{Type}}Multivector *{{type}} = ({{Type}}Multivector*)PyMem_RawMalloc(sizeof({{Type}}Multivector));
-    PyMultivectorObject *out = new_multivectorbyname(data,NULL); // pass NULL to inherit type
     {{Type}}Multivector *{{type}}_array = ({{Type}}Multivector*)PyMem_RawMalloc(size*sizeof({{Type}}Multivector));
+    PyMultivectorObject *out = new_multivectorbyname(data,NULL); // pass NULL to inherit type
+    if(!{{type}} || !{{type}}_array || !out){
+        PyMem_RawFree({{type}});
+        PyMem_RawFree({{type}}_array);
+        free_multivector(out);
+        return NULL;
+    }
+
     for(Py_ssize_t i = 0; i < size; i++)
         {{type}}_array[i] = *(({{Type}}Multivector*)data[i].data);
 
@@ -1686,7 +1695,6 @@ static PyMultivectorObject *atomic_{{type}}_{{operation}}(PyMultivectorObject *d
 
     out->data = {{type}};
     Py_SET_REFCNT((PyObject*)out,1);
-
     PyMem_RawFree({{type}}_array);
     return out;
 }
@@ -1943,8 +1951,8 @@ static PyMultivectorObject *cast_binary_mixed_{{operation}}(PyMultivectorObject 
 
 
 static PyMultivectorObject *cast_atomic_mixed_{{operation}}(PyMultivectorObject *data, Py_ssize_t size, PyMultivectorObject *def{{OP_args}}){
-    PyMultivectorObject *casted = (PyMultivectorObject*)PyMem_RawMalloc((size-1)*sizeof(PyMultivectorObject));
-    PyMultivectorObject **casted_array = (PyMultivectorObject**)PyMem_RawMalloc((size-1)*sizeof(PyMultivectorObject*));
+    PyMultivectorObject *casted = (PyMultivectorObject*)PyMem_RawMalloc(size*sizeof(PyMultivectorObject));
+    PyMultivectorObject **casted_array = (PyMultivectorObject**)PyMem_RawMalloc(size*sizeof(PyMultivectorObject*));
     PyMultivectorObject *out;
     gacastfunc cast = def->type.data_funcs->cast;
     if(!cast) {
@@ -1962,7 +1970,6 @@ static PyMultivectorObject *cast_atomic_mixed_{{operation}}(PyMultivectorObject 
             return NULL;
         }
         casted[i] = *casted_array[i];
-        PyMem_RawFree(casted);
     }
 
     out = def->type.math_funcs->atomic_{{operation}}(casted,size{{op_args}});
@@ -2015,6 +2022,7 @@ PyObject *multivector_repr(PyMultivectorObject *self){
     PyObject *mv_repr;
     PyObject *ga_repr;
     PrintTypeMV ptype = self->GA->print_type_mv;
+    PyObject *out;
 
     PyMultivectorIter *iter = init_multivector_iter(self,1);
     mv_repr = type_iter_repr(iter,ptype,iter->niters);
@@ -2022,7 +2030,10 @@ PyObject *multivector_repr(PyMultivectorObject *self){
 
     if(ptype == PrintTypeMV_normal){
         ga_repr = PyObject_Repr((PyObject*)self->GA);
-        return PySequence_Concat(ga_repr,mv_repr);
+        out =  PySequence_Concat(ga_repr,mv_repr);
+        Py_XDECREF(ga_repr);
+        Py_XDECREF(mv_repr);
+        return out;
     }else if(ptype == PrintTypeMV_reduced){
         return mv_repr;
     }else {
@@ -2375,7 +2386,7 @@ PyObject* multivector_atomic_add(PyObject *cls, PyObject *args){
     Py_ssize_t size = PyTuple_Size(args);
     gaatomicfunc add = NULL;
     gamixedatomicfunc mixed_add = NULL;
-    PyMultivectorObject *data0, *data1;
+    PyMultivectorObject *data0, *data1, *out;
     PyMultivectorObject *data_array;
     Py_ssize_t index;
 
@@ -2408,8 +2419,9 @@ PyObject* multivector_atomic_add(PyObject *cls, PyObject *args){
     if(index >= 0){ // dispatch mixed type operations
         mixed_add = data_array[index].mixed->atomic_add;
         if(mixed_add){
-            return (PyObject*)mixed_add(data_array,size,&data_array[index]);
+            out = mixed_add(data_array,size,&data_array[index]);
         }else{
+            PyMem_RawFree(data_array);
             PyErr_SetString(PyExc_NotImplementedError,"The atomic mixed sum operation for these types is not implemented");
             return NULL; // raise not implemented error
         }
@@ -2417,13 +2429,16 @@ PyObject* multivector_atomic_add(PyObject *cls, PyObject *args){
     else{
         add = data_array->type.math_funcs->atomic_add;
         if(add){
-            return (PyObject*)add(data_array,size);
+            out = add(data_array,size);
         }else{
+            PyMem_RawFree(data_array);
             PyErr_SetString(PyExc_NotImplementedError,"The atomic sum operation for these types is not implemented");
             return NULL; // raise not implemented error
         }
     }
-    return NULL;
+
+    PyMem_RawFree(data_array);
+    return (PyObject*)out;
 }
 
 
@@ -2433,7 +2448,7 @@ static PyObject* multivector_atomic_product(PyObject *cls, PyObject *args, Produ
     Py_ssize_t size = PyTuple_Size(args);
     gaatomicprodfunc product = NULL;
     gamixedatomicprodfunc mixed_product = NULL;
-    PyMultivectorObject *data0 = NULL, *data1 = NULL, *data2 = NULL;
+    PyMultivectorObject *data0 = NULL, *data1 = NULL, *data2 = NULL, *out = NULL;
     PyMultivectorObject *data_array = NULL;
     Py_ssize_t index;
 
@@ -2480,23 +2495,25 @@ static PyObject* multivector_atomic_product(PyObject *cls, PyObject *args, Produ
     if(index >= 0){ // dispatch mixed type operations
         mixed_product = data_array[index].mixed->atomic_product;
         if(mixed_product){
-            return (PyObject*)mixed_product(data_array,size,&data_array[index],ptype);
+            out = mixed_product(data_array,size,&data_array[index],ptype);
         }else{
+            PyMem_RawFree(data_array);
             PyErr_SetString(PyExc_NotImplementedError,"The atomic mixed sum operation for these types is not implemented");
             return NULL; // raise not implemented error
         }
-    }
-    else{
+    }else{
         product = data_array->type.math_funcs->atomic_product;
         if(product){
-            return (PyObject*)product(data_array,size,ptype);
+            out = product(data_array,size,ptype);
         }else{
+            PyMem_RawFree(data_array);
             PyErr_SetString(PyExc_NotImplementedError,"The atomic product operation for these types is not implemented");
             return NULL; // raise not implemented error
         }
     }
 
-    return NULL;
+    PyMem_RawFree(data_array);
+    return (PyObject*)out;
 }
 
 
