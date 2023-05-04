@@ -158,6 +158,7 @@ typedef struct PyMultivectorMath_Funcs{
     gaunaryfunc reverse;
     gaunaryfunc dual;
     gaunaryfunc undual;
+    gaunaryfunc exp;
     gaternaryprodfunc ternary_product;
 }PyMultivectorMath_Funcs;
 
@@ -251,6 +252,7 @@ PyObject *multivector_positive(PyMultivectorObject *self);
 PyObject* multivector_atomic_add(PyObject *self, PyObject *args);
 PyObject* multivector_atomic_geometric_product(PyObject *self, PyObject *args);
 PyObject* multivector_atomic_outer_product(PyObject *self, PyObject *args);
+PyObject* multivector_exponential(PyObject *self, PyObject *args);
 // other methods
 PyObject* multivector_dual(PyMultivectorObject *self, PyObject *args);
 PyObject* multivector_undual(PyMultivectorObject *self, PyObject *args);

@@ -1,5 +1,7 @@
 #include <Python.h>
+#include <math.h>
 #include "gasparse.h"
+
 /* #include "multivector.h" */
 
 
@@ -473,7 +475,7 @@ static PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_s
                     // maybe should add this as an option when creating the algebra
                     if(ABS(iter->value) < 1e-12) continue; // don't print small values
 
-                char *value = PyOS_double_to_string((double)iter->value,'f',6,0,NULL);
+                char *value = PyOS_double_to_string((double)iter->value,'f',16,0,NULL);
                 if(iter->bitmap){
                     char *bitmap = bitmap_to_string(iter->bitmap);
                     Py_ssize_t size = strlen(bitmap) + strlen(value)+3;
@@ -576,6 +578,42 @@ static PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_s
         }else return Py_BuildValue("s",".multivector(0.0)");
     }
     return NULL; // raise error
+}
+
+static SparseMultivector sparse_copy_(SparseMultivector sparse){
+    SparseMultivector copy = {.size = -1, .bitmap = NULL, .value = NULL};
+    if(sparse.size < 0) return copy;
+    if(sparse.size == 0){
+        copy.size = 0;
+        return copy;
+    }
+
+    copy.bitmap = (int*)PyMem_RawMalloc(sparse.size*sizeof(int));
+    copy.value = (ga_float*)PyMem_RawMalloc(sparse.size*sizeof(ga_float));
+    if(!copy.bitmap || !copy.value){
+        PyMem_RawFree(copy.bitmap);
+        PyMem_RawFree(copy.value);
+        return copy;
+    }
+    copy.size = sparse.size;
+    memcpy(copy.bitmap,sparse.bitmap,sparse.size*sizeof(int));
+    memcpy(copy.value,sparse.value,sparse.size*sizeof(ga_float));
+    return copy;
+}
+
+SparseMultivector sparse_new_(Py_ssize_t size){
+    SparseMultivector sparse = {.size = -1};
+    sparse.bitmap = (int*)PyMem_RawMalloc(size*sizeof(int));
+    sparse.value = (ga_float*)PyMem_RawMalloc(size*sizeof(ga_float));
+    if(!sparse.bitmap || !sparse.value){
+       PyMem_RawFree(sparse.bitmap);
+       PyMem_RawFree(sparse.value);
+       PyErr_SetString(PyExc_MemoryError,"Error allocating memory for a sparse multivector");
+       return sparse;
+    }
+    sparse.size = size;
+
+    return sparse;
 }
 
 
@@ -1533,6 +1571,38 @@ static SparseMultivector atomic_sparse_product_(SparseMultivector *data, Py_ssiz
     return sparse;
 }
 
+static SparseMultivector unary_sparse_exponential_(SparseMultivector sparse0, PyAlgebraObject *ga){
+    SparseMultivector exp = sparse_new_(sparse0.size + 1);
+    SparseMultivector pow = sparse_copy_(sparse0);
+    SparseMultivector prev;
+    Py_ssize_t niters = 50;
+    if(pow.size == -1 || exp.size == -1){
+        sparse_free_(pow);
+        sparse_free_(exp);
+        pow.size = -1;
+        return pow;
+    }
+
+    *exp.bitmap = 0;
+    *exp.value = 1;
+    memcpy(exp.bitmap+1,sparse0.bitmap,sparse0.size*sizeof(int));
+    memcpy(exp.value+1,sparse0.value,sparse0.size*sizeof(ga_float));
+
+    for(Py_ssize_t k = 2; k < niters+2; k++){
+        prev = pow;
+        pow = binary_sparse_product_(pow,sparse0,ga,ProductType_geometric);
+        sparse_free_(prev); prev = pow;
+        pow = unary_sparse_scalarproduct_(pow,ga,1.0/(ga_float)k);
+        sparse_free_(prev); prev = exp;
+        exp = binary_sparse_add_(exp,pow,ga,1);
+        sparse_free_(prev);
+    }
+
+    sparse_free_(pow);
+    return exp;
+}
+
+
 static BladesMultivector atomic_blades_add_(BladesMultivector *data, Py_ssize_t size, PyAlgebraObject *ga){
     BladesMultivector sparse = {.size = -1};
     SparseMultivector dense = init_sparse_empty(ga->asize);
@@ -1654,6 +1724,29 @@ static DenseMultivector atomic_dense_product_(DenseMultivector *data, Py_ssize_t
     return temp;
 }
 
+
+static PyMultivectorObject *unary_sparse_exponential(PyMultivectorObject *data0){
+    SparseMultivector *sparse = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
+    PyMultivectorObject *out = new_multivectorbyname(data0,NULL);// pass NULL to inherit type
+    SparseMultivector *sparse0 = (SparseMultivector*)data0->data;
+    if(!sparse || !out || !sparse0){
+        PyMem_RawFree(sparse);
+        free_multivector(out);
+        return NULL;
+    }
+
+    *sparse = unary_sparse_exponential_(*sparse0,data0->GA);
+
+    if(sparse->size == -1){
+        PyMem_RawFree(sparse);
+        free_multivector(out);
+        return NULL;
+    }
+
+    out->data = (void*)sparse;
+    Py_SET_REFCNT((PyObject*)out,1);
+    return out;
+}
 
 
 {# generating code for same type atomic operations #}
@@ -2327,7 +2420,6 @@ PyObject* multivector_undual(PyMultivectorObject *self, PyObject *Py_UNUSED(igno
     return NULL;
 }
 
-
 static PyObject *multivector_sign(PyMultivectorObject *self, ga_float value){
     gascalarfunc scalar_product = self->type.math_funcs->scalar_product;
     PyMultivectorObject *out;
@@ -2525,6 +2617,34 @@ PyObject* multivector_atomic_outer_product(PyObject *cls, PyObject *args){
     return multivector_atomic_product(cls,args,ProductType_outer);
 }
 
+PyObject* multivector_exponential(PyObject *cls, PyObject *args){
+    Py_ssize_t size = PyTuple_Size(args);
+    gaunaryfunc exponential;
+    PyMultivectorObject *data0 = NULL;
+
+    if(size != 1){
+        PyErr_SetString(PyExc_ValueError,"number of arguments must be one");
+        return NULL;
+    }
+    // check if objects are multivectors
+    if(get_biggest_algebra_index(cls,args) == -1){
+        PyErr_SetString(PyExc_ValueError,"the input must be a multivector");
+        return NULL;
+    }
+
+    data0 = (PyMultivectorObject*)PyTuple_GetItem(args,0);
+    exponential = data0->type.math_funcs->exp;
+    if(exponential){
+        return (PyObject*)exponential(data0);
+    }else{
+        PyErr_SetString(PyExc_NotImplementedError,"The exponential operation for this type is not implemented");
+        return NULL;
+    }
+    return NULL;
+}
+
+
+
 void multivector_dealloc(PyMultivectorObject *self){
     Py_XDECREF((PyObject*)self->GA);
     gafreefunc free_type = self->type.data_funcs->free;
@@ -2567,6 +2687,9 @@ static PyMultivectorMath_Funcs multivector_{{type}}_math_fn = {
     .reverse = unary_{{type}}_reverse,
     .dual = unary_{{type}}_dual,
     .undual = unary_{{type}}_undual,
+{% if type == "sparse" %}
+    .exp = unary_sparse_exponential,
+{% endif %}
 };
 {% endfor %}
 

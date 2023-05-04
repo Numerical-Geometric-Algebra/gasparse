@@ -932,6 +932,7 @@ PyDoc_STRVAR(add_doc, "adds a bunch of multivectors.");
 PyDoc_STRVAR(dual_doc, "dualizes the multivector.");
 PyDoc_STRVAR(undual_doc, "undualizes the multivector.");
 PyDoc_STRVAR(product_doc, "multiplies a bunch of multivectors.");
+PyDoc_STRVAR(exponential_doc, "takes the exponential of multivectors.");
 
 PyMethodDef multivector_methods[] = {
     {"dual", (PyCFunction)multivector_dual, METH_NOARGS, dual_doc},
@@ -939,6 +940,7 @@ PyMethodDef multivector_methods[] = {
     {"add", (PyCFunction) multivector_atomic_add, METH_VARARGS|METH_CLASS, add_doc},
     {"geometric_product", (PyCFunction) multivector_atomic_geometric_product, METH_VARARGS|METH_CLASS, product_doc},
     {"outer_product", (PyCFunction) multivector_atomic_outer_product, METH_VARARGS|METH_CLASS, product_doc},
+    {"exp", (PyCFunction) multivector_exponential, METH_VARARGS|METH_CLASS, exponential_doc},
     {NULL},
 };
 
@@ -1017,10 +1019,11 @@ static Py_ssize_t parse_list_as_values(PyObject *values, ga_float **values_float
 }
 
 static PyObject *algebra_set_multivector_defaults(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
-    static char *kwlist[] = {"dtype",NULL};
+    static char *kwlist[] = {"dtype","precision",NULL};
     char *dtype = NULL;
+    double precision = 1e-12;
 
-    if(!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist,&dtype))
+    if(!PyArg_ParseTupleAndKeywords(args, kwds, "s|f", kwlist,&dtype,&precision))
         return NULL;
 
     if(!dtype)
@@ -1029,7 +1032,7 @@ static PyObject *algebra_set_multivector_defaults(PyAlgebraObject *self, PyObjec
     PyMem_RawFree(self->mdefault.type_name); // free previous
     self->mdefault.type_name = (char*)PyMem_RawMalloc((strlen(dtype)+1)*sizeof(char));
     strcpy(self->mdefault.type_name,dtype);
-
+    self->precision = (ga_float)precision;
     Py_RETURN_NONE;
 }
 
