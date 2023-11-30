@@ -2949,6 +2949,28 @@ static int get_scalar(PyObject *self, ga_float *value){
     return 0;
 }
 
+PyObject* multivector_list(PyMultivectorObject *self, PyObject *Py_UNUSED(ignored)){
+    PyMultivectorObject *m_object = (PyMultivectorObject*)self;
+    PyObject* list = PyList_New(m_object->GA->asize);
+
+    PyMultivectorIter iter = m_object->type.data_funcs->iter_init(m_object);
+    
+    // Initialize list with all zeros
+    for(Py_ssize_t i = 0; i < m_object->GA->asize; i++){
+        PyList_SetItem(list,i,PyFloat_FromDouble(0.0));
+    }
+
+    while(iter.next(&iter)){
+        PyObject *value = PyFloat_FromDouble(iter.value);
+        PyList_SetItem(list,iter.bitmap,value);
+    }
+
+    free(iter.index);
+
+    return list;
+
+}
+
 static PyObject *multivector_product(PyObject *left, PyObject *right, ProductType ptype){
     PyMultivectorObject *data0 = NULL, *data1 = NULL, *def = NULL, *out = NULL;
     ga_float value = 0;

@@ -256,6 +256,7 @@ PyObject* multivector_exponential(PyObject *self, PyObject *args);
 // other methods
 PyObject* multivector_dual(PyMultivectorObject *self, PyObject *args);
 PyObject* multivector_undual(PyMultivectorObject *self, PyObject *args);
+PyObject* multivector_list(PyMultivectorObject *self, PyObject *args);
 
 // TYPE methods
 int comp_abs(ga_float v, ga_float p);

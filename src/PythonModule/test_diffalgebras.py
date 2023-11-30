@@ -7,6 +7,7 @@ modes = ['generated']
 # dtypes = ['sparse','dense','blades']
 dtypes = ['blades']
 
+
 blades_list = []
 for mode in modes:
     for dtype in dtypes:
@@ -19,7 +20,7 @@ for mode in modes:
         locals().update(blades)
         print((e1+e12+e23+e123)([1,3]))
 
-'''
+
 for blades0 in blades_list:
     for blades1 in blades_list:
         print()
@@ -41,4 +42,4 @@ for blades0 in blades_list:
         print(multivector.geometric_product(blades0["e1"],blades1["e2"],blades0["e3"]))
         print(multivector.geometric_product(blades0["e1"],blades1["e2"]))
         print(multivector.geometric_product(blades0["e1"],blades1["e2"],blades0["e3"],blades1["e12"]))
-'''
+

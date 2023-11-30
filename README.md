@@ -3,6 +3,16 @@
 Creating a python library to do computations using sparse representation of multivectors.
 
 ## TODO
+1. Write code to retrieve multivectors as lists
+    - [ ] Multivectors by grade
+    - [ ] Also output bitmap
+1. Scalars should output as floats and not as gasparse.multivector objects
+1. Generate multivector
+    - [ ] Random by grade
+    - [ ] From any list
+    - [ ] Multiple grade selection from multivectors
+1. Function to check grade (return -1 if it isnt of unique grade)
+1. Multivector arrays!!!!!!
 1. Implement the geometric product in all data representations in **C**
    - [ ] Data type conversions
       + [x] sparse to grade sparse
@@ -43,6 +53,11 @@ Except logarithm and exponential these operation can be computed using the gener
   + **Dual** - $x^* = xI^{-1}$
   + **Meet** - $m = x\cap y\equiv (x\cdot m^{-1})\wedge y$
   + **Join** - $j = x\cup y\equiv (x\cdot j^{-1})\cdot y$
+
+
+Before compiling the C code ensure that some packages are installed
+
+`sudo apt-get install python3-dev`
 
 ### Code
   - [ ] change all `unsigned int size` to `size_t size`

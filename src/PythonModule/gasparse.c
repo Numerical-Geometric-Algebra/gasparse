@@ -933,6 +933,7 @@ PyDoc_STRVAR(dual_doc, "dualizes the multivector.");
 PyDoc_STRVAR(undual_doc, "undualizes the multivector.");
 PyDoc_STRVAR(product_doc, "multiplies a bunch of multivectors.");
 PyDoc_STRVAR(exponential_doc, "takes the exponential of multivectors.");
+PyDoc_STRVAR(list_doc, "Returns a list with each coefficient of the multivector.");
 
 PyMethodDef multivector_methods[] = {
     {"dual", (PyCFunction)multivector_dual, METH_NOARGS, dual_doc},
@@ -941,6 +942,7 @@ PyMethodDef multivector_methods[] = {
     {"geometric_product", (PyCFunction) multivector_atomic_geometric_product, METH_VARARGS|METH_CLASS, product_doc},
     {"outer_product", (PyCFunction) multivector_atomic_outer_product, METH_VARARGS|METH_CLASS, product_doc},
     {"exp", (PyCFunction) multivector_exponential, METH_VARARGS|METH_CLASS, exponential_doc},
+    {"list", (PyCFunction)multivector_list, METH_NOARGS, list_doc},
     {NULL},
 };
 
