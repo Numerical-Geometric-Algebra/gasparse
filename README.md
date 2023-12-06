@@ -6,6 +6,10 @@ Creating a python library to do computations using sparse representation of mult
 1. Write code to retrieve multivectors as lists
     - [ ] Multivectors by grade
     - [ ] Also output bitmap
+    - [ ] Convert data to and from numpy
+    - [ ] Convert multilinear and linear transformations into matrices
+1. Print multivectors by grade
+1. Change the value for which multivectors get converted to zero 
 1. Scalars should output as floats and not as gasparse.multivector objects
 1. Generate multivector
     - [ ] Random by grade

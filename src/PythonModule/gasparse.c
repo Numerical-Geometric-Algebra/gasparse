@@ -616,7 +616,7 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds){
     if(print_type_mv < PrintTypeMVMAX && print_type_mv > PrintTypeMVMIN)
         self->print_type_mv = print_type_mv;
 
-    self->precision = 1e-6;
+    self->precision = 1e-12;
 
     return 0;
 }
@@ -797,8 +797,10 @@ static int parse_list_as_bitmaps(PyObject *blades, int **bitmap){
             j++;
         Py_ssize_t bitmap_i = 0;
         for(; j < len; j++){
-            if(!IS_NONZERO(blade_str[j]))
+            if(!IS_NONZERO(blade_str[j])){
+                PyMem_RawFree(*bitmap);
                 return -1;
+            }
             bitmap_i += 1 << (int)(blade_str[j] - '1');
         }
         (*bitmap)[i] = bitmap_i;
@@ -1055,13 +1057,14 @@ static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyOb
     size = parse_list_as_values(values,&values_float);
     if(size <= 0){
         PyErr_SetString(PyExc_TypeError,"values must be a non empty list of integers or floats");
-        PyMem_RawFree(values_float);
+        //if(size != -1)
+        //PyMem_RawFree(values_float);
         return NULL;
     }
     bsize = parse_list_as_bitmaps(blades,&bitmaps_int);
     if(bsize != size){
         PyMem_RawFree(values_float);
-        PyMem_RawFree(bitmaps_int);
+        //PyMem_RawFree(bitmaps_int);
         PyErr_SetString(PyExc_TypeError,"blades must be of the same size as values");
         return NULL;
     }

@@ -1,41 +1,26 @@
 # Suboptimal Rotor Estimation
 from geo_algebra import *
-m_multivectors = 1
 
-Q_lst = []
-P_lst = []
-
-R = rdn_rotor()
-t = 10*rdn_vanilla_vec()
-T = 1 + (1/2)*einf*t
-
-noise = 0
-
-for i in range(m_multivectors):
-    Q = rdn_multivector() # + noise*rdn_multivector() # Don't forget to allways add a bunch of noise
-    P = ~R*~T*Q*T*R + noise*rdn_multivector()
-    #Q_lst = [Q(1)] + [Q(2)] + [Q(3)] + [Q(4)] + Q_lst
-    #P_lst = [P(1)] + [P(2)] + [P(3)] + [P(4)] + P_lst
-    Q_lst = [Q(1) + Q(2) + Q(3) + Q(4)] + Q_lst
-    P_lst = [P(1) + P(2) + P(3) + P(4)] + P_lst
-
+m_multivectors = 10
+P_lst,Q_lst = generate_rdn_MCs(m_multivectors,noise=0.01)
 
 T_est,R_est = estimate_rbm(P_lst,Q_lst)
 #print(np.c_[compute_magnitudes(P_lst),compute_magnitudes(Q_lst)])
 #print(get_corr(Q_lst,P_lst))
 
-#P_est_lst = trans_list(Q_lst,~R_est*~T_est)
-'''
+P_est_lst = trans_list(Q_lst,~R_est*~T_est)
+
+print("Estimation from P and Q")
 print(np.argmin(comp_dist_matrix(Q_lst,P_lst),axis=1))
-print(comp_dist_matrix(Q_lst,P_lst))
-print("P estimated:")
+#print(comp_dist_matrix(Q_lst,P_lst))
+print("Estimation from P and P_est")
 print(np.argmin(comp_dist_matrix(P_est_lst,P_lst),axis=1))
-print(comp_dist_matrix(P_est_lst,P_lst))
+#print(comp_dist_matrix(P_est_lst,P_lst))
 
 print('Correspondences from negative magnitudes:')
 print(get_corr(Q_lst,P_lst))
 
-'''
+
 #print(pos_cga_dist(P_lst[0],Q_lst[0]))
 m_dists = 10
 if m_multivectors < m_dists:
@@ -47,7 +32,7 @@ for i in range(len(P_lst)):
     Q = Q_lst[i]
     P_est = ~R_est*~T_est*Q*T_est*R_est
     error += dist(P_est,P)
-print(error/m_multivectors)
+print('Squared Error:', error/m_multivectors)
 
 '''
 # Rotation and translation sanity check

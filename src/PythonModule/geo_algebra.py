@@ -26,8 +26,8 @@ einf = (1.0*blades['e5'] - 1.0*blades['e4'])*(1/np.sqrt(2))
 eo = (1.0*blades['e5'] + 1.0*blades['e4'])*(1/np.sqrt(2))
 
 I = blades['e1']*blades['e2']*blades['e3']
-i = I*(eo^einf)
-
+ii = I*(eo^einf)
+three_ones = 0.5*np.ones([3])
 
 def get_float(X):
     return X.list()[0]
@@ -45,7 +45,7 @@ def rdn_biv():
     return ga.multivector(list(np.random.rand(10)),blades = bivectors)
 
 def rdn_vanilla_vec():
-    return ga.multivector(list(np.random.rand(3)),blades = vanilla_vecs)
+    return ga.multivector(list(np.random.rand(3)-three_ones),blades = vanilla_vecs)
 
 def rdn_multivector():
     return ga.multivector(list(np.random.rand(32)),blades=list(blades.keys()))
@@ -122,7 +122,21 @@ def rotor_sqrt(R):
     return np.cos(theta/2) + B*np.sin(theta/2)
 
 
-# Estimate  correspondences
+eps = 1E-10
+# Normalizes all types of multivectors
+# Ignores almost null multivectors
+def normalize_null(X):
+    magnitude = np.sqrt(abs((X*~X).list()[0])) 
+    scalar = 1
+    if magnitude < eps:
+        if abs(pos_cga_dist(X,X) - magnitude) < eps/2:
+            scalar = 1/magnitude
+    else: 
+        scalar = 1/magnitude
+    return X*scalar
+
+
+# Estimate correspondences
 def compute_magnitudes(X_list):
     mag_vector = np.zeros([len(X_list),1])
     for i in range(len(X_list)):
@@ -139,6 +153,217 @@ def get_corr(X_list,Y_list):
     corr_index = estimate_corrs_index(X_magarray,Y_magarray)
     return corr_index
 
+def point_convolution(X_lst,s,gamma,f):
+    # convolution for each point
+    out_scalars = 0j*np.zeros([len(X_lst),1])
+
+    for i in range(len(X_lst)):
+        vec_i = normalize(X_lst[i])
+        for j in range(len(X_lst)):
+            if i != j:
+                scalar = get_float(vec_i|normalize(X_lst[j]))
+                theta = np.arccos(scalar)
+                magnitude = np.sqrt(mag(X_lst[i] - X_lst[j]))
+                out_scalars[i] += np.exp(-s*magnitude**gamma)*np.exp(f*1j*theta)
+    return out_scalars
+
+def exp_corrs(X_lst,Y_lst,s,gamma,f):
+    alphas = point_convolution(X_lst,s,gamma,f)
+    betas = point_convolution(Y_lst,s,gamma,f)
+    return estimate_corrs_index(alphas,betas)
+
+
+def rdn_gaussian_vec(mu,sigma):
+    s = np.random.normal(mu, sigma, 3)
+    return ga.multivector(list(s),blades = vanilla_vecs)
+
+
+def generate_rdn_PC(m,mu=0,sigma=0.001):
+    x_lst = []
+    for i in range(m):
+        x_lst += [10*np.random.rand()*normalize(rdn_vanilla_vec())]
+    return x_lst
+
+def vanilla_to_cga_vecs(x_lst):
+    p_lst = []
+    for x in x_lst:
+        p_lst += [ eo + x + (1/2)*mag(x)*einf] 
+
+    return p_lst
+
+def apply_vec_RBM(x_lst,R,t,mu=0,sigma=0.00001):
+    y_lst = []
+    for x in x_lst:
+        noise = rdn_gaussian_vec(mu,sigma)
+        y_lst += [R*x*~R + t + noise]
+    return y_lst
+
+
+def apply_rotation(x_lst,R):
+    y_lst = []
+    for x in x_lst:
+        y_lst += [R*x*~R]
+    return y_lst
+
+
+def convoution(x_lst):
+    X_lst = [0]*len(x_lst)
+    mean = 0
+    for i in range(len(x_lst)):
+        mean += x_lst[i]
+
+    for i in range(len(x_lst)):
+        biv = x_lst[i]^mean
+        theta = np.sqrt(mag(biv))
+        U = np.cos(theta) + biv*np.sin(theta)
+        X_lst[i] = U*x_lst[i]*~U
+
+    return X_lst
+
+
+def transform(f_list,p_lst):
+    prods = []
+
+    for i in range(len(p_lst)):
+        for j in range(i+1,len(p_lst)):
+            prods += [p_lst[i]*p_lst[j]]
+
+    F_transform = [0]*len(f_list)
+
+    for k in range(len(f_list)):
+        F_transform[k] = 0
+        for i in range(len(prods)):
+            scalar = get_float(prods[i])*2*np.pi*f_list[k]
+            F_transform[k] += (prods[i](2))*(np.cos(scalar) + ii*np.sin(scalar))
+
+    return F_transform
+
+'''
+def transform_rot(f_list,p_lst):
+    prods = []
+
+    for i in range(len(p_lst)):
+        for j in range(i+1,len(p_lst)):
+            prods += [p_lst[i]*p_lst[j]]
+
+    F_transform = [0]*len(f_list)
+
+    for k in range(len(f_list)):
+        F_transform[k] = 0
+        for i in range(len(prods)):
+            scalar = get_float(prods[i])*2*np.pi*f_list[k]
+            F_transform[k] += (prods[i](2))*(np.cos(scalar) + I*np.sin(scalar))
+
+    return F_transform
+'''
+
+def exp(X):
+    # To do this computation we are assuming 
+    # that X is simple and of unique grade
+    s = get_float(X|X)
+    if abs(s) < eps:
+        # consider a null multivector
+        return 1 + X
+    elif s < 0:
+        theta = np.sqrt(abs(s))
+        return np.cos(theta) + X*np.sin(theta)
+    elif s > 0:
+        gamma = np.sqrt(s)
+        return np.cosh(gamma) + X*np.sinh(gamma)
+
+
+'''
+def transform_rot(f_list,p_lst):
+    prods = []
+
+    for i in range(len(p_lst)):
+        for j in range(i+1,len(p_lst)):
+            prods += [p_lst[i]*p_lst[j]]
+
+    F_transform = [0]*len(f_list)
+
+    for k in range(len(f_list)):
+        F_transform[k] = 0
+        for i in range(len(prods)):
+            scalar = 2*np.pi*f_list[k]
+            U = exp(scalar*prods[i](2))
+            F_transform[k] += U*(I*prods[i](2))*~U
+            #F_transform[k] += (prods[i](2))*exp(scalar*prods[i](2))
+
+    return F_transform
+'''
+'''
+def transform_rot(f_list,p_lst):
+    prods = []
+
+    for i in range(len(p_lst)):
+        for j in range(i+1,len(p_lst)):
+            prods += [mag(p_lst[i]-p_lst[j]) + p_lst[i]^p_lst[j]]
+
+    F_transform = [0]*len(f_list)
+
+    for k in range(len(f_list)):
+        F_transform[k] = 0
+        for i in range(len(prods)):
+            scalar = f_list[k]*get_float(prods[i])
+            #U = exp(scalar*prods[i](2))
+            F_transform[k] += prods[i](2)*np.exp(-scalar)
+            #F_transform[k] += (prods[i](2))*exp(scalar*prods[i](2))
+
+    return F_transform
+'''
+
+epsilon = 0.00001
+
+def simple_transform(f_list,x_lst):
+    F_transform = [0]*len(f_list)
+    mean = 0
+    for i in range(len(x_lst)):
+        mean += x_lst[i]
+    mean *= (1/len(x_lst))
+
+    for i in range(len(f_list)):
+        #sum_exp = 0
+        for j in range(len(x_lst)):
+            #exp_value = np.exp(-abs(f_list[i]-np.sqrt(mag(x_lst[j]))))
+            #exp_value = np.exp(-f_list[i]*np.sqrt(mag(x_lst[j])))
+            #sum_exp += exp_value
+            #*np.sqrt(mag(x_lst[j]))
+            #angle = 2*np.pi*f_list[i]*np.sqrt(mag(x_lst[j]))
+            #F_transform[i] += mean*exp_imag
+
+            angle = np.pi*f_list[i]
+            exp_imag = np.cos(angle) + I*np.sin(angle)
+            U = np.cos(angle) + x_lst[j]*I*np.sin(angle)
+            F_transform[i] += U*mean*~U*exp_imag
+
+        #mag_value = np.sqrt(mag(F_transform[i]))
+        #if mag_value > epsilon:
+        #   F_transform[i] = F_transform[i]*(1/(mag_value))
+    
+    return F_transform
+
+
+
+# Generate random multivector clouds
+def generate_rdn_MCs(m,noise=0):
+    Q_lst = []
+    P_lst = []
+
+    R = rdn_rotor()
+    t = 10*rdn_vanilla_vec()
+    T = 1 + (1/2)*einf*t
+
+    for i in range(m):
+        Q = 10*np.random.rand()*normalize_null(rdn_multivector())
+        P = ~R*~T*Q*T*R + noise*rdn_multivector() # Don't forget to allways add a bunch of noise
+        #Q_lst = [Q(1)] + [Q(2)] + [Q(3)] + [Q(4)] + Q_lst
+        #P_lst = [P(1)] + [P(2)] + [P(3)] + [P(4)] + P_lst
+        Q_lst = [Q(1) + Q(2) + Q(3) + Q(4)] + Q_lst
+        P_lst = [P(1) + P(2) + P(3) + P(4)] + P_lst
+
+    return (P_lst,Q_lst)
+
 def estimate_rot(p_lst,q_lst):
     beta_matrix = np.zeros([4,4])
     basis_rotor = [blades['e'],e12,e13,e23]
@@ -148,18 +373,22 @@ def estimate_rot(p_lst,q_lst):
         q = q_lst[k]
 
         def Func(Rotor):
-            return q*Rotor*p
-
+            #return (~q*Rotor*p + q*Rotor*~p)*(1/(1E-12 + np.sqrt(mag(p) + mag(q))))
+            return ~q*Rotor*p + q*Rotor*~p
+            
         for i in range(4):
             for j in range(4):
                 beta_matrix[i][j] += get_float(Func(basis_rotor[i])*(~basis_rotor[j]))
 
-
     eigenvalues, eigenvectors = np.linalg.eig(beta_matrix)
-    u = eigenvectors[:,np.argmax(eigenvalues)]# eigenvalues are column vectors
+    u = eigenvectors[:,np.argmax(eigenvalues)]# eigenvectors are column vectors
     R_est = 0
+    
+
     for i in range(4):
-        R_est += u[i]*basis_rotor[i]
+        R_est += np.real(u[i])*basis_rotor[i]
+    #print(eigenvectors)
+    #print(beta_matrix - beta_matrix.T)
 
     R_est = normalize(R_est)
     
@@ -207,3 +436,72 @@ def estimate_rbm(P_lst,Q_lst):
     T_est = 1 + (1/2)*einf*t_est
 
     return (T_est,R_est)
+
+def estimate_rot_SVD(p_lst,q_lst):
+    matrix = np.zeros([3,3])
+    basis_vecs = [e1,e2,e3]
+    for i in range(len(p_lst)):
+        q = q_lst[i]
+        p = p_lst[i]
+        def f(x):
+            return q*(p|x)
+
+        for j in range(len(basis_vecs)):
+            for k in range(len(basis_vecs)):
+                matrix[j][k] += get_float(f(basis_vecs[j])|basis_vecs[k])
+
+    U, S, V = np.linalg.svd(matrix, full_matrices=True)
+    M = np.array([[1,0,0],
+                  [0,1,0],
+                  [0,0,np.linalg.det(U)*np.linalg.det(V)]])
+    rot_matrix = U@M@V
+
+    eigenvalues, eigenvectors = np.linalg.eig(rot_matrix)
+
+    # The axis of rotation
+    u = np.real(eigenvectors[:,np.argmax(eigenvalues)])
+    Kn = np.array([[0,-u[2],u[1]],
+                   [u[2],0,-u[0]],
+                   [-u[1],u[0],0]])
+
+    cos_theta = (np.trace(rot_matrix) - 1)/2
+    sin_theta = -np.trace(Kn@rot_matrix)/2
+
+    ga_vec = ga.multivector(list(u),blades = vanilla_vecs)
+    rotor = cos_theta + I*ga_vec*sin_theta
+
+    return rotor_sqrt(rotor)
+
+    #q_numpy = np.zeros([3,len(p_lst)])
+    #for i in range(len(p_lst)):
+    #    q = q_lst[i]
+    #    p = p_lst[i]
+
+
+
+
+def compute_PC_error(t,R,x_lst,y_lst):
+    error = 0
+    for i in range(len(x_lst)):
+        y_est = R*x_lst[i]*~R + t
+        error += mag(y_est-y_lst[i])
+    return error/len(x_lst)
+
+
+def compute_error(T_est,R_est,P_lst,Q_lst):
+    error = 0
+    for i in range(len(P_lst)):
+        P = P_lst[i]
+        Q = Q_lst[i]
+        P_est = ~R_est*~T_est*Q*T_est*R_est
+        error += dist(P_est,P)
+    return error/len(P_lst)
+
+def compute_error_euclidean(R_est,P_lst,Q_lst):
+    error = 0
+    for i in range(len(P_lst)):
+        P = P_lst[i]
+        Q = Q_lst[i]
+        Q_est = R_est*P*~R_est
+        error += mag(Q_est-Q)
+    return error/len(P_lst)
