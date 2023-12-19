@@ -18,7 +18,7 @@ freqs = list(np.arange(10,21,0.1))
 nfreqs = len(freqs)
 n_points = 100
 mu = 0
-sigma = 0.1
+sigma = 0
 
 s = 5
 gamma = 1

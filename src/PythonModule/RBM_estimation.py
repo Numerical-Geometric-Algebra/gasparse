@@ -1,7 +1,7 @@
 # Suboptimal Rotor Estimation
 from geo_algebra import *
 
-m_multivectors = 10
+m_multivectors = 100
 P_lst,Q_lst = generate_rdn_MCs(m_multivectors,noise=0.01)
 
 T_est,R_est = estimate_rbm(P_lst,Q_lst)

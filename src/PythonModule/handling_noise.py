@@ -104,7 +104,7 @@ y_array = R_matrix@x_array + np.random.normal(mu, sigma, [3,n_points])
 x_mesh = generate_mesh(np.max(x_array),np.min(x_array))
 #x_mesh = np.random.rand(3,5) - 0.5
 rot_xarray = x_array
-
+'''
 for i in range(100):
     #fig = plt.figure()
     #ax = fig.add_subplot(111, projection='3d')
@@ -112,7 +112,7 @@ for i in range(100):
     #ax.scatter(x_mesh[0],x_mesh[1],x_mesh[2])
     #plt.show()
     x_mesh = increase_prob(x_mesh,x_array,sigmax_sq)
-
+'''
 
 
 

@@ -2,7 +2,7 @@ from geo_algebra import *
 freqs = [1,2,3,4,5,6]
 n_points = 10
 mu = 0
-sigma = 0
+sigma = 0.02
 
 x_lst = generate_rdn_PC(n_points)
 R = rdn_rotor()
