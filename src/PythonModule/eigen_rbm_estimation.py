@@ -1,9 +1,27 @@
 from geo_algebra import *
 
+def reflect_list(X_lst,X):
+    Y = 0
+    for i in range(len(X_lst)):
+        Y += X_lst[i]*X*X_lst[i]
+    return Y
 
-m_points = 100
+def orient_multivectors(X_lst,Xv,Xb):
+    Y_lst = [0]*len(X_lst)
+
+    for i in range(len(X_lst)):
+        X = X_lst[i]
+        scalar = get_float(X(1)*Xv) + get_float(X(2)*Xb)
+        if scalar == 0:
+            scalar = 1
+        else:
+            scalar = np.sign(scalar)
+        Y_lst[i] = scalar*X
+    return Y_lst
+
+m_points = 1000
 mu = 0
-sigma = 0
+sigma = 0.7
 
 x_lst = generate_rdn_PC(m_points)
 theta = 100*np.pi/180
@@ -16,102 +34,61 @@ y_lst = apply_vec_RBM(x_lst,R,t,mu,sigma)
 p_lst = vanilla_to_cga_vecs(x_lst)
 q_lst = vanilla_to_cga_vecs(y_lst)
 
-cga_basis = list(ga.blades(grades=[0,2]).values())
+q_reorder = q_lst[0]
+q_lst[0] = q_lst[1]
+q_lst[1] = q_reorder
 
-def get_func(X_lst):
+cga_basis = list(ga.blades(grades=[1,2]).values())
+
+def get_func(X_lst):    
     def F(Y):
         out = 0
         for i in range(len(X_lst)):
-            for j in range(i,len(X_lst)):
-                out += X_lst[i]*Y*X_lst[j]
+            out += X_lst[i]*Y*X_lst[i]  
         return out
     return F
 
+cga_rec_basis = reciprocal_blades_cga(cga_basis)
+P_lst,lambda_P = eigen_decomp(get_func(p_lst),cga_basis,cga_rec_basis)
+Q_lst,lambda_Q = eigen_decomp(get_func(q_lst),cga_basis,cga_rec_basis)
 
-P_lst,lambda_P = eigen_decomp(get_func(p_lst),cga_basis)
-Q_lst,lambda_Q = eigen_decomp(get_func(q_lst),cga_basis)
 
 
-# Check if Y_ordered are eigenmultivectors of Func with eigenvalues eigenvalues_ordered
-Func = get_func(q_lst)
-for i in range(len(Q_lst)):
-    #print(eigenvalues[i]*eigenvectors[:,i] - beta@eigenvectors[:,i])
-    print(np.max(np.abs(np.array((lambda_Q[i]*Q_lst[i] - Func(Q_lst[i])).list()))))
-
+# Normalize the multivectors
 P_lst = normalize_null_mvs(P_lst)
 Q_lst = normalize_null_mvs(Q_lst)
 
-Q_est_lst = trans_list(P_lst,T*R)
+# Compute the normalized means of the eigenmvs and vectors of the PCs
+P_bar = normalize_null(mv_list_mean(P_lst))
+Q_bar = normalize_null(mv_list_mean(Q_lst))
 
-#T_est,R_est = estimate_rbm(P_lst[0:2],Q_lst[0:2])
+# Compute the components used to orient the eigenmultivectors
+p_bar = normalize_null(mv_list_mean(p_lst))
+q_bar = normalize_null(mv_list_mean(q_lst))
+p_ref = normalize_null(reflect_list(p_lst,p_bar))
+q_ref = normalize_null(reflect_list(q_lst,q_bar))
 
-#T_est,R_est = estimate_rbm([-P_lst[4],-P_lst[5]],Q_lst[4:6])
+p_biv = p_bar^p_ref
+q_biv = q_bar^q_ref
 
-# How to determine the right sign for the eigenmultivectors???
-# For vectors I can use the eo vector
+P_oriented = orient_multivectors(P_lst,p_bar,p_biv)
+Q_oriented = orient_multivectors(Q_lst,q_bar,q_biv)
 
-#Q_est_lst = trans_list(P_lst,~R_est*~T_est)
+Q_est_oriented = trans_list(P_oriented,T*R)
 
-#for i in range(len(q_lst)):
-#    print(q_est_lst[i]|q_lst[i])
-
-'''
-matrix = np.zeros([30,30])
-for i in range(30):
-    for j in range(30):
-        matrix[i][j] = abs(abs(lambda_P[i]) - abs(lambda_Q[j]))
-
-index = np.argmin(matrix,axis=1)
-P_ordered = [P_lst[i] for i in index]
-Q_est_lst = trans_list(P_ordered,T*R)
-'''
-
-#Q_est_lst = trans_list(P_lst,T*R)
-#Q_est_lst = normalize_null_mvs(Q_est_lst)
-#Q_lst = normalize_null_mvs(Q_lst)
-
-#Q_est_lst = trans_list(P_lst,~R*~T)
-#P_est_lst = trans_list(Q_lst,~R*~T)
-'''
-matrix0 = np.zeros([len(Q_lst),len(Q_lst)])
-for i in range(len(Q_lst)):
-    for j in range(len(Q_lst)):
-        matrix0[i][j] = mag(normalize_null(Q_est_lst[i]) - normalize_null(Q_lst[j]))
-'''
-'''
-error_dist = 0
-error_mag = 0 
-for i in range(len(P_lst)):
-    error_dist += dist(Q_est_lst[i],Q_lst[i])
-    error_mag += abs(mag(Q_est_lst[i]- Q_lst[i]))
-
-print(error_dist)
-print(error_mag)
-'''
-'''
-t = 0
-y_lst = apply_vec_RBM(x_lst,R,t,mu,sigma)
-X_lst,lambda_X = eigen_decomp_pc(x_lst,grades=[1])
-Y_lst,lambda_Y = eigen_decomp_pc(y_lst,grades=[1])
-
-X_est_lst = trans_list(Y_lst,~R)
+T_est,R_est = estimate_rbm(P_oriented,Q_oriented)
 
 
-matrix1 = np.zeros([len(X_lst),len(X_lst)])
-for i in range(len(X_lst)):
-    for j in range(len(X_lst)):
-        matrix1[i][j] = mag(X_est_lst[i] - X_lst[j])
+print("Angle Error")
+print(np.arccos(get_float(R_est*~R))/np.pi*360)
 
 '''
-# Reciprocal blades sanity check
-basis = list(ga.blades(grades=[0,2]).values())
-#basis =  [e1,e2,e3,eo,einf]
-#basis += [e1*e2,e1*e3,e1*eo,e1*einf,e2*e3,e2*eo,e2*einf,e3*eo,e3*einf,eo^einf]
-rec_basis = reciprocal_blades(basis)
-matrix = np.zeros([len(basis),len(basis)])
-
-for i in range(len(basis)):
-    for j in range(len(basis)):
-        matrix[i][j] = get_float(rec_basis[i]*basis[j])
-
-print(np.sum(abs(matrix - np.eye(len(basis)))))
+TODO:
+    - For large amounts of noise it is difficult to determine the orientation of 
+    the eigenmultivectors, as such by increasing the noise above a certain threshold we are 
+    not able to determine the right orientation resulting in a very bad rotation accuracy
+    - [ ] Find a more noise robust approach to estimate orientation of multivectors 
+    - [ ] Study the algorithm under the influence of outliers
+    - [ ] Study the solution for the eigenmultivectors, it seems that even though we find the
+    eigenvectors of the matrix of F, the corresponding multivectors are not eigenmultivectors
+'''

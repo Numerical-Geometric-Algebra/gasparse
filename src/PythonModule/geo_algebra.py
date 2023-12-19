@@ -241,25 +241,6 @@ def transform(f_list,p_lst):
 
     return F_transform
 
-'''
-def transform_rot(f_list,p_lst):
-    prods = []
-
-    for i in range(len(p_lst)):
-        for j in range(i+1,len(p_lst)):
-            prods += [p_lst[i]*p_lst[j]]
-
-    F_transform = [0]*len(f_list)
-
-    for k in range(len(f_list)):
-        F_transform[k] = 0
-        for i in range(len(prods)):
-            scalar = get_float(prods[i])*2*np.pi*f_list[k]
-            F_transform[k] += (prods[i](2))*(np.cos(scalar) + I*np.sin(scalar))
-
-    return F_transform
-'''
-
 def exp(X):
     # To do this computation we are assuming 
     # that X is simple and of unique grade
@@ -273,48 +254,6 @@ def exp(X):
     elif s > 0:
         gamma = np.sqrt(s)
         return np.cosh(gamma) + X*np.sinh(gamma)
-
-
-'''
-def transform_rot(f_list,p_lst):
-    prods = []
-
-    for i in range(len(p_lst)):
-        for j in range(i+1,len(p_lst)):
-            prods += [p_lst[i]*p_lst[j]]
-
-    F_transform = [0]*len(f_list)
-
-    for k in range(len(f_list)):
-        F_transform[k] = 0
-        for i in range(len(prods)):
-            scalar = 2*np.pi*f_list[k]
-            U = exp(scalar*prods[i](2))
-            F_transform[k] += U*(I*prods[i](2))*~U
-            #F_transform[k] += (prods[i](2))*exp(scalar*prods[i](2))
-
-    return F_transform
-'''
-'''
-def transform_rot(f_list,p_lst):
-    prods = []
-
-    for i in range(len(p_lst)):
-        for j in range(i+1,len(p_lst)):
-            prods += [mag(p_lst[i]-p_lst[j]) + p_lst[i]^p_lst[j]]
-
-    F_transform = [0]*len(f_list)
-
-    for k in range(len(f_list)):
-        F_transform[k] = 0
-        for i in range(len(prods)):
-            scalar = f_list[k]*get_float(prods[i])
-            #U = exp(scalar*prods[i](2))
-            F_transform[k] += prods[i](2)*np.exp(-scalar)
-            #F_transform[k] += (prods[i](2))*exp(scalar*prods[i](2))
-
-    return F_transform
-'''
 
 epsilon = 0.00001
 
@@ -390,8 +329,6 @@ def estimate_rot(p_lst,q_lst):
 
     for i in range(4):
         R_est += np.real(u[i])*basis_rotor[i]
-    #print(eigenvectors)
-    #print(beta_matrix - beta_matrix.T)
 
     R_est = normalize(R_est)
     
@@ -447,20 +384,31 @@ def grade_involution(X):
 def grade_involution_vga(X):
     return X(0) - X(1) + X(2) - X(3)
 
+def grade_project_lst(X_lst,grades):
+    Y_lst = [0]*len(X_lst)
+    for i in range(len(X_lst)):
+        for j in range(len(grades)):
+            Y_lst[i] += X_lst[i](grades[j])
+    return Y_lst
 
-def reciprocal_blades(basis):
+def mv_list_mean(X_lst):
+    # Computes the mean of a list of multivectors
+    X_bar = 0
+    for i in range(len(X_lst)):
+        X_bar += X_lst[i]
+    return (1/len(X_lst))*X_bar
+
+def reciprocal_blades_cga(basis):
     rec_basis = [0]*len(basis) # reciprocal basis blades
     sigma = blades['e5']
     for i in range(len(basis)):
         rec_basis[i] = -sigma*~grade_involution(basis[i])*sigma
-        #rec_basis[i] = ~basis[i]
     return rec_basis
 
 def reciprocal_blades_vga(basis):
     rec_basis = [0]*len(basis) # reciprocal basis blades
-    sigma = blades['e5']
     for i in range(len(basis)):
-        rec_basis[i] = -sigma*~grade_involution_vga(basis[i])*sigma
+        rec_basis[i] = ~basis[i]
     return rec_basis
 
 def normalize_null_mvs(X_lst):
@@ -469,9 +417,8 @@ def normalize_null_mvs(X_lst):
     return X_lst
 
 
-def eigen_decomp(F,basis):
+def eigen_decomp(F,basis,rec_basis):
     # Solves the eigendecomposition of a multilinear transformation F
-    rec_basis = reciprocal_blades(basis)
     beta = np.zeros([len(basis),len(basis)])
 
     for i in range(len(basis)):
@@ -493,106 +440,6 @@ def eigen_decomp(F,basis):
     eigenvalues_ordered = eigenvalues[indices]
 
     return Y_ordered,np.real(eigenvalues_ordered)
-
-def eigen_decomp_cga_pc(X_lst):
-    # Choose all the elements of the basis, except the scalar and pseudoscalar components
-    basis = list(ga.blades(grades=[0,2]).values())
-    #basis =  [e1,e2,e3,eo,einf]
-    #basis += [e1*e2,e1*e3,e1*eo,e1*einf,e2*e3,e2*eo,e2*einf,e3*eo,e3*einf,eo^einf]
-    #Ip = e1*e2*e3*blades['e4']*blades['e5']
-    rec_basis = reciprocal_blades(basis)
-    beta = np.zeros([len(basis),len(basis)])
-    alpha = 2
-    gamma = 3
-    X_bar = 0
-
-    for i in range(len(X_lst)):
-        X_bar += X_lst[i]
-    X_bar = (1/len(X_lst))*X_bar
-    
-    def F(Y):
-        out = 0
-        for i in range(len(X_lst)):
-            for j in range(i,len(X_lst)):
-                out += X_lst[i]*Y*X_lst[j]
-            #out += (X_lst[i] + alpha*X_bar)*Y*(X_lst[i] + gamma*X_bar)
-            #out += X_lst[i]*Y*X_lst[i]
-        return out
-
-    for i in range(len(basis)):
-        for j in range(len(basis)):
-            beta[i][j] += get_float(F(basis[i])*(rec_basis[j]))
-
-    eigenvalues, eigenvectors = np.linalg.eig(beta)
-    Y = [0]*len(eigenvalues)
-    print(beta-beta.T)
-    # print(eigenvectors)
-    for i in range(len(eigenvalues)):
-        u = np.real(eigenvectors[:,i])
-        
-        for j in range(len(basis)):
-            Y[i] += u[j]*rec_basis[j]
-
-    #Order eigenmultivectors and eigenvalues by the absolute value of the eigenvalues
-    indices = np.argsort(abs(eigenvalues))
-    #print(Y)
-    Y_ordered = [Y[i] for i in indices]
-    eigenvalues_ordered = eigenvalues[indices]
-    print(eigenvalues)
-    
-    # Check if Y_ordered are eigenmultivectors of F with eigenvalues eigenvalues_ordered
-    for i in range(len(Y_ordered)):
-        #print(eigenvalues[i]*eigenvectors[:,i] - beta@eigenvectors[:,i])
-        print(np.max(np.abs(np.array((eigenvalues_ordered[i]*Y_ordered[i] - F(Y_ordered[i])).list()))))
-    
-
-    return Y_ordered,np.real(eigenvalues_ordered)
-
-def eigen_decomp_pc(X_lst,grades=[1]):
-    # Choose all the elements of the basis, except the scalar and pseudoscalar components
-    basis = list(vga.blades(grades=grades).values())
-    rec_basis = reciprocal_blades_vga(basis)
-    beta = np.zeros([len(basis),len(basis)])
-    #print(basis)
-    for i in range(len(X_lst)):
-        Xi = X_lst[i]
-        def F(Y):
-            return Xi*Y*Xi
-
-        for j in range(len(basis)):
-            for k in range(len(basis)):
-                beta[j][k] += get_float(F(basis[j])*(rec_basis[k]))
-
-    eigenvalues, eigenvectors = np.linalg.eig(beta)
-    Y = [0]*len(eigenvalues)
-
-    #print(eigenvectors)
-    for i in range(len(eigenvalues)):
-        u = np.real(eigenvectors[:,i])
-        
-        for j in range(len(basis)):
-            Y[i] += u[j]*rec_basis[j]
-
-    #Order eigenmultivectors and eigenvalues by the absolute value of the eigenvalues
-    indices = np.argsort(abs(eigenvalues))
-    Y_ordered = [Y[i] for i in indices]
-    eigenvalues_ordered = eigenvalues[indices]
-
-    '''
-    def F(Y):
-        out = 0
-        for i in range(len(X_lst)):
-            out += X_lst[i]*Y*X_lst[i]
-        return out
-
-    # Check if Y_ordered are eigenmultivectors of F with eigenvalues eigenvalues_ordered
-    for i in range(len(Y_ordered)):
-        print(eigenvalues[i]*eigenvectors[:,i] - beta@eigenvectors[:,i])
-        print(eigenvalues_ordered[i]*Y_ordered[i] - F(Y_ordered[i]))
-
-    '''
-
-    return Y_ordered,eigenvalues_ordered
 
 
 def estimate_rot_SVD(p_lst,q_lst):
