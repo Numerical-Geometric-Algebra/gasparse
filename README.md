@@ -9,6 +9,7 @@ Creating a python library to do computations using sparse representation of mult
     - [ ] Convert data to and from numpy
     - [ ] Convert multilinear and linear transformations into matrices
 1. Implement grade involution (Important for reflection)
+1. Implement integer powers of multivectors 
 1. Print multivectors by grade
 1. Change the value for which multivectors get converted to zero 
 1. Scalars should output as floats and not as gasparse.multivector objects

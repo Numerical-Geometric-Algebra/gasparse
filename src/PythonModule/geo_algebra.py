@@ -425,22 +425,20 @@ def eigen_decomp(F,basis,rec_basis):
         for j in range(len(basis)):
             beta[i][j] += get_float(F(basis[i])*(rec_basis[j]))
 
-    eigenvalues, eigenvectors = np.linalg.eig(beta)
+    eigenvalues, eigenvectors = np.linalg.eig(beta.T)
     Y = [0]*len(eigenvalues)
-    
     # Convert the eigenvectors to eigenmultivectors
     for i in range(len(eigenvalues)):
         u = np.real(eigenvectors[:,i])
         for j in range(len(basis)):
-            Y[i] += u[j]*rec_basis[j]
+            Y[i] += u[j]*basis[j]
 
     #Order eigenmultivectors and eigenvalues by the absolute value of the eigenvalues
     indices = np.argsort(abs(eigenvalues))
     Y_ordered = [Y[i] for i in indices]
     eigenvalues_ordered = eigenvalues[indices]
-
+    
     return Y_ordered,np.real(eigenvalues_ordered)
-
 
 def estimate_rot_SVD(p_lst,q_lst):
     matrix = np.zeros([3,3])
