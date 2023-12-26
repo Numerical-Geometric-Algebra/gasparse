@@ -90,8 +90,7 @@ T_est,R_est = estimate_rbm(P_oriented,Q_oriented)
 print("Angle Error")
 print(np.arccos(get_float(R_est*~R))/np.pi*360)
 
-
-
+'''
 # The eigenmultivectors are orthogonal and they are also blades
 matrix = np.zeros([len(P_lst),len(P_lst)])
 self_prod = [0]*len(P_lst)
@@ -105,7 +104,7 @@ for i in range(len(P_lst)):
 Func = get_func(p_lst)
 for i in range(len(P_lst)):
     print(P_lst[i]*lambda_P[i] - Func(P_lst[i]))
-
+'''
 
 '''
 TODO:

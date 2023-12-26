@@ -3,6 +3,13 @@
 Creating a python library to do computations using sparse representation of multivectors.
 
 ## TODO
+
+1. Numpy integration
+    - [ ] Read numpy arrays
+    - [ ] Generate random multivectors by grade or by given basis
+    - [ ] Numpy Array to array of multivectors (by a given basis, by grade or by all elements of the algebra)
+    - [ ] Output multivectors as a numpy array by grade (also output basis, consider a basis as input)
+
 1. Write code to retrieve multivectors as lists
     - [ ] Multivectors by grade
     - [ ] Also output bitmap
@@ -17,7 +24,7 @@ Creating a python library to do computations using sparse representation of mult
     - [ ] Random by grade
     - [ ] From any list
     - [ ] Multiple grade selection from multivectors
-1. Function to check grade (return -1 if it isnt of unique grade)
+1. Function to check grade (return -1 or None if it isnt of unique grade)
 1. Multivector arrays!!!!!!
 1. Implement the geometric product in all data representations in **C**
    - [ ] Data type conversions
