@@ -1,7 +1,9 @@
+
 #ifndef GASPARSE_H_
 #define GASPARSE_H_
 #define PY_SSIZE_T_CLEAN
 #include "common.h"
+#include <python3.11/Python.h>
 
 #define METRIC_SIZE(s) (s->p + s->q + s->r)
 #define MAX_GRADE(s) (s->p + s->q + s->r)
@@ -63,6 +65,13 @@ typedef struct GradeMap{ // used to map bitmap to position and grade
     Py_ssize_t size;
 }GradeMap;
 
+typedef struct GradeTable{ // For each grade stores the array of bitmaps of that grade
+    Py_ssize_t **bitmaps;
+    Py_ssize_t *grade_size; // number of basis elements by grade
+    Py_ssize_t size;
+}GradeTable;
+
+
 typedef struct DualMap{
     char *sign;
     Py_ssize_t *bitmap;
@@ -82,6 +91,7 @@ typedef struct MultivectorDefaults{
 typedef struct PyAlgebraObject{
     PyObject_HEAD
     GradeMap gm;
+    GradeTable gt;
     DualMap dm;
     CliffordMap product[ProductTypeMAX];
     Py_ssize_t p,q,r;
@@ -140,6 +150,7 @@ typedef PyMultivectorObject *(*gascalaraddfunc)(PyMultivectorObject *self, ga_fl
 
 typedef void *(*gainitfunc)(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga);
 typedef void (*gafreefunc)(void *data);
+typedef PyObject *(*gareprfunc)(void *data, PrintTypeMV ptype);
 
 typedef PyMultivectorObject *(*gamixedaddfunc)(PyMultivectorObject *left, PyMultivectorObject *right, PyMultivectorObject *defdata, int sign);
 typedef PyMultivectorObject *(*gamixedprodfunc)(PyMultivectorObject *left,PyMultivectorObject *right, PyMultivectorObject *defdata, ProductType ptype);

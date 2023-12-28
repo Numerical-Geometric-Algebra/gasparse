@@ -1,5 +1,5 @@
-#include <Python.h>
-#include <math.h>
+
+//#include <math.h>
 #include "gasparse.h"
 
 /* #include "multivector.h" */
@@ -3174,7 +3174,7 @@ Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int *
                 return -1; // raise error
             (*grades)[i] = (int)PyLong_AsLong(grade_obj);
             if((*grades)[i] > MAX_GRADE(ga)){
-                PyMem_RawFree(grades);
+                PyMem_RawFree(*grades);
                 return -1; // raise error
             }
         }
