@@ -1,4 +1,4 @@
-#include <Python.h>
+#include <python3.11/Python.h>
 #include "gasparse.h"
 
 
@@ -83,15 +83,14 @@ static BladesMultivector blades_init_(int *bitmap, ga_float *value, Py_ssize_t s
     return sparse_dense_to_blades_sparse(ssparse,ga);
 }
 
-static PyMultivectorObject* cast_to_blades(PyMultivectorObject *data, PyMultivectorObject *to){
+static int cast_to_blades(PyMultivectorObject *data, PyMultivectorObject *to){
     PyMultivectorIter *iter = init_multivector_iter(data,1);
     BladesMultivector *pblades = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivectorbyname(to,"blades");
-    if(!iter || !pblades || !out){
+    
+    if(!iter || !pblades || !to){
         free_multivector_iter(iter,1);
         PyMem_RawFree(pblades);
-        free_multivector(out);
-        return NULL;
+        return 0;
     }
 
     SparseMultivector sparse = {.size = iter->niters, .value = NULL, .bitmap = NULL};
@@ -105,9 +104,9 @@ static PyMultivectorObject* cast_to_blades(PyMultivectorObject *data, PyMultivec
     }
     *pblades = sparse_dense_to_blades_sparse(sparse,data->GA);
     sparse_free_(sparse);
-    out->data = (void*)pblades;
+    to->data = (void*)pblades;
     free_multivector_iter(iter,1);
-    return out;
+    return 1;
 }
 
 

@@ -1,6 +1,10 @@
 
 //#include <math.h>
 #include "gasparse.h"
+#include <python3.11/longobject.h>
+#include <python3.11/pyerrors.h>
+#include <python3.11/pyport.h>
+#include <python3.11/tupleobject.h>
 
 /* #include "multivector.h" */
 
@@ -256,15 +260,13 @@ static DenseMultivector dense_init_(int *bitmap, ga_float *value, Py_ssize_t siz
 }
 
 
-static PyMultivectorObject* cast_to_sparse(PyMultivectorObject *data,PyMultivectorObject *to){
+static int cast_to_sparse(PyMultivectorObject *data,PyMultivectorObject *to){
     PyMultivectorIter *iter = init_multivector_iter(data,1);
     SparseMultivector *psparse = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
-    PyMultivectorObject *out = new_multivectorbyname(to,"sparse");
-    if(!iter || !psparse || !out){
+    if(!iter || !psparse || !to){
         free_multivector_iter(iter,1);
         PyMem_RawFree(psparse);
-        free_multivector(out);
-        return NULL;
+        return 0;
     }
 
     SparseMultivector sparse = {.size = iter->niters, .value = NULL, .bitmap = NULL};
@@ -277,20 +279,18 @@ static PyMultivectorObject* cast_to_sparse(PyMultivectorObject *data,PyMultivect
         i++;
     }
     *psparse = sparse;
-    out->data = (void*)psparse;
+    to->data = (void*)psparse;
     free_multivector_iter(iter,1);
-    return out;
+    return 1;
 }
 
-static PyMultivectorObject* cast_to_dense(PyMultivectorObject *data, PyMultivectorObject *to){
+static int cast_to_dense(PyMultivectorObject *data, PyMultivectorObject *to){
     PyMultivectorIter *iter = init_multivector_iter(data,1);
     DenseMultivector *pdense = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
-    PyMultivectorObject *out = new_multivectorbyname(to,"dense");
-    if(!iter || !pdense || !out){
+    if(!iter || !pdense || !to){
         free_multivector_iter(iter,1);
         PyMem_RawFree(pdense);
-        free_multivector(out);
-        return NULL;
+        return 0;
     }
 
     DenseMultivector dense = {.size = data->GA->asize, .value = NULL};
@@ -302,20 +302,19 @@ static PyMultivectorObject* cast_to_dense(PyMultivectorObject *data, PyMultivect
         dense.value[iter->bitmap] += iter->value;
 
     *pdense = dense;
-    out->data = (void*)pdense;
+    to->data = (void*)pdense;
     free_multivector_iter(iter,1);
-    return out;
+    return 1;
 }
 
-static PyMultivectorObject* cast_to_blades(PyMultivectorObject *data, PyMultivectorObject *to){
+static int cast_to_blades(PyMultivectorObject *data, PyMultivectorObject *to){
     PyMultivectorIter *iter = init_multivector_iter(data,1);
     BladesMultivector *pblades = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
-    PyMultivectorObject *out = new_multivectorbyname(to,"blades");
-    if(!iter || !pblades || !out){
+    
+    if(!iter || !pblades || !to){
         free_multivector_iter(iter,1);
         PyMem_RawFree(pblades);
-        free_multivector(out);
-        return NULL;
+        return 0;
     }
 
     SparseMultivector sparse = {.size = iter->niters, .value = NULL, .bitmap = NULL};
@@ -329,9 +328,9 @@ static PyMultivectorObject* cast_to_blades(PyMultivectorObject *data, PyMultivec
     }
     *pblades = sparse_dense_to_blades_sparse(sparse,data->GA->gm);
     sparse_free_(sparse);
-    out->data = (void*)pblades;
+    to->data = (void*)pblades;
     free_multivector_iter(iter,1);
-    return out;
+    return 1;
 }
 
 
@@ -2747,22 +2746,37 @@ static PyMultivectorObject *atomic_mixed_product(PyMultivectorObject *data, Py_s
     return out;
 }
 
+static int binary_cast(PyMultivectorObject *data0, 
+                       PyMultivectorObject *data1,
+                       PyMultivectorObject *def,
+                       PyMultivectorObject **casted0, 
+                       PyMultivectorObject **casted1){
 
+    gacastfunc cast = def->type.data_funcs->cast;
+    
+    int c0ok,c1ok;
+    if(!cast) return 0;
+
+    *casted0 = populate_multivector_types(def->GA, def->type.type_name);
+    *casted1 = populate_multivector_types(def->GA, def->type.type_name);
+    c0ok = cast(data0,*casted0); // cast data0
+    c1ok = cast(data1,*casted1); // cast data1
+    if(!c0ok || !c1ok){
+        Py_XDECREF((void*)casted0);
+        Py_XDECREF((void*)casted1);
+        return 0;
+    }
+    return 1;
+}
  
 static PyMultivectorObject *cast_binary_mixed_add(PyMultivectorObject *data0, PyMultivectorObject *data1,PyMultivectorObject *def, int sign){
-    gacastfunc cast = def->type.data_funcs->cast;
+    
     PyMultivectorObject *casted0;
     PyMultivectorObject *casted1;
     PyMultivectorObject *out;
-    if(!cast) return NULL;
-
-    casted0 = cast(data0,def); // cast data0
-    casted1 = cast(data1,def); // cast data1
-    if(!casted0 || !casted1){
-        Py_XDECREF((void*)casted0);
-        Py_XDECREF((void*)casted1);
+    
+    if(!binary_cast(data0,data1,def,&casted0,&casted1))
         return NULL;
-    }
     out = def->type.math_funcs->add(casted0,casted1,sign);
 
     Py_XDECREF((void*)casted0);
@@ -2771,19 +2785,13 @@ static PyMultivectorObject *cast_binary_mixed_add(PyMultivectorObject *data0, Py
 }
  
 static PyMultivectorObject *cast_binary_mixed_product(PyMultivectorObject *data0, PyMultivectorObject *data1,PyMultivectorObject *def, ProductType type){
-    gacastfunc cast = def->type.data_funcs->cast;
     PyMultivectorObject *casted0;
     PyMultivectorObject *casted1;
     PyMultivectorObject *out;
-    if(!cast) return NULL;
-
-    casted0 = cast(data0,def); // cast data0
-    casted1 = cast(data1,def); // cast data1
-    if(!casted0 || !casted1){
-        Py_XDECREF((void*)casted0);
-        Py_XDECREF((void*)casted1);
+    
+    if(!binary_cast(data0,data1,def,&casted0,&casted1))
         return NULL;
-    }
+
     out = def->type.math_funcs->product(casted0,casted1,type);
 
     Py_XDECREF((void*)casted0);
@@ -2791,73 +2799,62 @@ static PyMultivectorObject *cast_binary_mixed_product(PyMultivectorObject *data0
     return out;
 }
 
- 
-
-static PyMultivectorObject *cast_atomic_mixed_add(PyMultivectorObject *data, Py_ssize_t size, PyMultivectorObject *def){
-    PyMultivectorObject *casted = (PyMultivectorObject*)PyMem_RawMalloc(size*sizeof(PyMultivectorObject));
+static int atomic_cast(PyMultivectorObject *data, Py_ssize_t size, PyMultivectorObject *def,PyMultivectorObject **casted){
+    *casted = (PyMultivectorObject*)PyMem_RawMalloc(size*sizeof(PyMultivectorObject));
     PyMultivectorObject **casted_array = (PyMultivectorObject**)PyMem_RawMalloc(size*sizeof(PyMultivectorObject*));
-    PyMultivectorObject *out;
     gacastfunc cast = def->type.data_funcs->cast;
     if(!cast) {
         PyMem_RawFree(casted_array);
-        return NULL;
+        return 0;
     }
 
     for(Py_ssize_t i = 0; i < size; i++){
-        casted_array[i] = cast(&data[i],def);
-        if(!casted_array[i]){
+        casted_array[i] = populate_multivector_types(def->GA, def->type.type_name);
+        if(!cast(&data[i],casted_array[i])){
             for(Py_ssize_t j = i; j >= 0; j--)
                 Py_XDECREF(casted_array[j]);
             PyMem_RawFree(casted_array);
             PyMem_RawFree(casted);
-            return NULL;
+            return 0;
         }
-        casted[i] = *casted_array[i];
+        
+        (*casted)[i] = *casted_array[i];
     }
 
-    out = def->type.math_funcs->atomic_add(casted,size);
-
     for(Py_ssize_t i = 0; i < size; i++)
-        Py_XDECREF(casted_array[i]);
-
+        PyMem_RawFree(casted_array[i]);
     PyMem_RawFree(casted_array);
+    return 1;
+}
+ 
+
+static PyMultivectorObject *cast_atomic_mixed_add(PyMultivectorObject *data, Py_ssize_t size, PyMultivectorObject *def){
+    PyMultivectorObject *out;
+    PyMultivectorObject *casted = NULL;
+
+    atomic_cast(data,size,def,&casted);
+    out = def->type.math_funcs->atomic_add(casted,size);
+    for(Py_ssize_t i = 0; i < size; i++)
+        free_multivector(&casted[i]);
+    
     PyMem_RawFree(casted);
     return out;
 }
  
 
 static PyMultivectorObject *cast_atomic_mixed_product(PyMultivectorObject *data, Py_ssize_t size, PyMultivectorObject *def, ProductType type){
-    PyMultivectorObject *casted = (PyMultivectorObject*)PyMem_RawMalloc(size*sizeof(PyMultivectorObject));
-    PyMultivectorObject **casted_array = (PyMultivectorObject**)PyMem_RawMalloc(size*sizeof(PyMultivectorObject*));
     PyMultivectorObject *out;
-    gacastfunc cast = def->type.data_funcs->cast;
-    if(!cast) {
-        PyMem_RawFree(casted_array);
-        return NULL;
-    }
+    PyMultivectorObject *casted = NULL;
 
-    for(Py_ssize_t i = 0; i < size; i++){
-        casted_array[i] = cast(&data[i],def);
-        if(!casted_array[i]){
-            for(Py_ssize_t j = i; j >= 0; j--)
-                Py_XDECREF(casted_array[j]);
-            PyMem_RawFree(casted_array);
-            PyMem_RawFree(casted);
-            return NULL;
-        }
-        casted[i] = *casted_array[i];
-    }
+    atomic_cast(data,size,def,&casted);
 
     out = def->type.math_funcs->atomic_product(casted,size,type);
-
     for(Py_ssize_t i = 0; i < size; i++)
-        Py_XDECREF(casted_array[i]);
-
-    PyMem_RawFree(casted_array);
+        free_multivector(&casted[i]);
+    
     PyMem_RawFree(casted);
     return out;
 }
-
 
 
 
@@ -2949,6 +2946,104 @@ static int get_scalar(PyObject *self, ga_float *value){
     return 0;
 }
 
+PyObject* multivector_list(PyMultivectorObject *self, PyObject *args, PyObject *kwds){
+    static char *kwlist[] = {"grades","bitmap",NULL};
+    PyObject *grades = NULL;
+    int *grades_int = NULL;
+    GradeTable gt = self->GA->gt;
+    PyObject *list = NULL;
+    PyObject *bitmap = NULL;
+    PyMultivectorObject *dense;
+    int as_bitmap = 0;
+    
+    if(!PyArg_ParseTupleAndKeywords(args, kwds, "|Op", kwlist, &grades,&as_bitmap))
+        return NULL;
+
+
+    // Cast to dense if the multivector is not dense
+    if(strcmp(self->type.type_name,"dense")){
+
+        dense = populate_multivector_types(self->GA,"dense");
+
+        if(!dense){
+            PyErr_SetString(PyExc_TypeError,"Error populating types table");
+            return NULL;
+        }
+        gacastfunc cast = dense->type.data_funcs->cast;
+        if(!cast){ // Check if cast  function is available
+            // Free the data0 multivector
+            free_multivector(dense);
+            PyErr_SetString(PyExc_TypeError,"cast function not available for this type");
+            return NULL;
+        }
+        
+        if(!cast(self,dense)){
+            // Free the data0 multivector
+            free_multivector(dense);
+            PyErr_SetString(PyExc_TypeError,"Error casting the multivector");
+            return NULL;
+        }
+
+    }else dense = self;
+    
+    PyMultivectorIter iter = dense->type.data_funcs->iter_init(dense);
+
+    if(grades){
+        Py_ssize_t size = parse_list_as_grades(self->GA, grades,&grades_int);
+        if(size <= 0){
+            PyErr_SetString(PyExc_TypeError, "Error parsing grades");
+            return NULL;
+        }
+        int mv_size = 0;
+        
+        for(Py_ssize_t i = 0; i < size; i++){
+            mv_size += gt.grade_size[grades_int[i]];
+        }
+        list = PyList_New(mv_size);
+        bitmap = PyList_New(mv_size);
+        
+        // Initialize list with all zeros
+        for(Py_ssize_t i = 0; i < mv_size; i++){
+            PyList_SetItem(list,i,PyFloat_FromDouble(0.0));
+        }
+        Py_ssize_t index = 0;
+        while(iter.next(&iter)){
+            for(Py_ssize_t i = 0; i < size; i++){ // iterate over all grades
+                if(iter.grade == grades_int[i]){ // check if grade in the list
+                    PyObject *value = PyFloat_FromDouble(iter.value);
+                    PyObject *bitmap_obj = PyLong_FromLong(iter.bitmap);
+                    PyList_SetItem(list,index,value);
+                    PyList_SetItem(bitmap,index,bitmap_obj);
+                    index++;
+                }
+            }
+        }
+    }else{
+        list = PyList_New(self->GA->asize);
+        bitmap = PyList_New(self->GA->asize);
+         // Initialize list with all zeros
+        for(Py_ssize_t i = 0; i < self->GA->asize; i++){
+            PyList_SetItem(list,i,PyFloat_FromDouble(0.0));
+        }
+        while(iter.next(&iter)){
+            PyObject *value = PyFloat_FromDouble(iter.value);
+            PyObject *bitmap_obj = PyLong_FromLong(iter.bitmap);
+            PyList_SetItem(list,iter.bitmap,value);
+            PyList_SetItem(bitmap,iter.bitmap,bitmap_obj);
+        }
+    }
+
+    PyObject *tuple = PyTuple_New(2);
+    PyTuple_SetItem(tuple,0,list);
+    PyTuple_SetItem(tuple,1,bitmap);
+    
+    PyMem_RawFree(iter.index);
+
+    return tuple;
+
+}
+
+/*
 PyObject* multivector_list(PyMultivectorObject *self, PyObject *Py_UNUSED(ignored)){
     PyMultivectorObject *m_object = (PyMultivectorObject*)self;
     PyObject* list = PyList_New(m_object->GA->asize);
@@ -2965,11 +3060,29 @@ PyObject* multivector_list(PyMultivectorObject *self, PyObject *Py_UNUSED(ignore
         PyList_SetItem(list,iter.bitmap,value);
     }
 
-    free(iter.index);
+    PyMem_RawFree(iter.index);
 
     return list;
-
 }
+*/
+
+PyObject* multivector_grade(PyMultivectorObject *self, PyObject *Py_UNUSED(ignored)){
+    int grade = -1;
+    PyMultivectorIter iter = self->type.data_funcs->iter_init(self);
+
+    while(iter.next(&iter)){
+        if(grade == -1)// First iteration
+            grade = iter.grade;
+        else if(grade != iter.grade){
+            PyMem_RawFree(iter.index);
+            Py_RETURN_NONE;
+        }
+    }if(grade == -1) grade = 0;
+
+    PyMem_RawFree(iter.index);
+    return PyLong_FromLong(grade);
+}
+
 
 static PyObject *multivector_product(PyObject *left, PyObject *right, ProductType ptype){
     PyMultivectorObject *data0 = NULL, *data1 = NULL, *def = NULL, *out = NULL;
@@ -3155,6 +3268,35 @@ PyObject *multivector_regressive_product(PyObject *left, PyObject *right){
     return multivector_product(left,right,ProductType_regressive);
 }
 
+PyObject *multivector_cast(PyMultivectorObject *self, PyObject *args) {
+    char *type_name = NULL;
+    PyMultivectorObject *data0;
+    if(!PyArg_ParseTuple(args, "s", &type_name))
+        return NULL;
+
+    data0 = populate_multivector_types(self->GA,type_name);
+    if(!data0){
+        PyErr_SetString(PyExc_TypeError,"Error populating types table");
+        return NULL;
+    }
+    gacastfunc cast = data0->type.data_funcs->cast;
+    if(!cast){
+        // Free the data0 multivector
+        free_multivector(data0);
+        PyErr_SetString(PyExc_TypeError,"cast function not available for this type");
+        return NULL;
+    }
+    
+    if(!cast(self,data0)){
+        // Free the data0 multivector
+        free_multivector(data0);
+        PyErr_SetString(PyExc_TypeError,"Error casting the multivector");
+        return NULL;
+    }
+    // Free the data0 multivector
+    return (PyObject*)data0;
+}
+
 Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades){
     Py_ssize_t size = -1;
     if(PyLong_Check(grades_obj)){ // check if object is an integer
@@ -3193,6 +3335,20 @@ PyObject *multivector_grade_project(PyMultivectorObject *self, PyObject *args, P
 
     size = parse_list_as_grades(self->GA,grades_obj,&grades);
     if(size <= 0) return NULL;
+
+    if(size == 1 && *grades == 0){
+        // Grade projection to the scalar grade
+        PyMultivectorIter iter = self->type.data_funcs->iter_init(self);
+        while(iter.next(&iter)){
+            if(iter.bitmap == 0){
+                PyMem_RawFree(iter.index);
+                return PyFloat_FromDouble(iter.value);
+            }
+        }
+        // If grade is not found return zero
+        PyMem_RawFree(iter.index);
+        return PyFloat_FromDouble(0.0);
+    }
 
     gaunarygradefunc grade_project = self->type.math_funcs->grade_project;
     if(grade_project){

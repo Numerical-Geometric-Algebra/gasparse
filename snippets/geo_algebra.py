@@ -36,22 +36,23 @@ def get_float(X):
     return X.list()[0]
 
 def inv(X):
-    scalar = 1/((X*~X).list()[0])
+    #scalar = 1/((X*~X).list()[0])
+    scalar = 1/(X*~X)(0)
     return X*scalar
 
 def normalize(X):
-    scalar = 1/np.sqrt((X*~X).list()[0])
+    scalar = 1/np.sqrt((X*~X)(0))
     return X*scalar
 
 # generate random bivector
 def rdn_biv():
-    return ga.multivector(list(np.random.rand(10)),blades = bivectors)
+    return ga.multivector(list(np.random.rand(10)),basis=bivectors)
 
 def rdn_vanilla_vec():
-    return ga.multivector(list(np.random.rand(3)-three_ones),blades = vanilla_vecs)
+    return ga.multivector(list(np.random.rand(3)-three_ones),basis=vanilla_vecs)
 
 def rdn_multivector():
-    return ga.multivector(list(np.random.rand(32)),blades=list(blades.keys()))
+    return ga.multivector(list(np.random.rand(32)),basis=list(blades.keys()))
 
 def rdn_rotor():
     a = normalize(rdn_vanilla_vec())
@@ -79,12 +80,12 @@ def get_coeffs(X):
 def sqrt_rotor(e,u):
     e = normalize(e)
     u = normalize(u)
-    scalar = 1/np.sqrt(get_float(e|u) + 1)
+    scalar = 1/np.sqrt((e|u)(0) + 1)
     return (1/np.sqrt(2))*scalar*(e*u + 1)
 
 
 def mag(X):
-    return ((X*~X).list()[0])
+    return (X*~X)(0)
 
 def dist(X,Y):
     A,B,C,D = get_coeffs(X-Y)
@@ -120,7 +121,7 @@ def proj_perp(B,X):
 
 
 def rotor_sqrt(R):
-    theta = np.arccos(get_float(R(0)))
+    theta = np.arccos(R(0))
     B = normalize(R(2))
     return np.cos(theta/2) + B*np.sin(theta/2)
 
@@ -129,7 +130,7 @@ eps = 1E-10
 # Normalizes all types of multivectors
 # Ignores almost null multivectors
 def normalize_null(X):
-    magnitude = np.sqrt(abs((X*~X).list()[0])) 
+    magnitude = np.sqrt(abs((X*~X)(0)))
     scalar = 1
     if magnitude < eps:
         if abs(pos_cga_dist(X,X) - magnitude) < eps/2:
@@ -164,7 +165,7 @@ def point_convolution(X_lst,s,gamma,f):
         vec_i = normalize(X_lst[i])
         for j in range(len(X_lst)):
             if i != j:
-                scalar = get_float(vec_i|normalize(X_lst[j]))
+                scalar = (vec_i|normalize(X_lst[j]))(0)
                 theta = np.arccos(scalar)
                 magnitude = np.sqrt(mag(X_lst[i] - X_lst[j]))
                 out_scalars[i] += np.exp(-s*magnitude**gamma)*np.exp(f*1j*theta)
@@ -178,7 +179,7 @@ def exp_corrs(X_lst,Y_lst,s,gamma,f):
 
 def rdn_gaussian_vec(mu,sigma):
     s = np.random.normal(mu, sigma, 3)
-    return ga.multivector(list(s),blades = vanilla_vecs)
+    return ga.multivector(list(s),basis = vanilla_vecs)
 
 
 def generate_rdn_PC(m):
@@ -236,7 +237,7 @@ def transform(f_list,p_lst):
     for k in range(len(f_list)):
         F_transform[k] = 0
         for i in range(len(prods)):
-            scalar = get_float(prods[i])*2*np.pi*f_list[k]
+            scalar = (prods[i](0))*2*np.pi*f_list[k]
             F_transform[k] += (prods[i](2))*(np.cos(scalar) + ii*np.sin(scalar))
 
     return F_transform
@@ -244,7 +245,7 @@ def transform(f_list,p_lst):
 def exp(X):
     # To do this computation we are assuming 
     # that X is simple and of unique grade
-    s = get_float(X|X)
+    s = (X|X)(0)
     if abs(s) < eps:
         # consider a null multivector
         return 1 + X
@@ -320,7 +321,7 @@ def estimate_rot(p_lst,q_lst):
             
         for i in range(4):
             for j in range(4):
-                beta_matrix[i][j] += get_float(Func(basis_rotor[i])*(~basis_rotor[j]))
+                beta_matrix[i][j] += (Func(basis_rotor[i])*(~basis_rotor[j]))(0)
 
     eigenvalues, eigenvectors = np.linalg.eig(beta_matrix)
     u = eigenvectors[:,np.argmax(eigenvalues)]# eigenvectors are column vectors
@@ -350,7 +351,7 @@ def estimate_rbm(P_lst,Q_lst):
             
         for i in range(4):
             for j in range(4):
-                beta_matrix[i][j] += get_float(F(basis_rotor[i])*(~basis_rotor[j]))
+                beta_matrix[i][j] += (F(basis_rotor[i])*(~basis_rotor[j]))(0)
         
     eigenvalues, eigenvectors = np.linalg.eig(beta_matrix)
     R_est = 0
@@ -423,7 +424,7 @@ def eigen_decomp(F,basis,rec_basis):
 
     for i in range(len(basis)):
         for j in range(len(basis)):
-            beta[i][j] += get_float(F(basis[i])*(rec_basis[j]))
+            beta[i][j] += (F(basis[i])*(rec_basis[j]))(0)
 
     eigenvalues, eigenvectors = np.linalg.eig(beta.T)
     Y = [0]*len(eigenvalues)
@@ -451,7 +452,7 @@ def estimate_rot_SVD(p_lst,q_lst):
 
         for j in range(len(basis_vecs)):
             for k in range(len(basis_vecs)):
-                matrix[j][k] += get_float(f(basis_vecs[j])|basis_vecs[k])
+                matrix[j][k] += (f(basis_vecs[j])|basis_vecs[k])(0)
 
     U, S, V = np.linalg.svd(matrix, full_matrices=True)
     M = np.array([[1,0,0],
@@ -470,7 +471,7 @@ def estimate_rot_SVD(p_lst,q_lst):
     cos_theta = (np.trace(rot_matrix) - 1)/2
     sin_theta = -np.trace(Kn@rot_matrix)/2
 
-    ga_vec = ga.multivector(list(u),blades = vanilla_vecs)
+    ga_vec = ga.multivector(list(u),basis = vanilla_vecs)
     rotor = cos_theta + I*ga_vec*sin_theta
 
     return rotor_sqrt(rotor)

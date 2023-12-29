@@ -2,42 +2,83 @@
 
 Creating a python library to do computations using sparse representation of multivectors.
 
+## DONE
+
+- Initialize multivector via:
+  - A given basis (multivector or string)
+  ```python
+  x = ga.multivector([1,23,4,4],[1.0,e1,e2,e12])
+  y = ga.multivector([1,23,4,4],['e','e1','e2','e12'])
+  ```
+  
+  - A given list of grades or a single grade
+  ```python
+  u = ga.multivector([-1,1,2,3],grades=[0,2])
+  v = ga.multivector([1,2,3],grades=2)
+  ```
+  
+  - Nothing (Considers all basis elements)
+  ```python
+  z = ga.multivector([1,2,3,4,5,6,7,8])
+  ```
+  Note that the values can be either integer or float. (Everything gets cast to `ga_float`.)
+- Function that returns sizes:
+  - For each grade `ga.size(2)`
+  - For multiple grades `ga.size([1,2])`
+  - For the whole algebra (empty argument) `ga.size()`
+
+- Zero grade projection now outputs objects of type float instead of `gasparse.multivector`
+- The user can now use `x.grade()` to get the grade of a multivector if it has multiple grades then it returns `None`
+
+- The function list accepts grades as input, can be a single integer or a list 
+```python
+values,bitmaps = x.list([0,1]) # returns grades zero and one
+values,bitmaps = x.list() # returns all elements
+```
+The first variable of the output are the values atributed to each basis, the second are the bitmaps that indicates the basis (Maybe it would be better if it where a basis in a multivector type), 
+
+### Coding Strategy
+1. Set errror strings only in the outermost call (the first function that is called from python)
+
 ## TODO
 
-1. Read and Write Multivectors by grade
+1. $\checkmark$ Scalars should output as floats and not as gasparse.multivector objects
+1. $\checkmark$ Function to check grade (return `-1` or `None` if it isnt of unique grade)
+
+1. $\checkmark$ Read and Write Multivectors by grade
    
    - [ ] Read/write without defining basis (just defining grade)
    - [ ] Read/write in some basis (can be given as string or as an arbitrary basis in some algebra)
      - [ ] Might need to compute the reciprocal basis (or give that basis as input)
    - [ ] Option to also output the basis as bitmap or as the basis of those grades of that algebra
      - [ ] The basis can be multivectors, or positive integers (bitmaps)
-2. Scalars should output as floats and not as gasparse.multivector objects
-3. Change the value for which multivectors get converted to zero. Should be an option when generating the algebra (epsilon)
-4. Function to check grade (return `-1` or `None` if it isnt of unique grade)
-5. Numpy integration
+3. Return multivectors in a list by a specified grade
+4. Change the value for which multivectors get converted to zero. Should be an option when generating the algebra (epsilon)
+1. Implement cast to some algebra (Add the option to project to that algebra)
+6. Numpy integration
    
    - [ ] Read numpy arrays
    - [ ] Generate random multivectors by grade or by given basis
    - [ ] Numpy Array to array of multivectors (by a given basis, by grade or by all elements of the algebra)
    - [ ] Output multivectors as a numpy array by grade (also output basis, consider a basis as input)
-6. Do the same but also with lists of lists
-7. Give the option to compile the code without the zero value checking (checking if it is close to zero)
-8. Write code to retrieve multivectors as lists
+7. Do the same but also with lists of lists
+8. Give the option to compile the code without the zero value checking (checking if it is close to zero)
+9. Write code to retrieve multivectors as lists
    
    - [ ] Multivectors by grade
    - [ ] Also output bitmap
    - [ ] Convert data to and from numpy
    - [ ] Convert multilinear and linear transformations into matrices
-9. Implement grade involution (Important for reflection)
-10. Implement integer powers of multivectors
-11. Print multivectors by grade
-12. Generate multivector
+10. Implement grade involution (Important for reflection)
+11. Implement integer powers of multivectors
+12. Print multivectors by grade
+13. Generate multivector
     
     - [ ] Random by grade
     - [ ] From any list
     - [ ] Multiple grade selection from multivectors
-13. Multivector arrays!!!!!!
-14. Implement the geometric product in all data representations in **C**
+14. Multivector arrays!!!!!!
+15. Implement the geometric product in all data representations in **C**
     
     - [ ] Data type conversions
       + [x] sparse to grade sparse
@@ -47,24 +88,23 @@ Creating a python library to do computations using sparse representation of mult
     - [x] geometric product dense
       + [x] Direct mapping
       + [x] Inverse mapping
-15. Implement grades selection for each data type $\langle y\rangle_{j_1,j_2,\dots}$
+16. Implement grades selection for each data type $\langle y\rangle_{j_1,j_2,\dots}$
     
     + [x] dense
     + [x] sparse
     + [x] grade-sparse
-16. $\checkmark$ Implement the general product
-17. $\checkmark$ Implement sum for each type (still need to test):
+17. $\checkmark$ Implement the general product
+18. $\checkmark$ Implement sum for each type (still need to test):
     
     + [x] append
     + [x] add
-18. $\checkmark$ Generate tables for the outer and inner products
-19. Implement einsum where the product is some specified product (see [general product]("general product"))
-20. Use jinja to generate code for different types of values
-21. Implement the above in **CUDA**
-22. Create a python extension from the **C** and **CUDA** code
-23. Integrate this library into pytorch
-
-1. Compilar para diferentes versoes de python
+19. $\checkmark$ Generate tables for the outer and inner products
+20. Implement einsum where the product is some specified product (see [general product]("general product"))
+21. Use jinja to generate code for different types of values
+22. Implement the above in **CUDA**
+23. Create a python extension from the **C** and **CUDA** code
+24. Integrate this library into pytorch
+25. Compilar para diferentes versoes de python
 
 ### Other operations:
 

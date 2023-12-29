@@ -1,7 +1,7 @@
 from geo_algebra import *
 
 '''
-This snippet describes code to determine the rigid body motion between two noise Point Clouds
+This snippet describes code to determine the rigid body motion between two noisy Point Clouds
 To be robust to noise it first solves two eigenvalue problems stated in a multivector space
 that is it finds the eigenmultivector of F(X) = pi*X*pi and G(X) = qi*X*qi. Then it orders the 
 eigenmultivectors by magnitude of the absolute value. Before using the eigenmultivectors we correct 
@@ -32,7 +32,7 @@ def orient_multivectors(X_lst,Xv,Xb):
 
 m_points = 1000
 mu = 0
-sigma = 0
+sigma = 0.1
 
 x_lst = generate_rdn_PC(m_points)
 theta = 100*np.pi/180

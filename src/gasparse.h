@@ -107,7 +107,7 @@ typedef struct PyAlgebraObject{
 }_PyAlgebraObject;
 
 
-
+PyMultivectorObject *populate_multivector_types(PyAlgebraObject *self, char *dtype_str);
 typedef int (*gaiternextfunc)(PyMultivectorIter *iter);
 typedef PyMultivectorIter (*gaiterinitfunc)(PyMultivectorObject *data);
 typedef struct PyMultivectorIter{
@@ -143,11 +143,11 @@ typedef PyMultivectorObject *(*gaternaryprodfunc)(PyMultivectorObject *data0,PyM
 typedef PyMultivectorObject *(*gaunaryfunc)(PyMultivectorObject *self);
 typedef PyMultivectorObject *(*gaatomicfunc)(PyMultivectorObject *data, Py_ssize_t size);
 typedef PyMultivectorObject *(*gaatomicprodfunc)(PyMultivectorObject *data, Py_ssize_t size,ProductType ptype);
-typedef PyMultivectorObject *(*gacastfunc)(PyMultivectorObject *from, PyMultivectorObject *to);
 typedef PyMultivectorObject *(*gabinarygradefunc)(PyMultivectorObject *left, PyMultivectorObject *right, ProductType ptype, GradeProjectMap gpmap);
 typedef PyMultivectorObject *(*gascalarfunc)(PyMultivectorObject *self, ga_float value);
 typedef PyMultivectorObject *(*gascalaraddfunc)(PyMultivectorObject *self, ga_float value, int sign);
 
+typedef int (*gacastfunc)(PyMultivectorObject *from, PyMultivectorObject *to);
 typedef void *(*gainitfunc)(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga);
 typedef void (*gafreefunc)(void *data);
 typedef PyObject *(*gareprfunc)(void *data, PrintTypeMV ptype);
@@ -267,7 +267,9 @@ PyObject* multivector_exponential(PyObject *self, PyObject *args);
 // other methods
 PyObject* multivector_dual(PyMultivectorObject *self, PyObject *args);
 PyObject* multivector_undual(PyMultivectorObject *self, PyObject *args);
-PyObject* multivector_list(PyMultivectorObject *self, PyObject *args);
+PyObject* multivector_list(PyMultivectorObject *self, PyObject *args, PyObject *kwds);
+PyObject* multivector_grade(PyMultivectorObject *self, PyObject *args);
+PyObject *multivector_cast(PyMultivectorObject *self, PyObject *args);
 
 // TYPE methods
 int comp_abs(ga_float v, ga_float p);
@@ -284,6 +286,7 @@ void sparse_remove_small(SparseMultivector y, ga_float precision, Py_ssize_t *si
 SparseMultivector sparse_dense_to_sparse_sparse(SparseMultivector dense, Py_ssize_t size);
 Py_ssize_t* get_grade_bool(int *grades, Py_ssize_t size, Py_ssize_t n_grades);
 char *bitmap_to_string(int bitmap);
+int get_multivector_basis(PyAlgebraObject *self, PyObject *grades, PyMultivectorObject ***multivectors, Py_ssize_t *mvsize);
 
 PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ssize_t size);
 void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size);
