@@ -2,6 +2,7 @@
 //#include <math.h>
 #include "gasparse.h"
 #include <python3.11/longobject.h>
+#include <python3.11/object.h>
 #include <python3.11/pyerrors.h>
 #include <python3.11/pyport.h>
 #include <python3.11/tupleobject.h>
@@ -2950,15 +2951,16 @@ PyObject* multivector_list(PyMultivectorObject *self, PyObject *args, PyObject *
     static char *kwlist[] = {"grades","bitmap",NULL};
     PyObject *grades = NULL;
     int *grades_int = NULL;
-    GradeTable gt = self->GA->gt;
     PyObject *list = NULL;
     PyObject *bitmap = NULL;
     PyMultivectorObject *dense;
+	Py_ssize_t *grade_bool = NULL;
+	Py_ssize_t size;
+
     int as_bitmap = 0;
     
     if(!PyArg_ParseTupleAndKeywords(args, kwds, "|Op", kwlist, &grades,&as_bitmap))
         return NULL;
-
 
     // Cast to dense if the multivector is not dense
     if(strcmp(self->type.type_name,"dense")){
@@ -2986,85 +2988,68 @@ PyObject* multivector_list(PyMultivectorObject *self, PyObject *args, PyObject *
 
     }else dense = self;
     
-    PyMultivectorIter iter = dense->type.data_funcs->iter_init(dense);
-
     if(grades){
-        Py_ssize_t size = parse_list_as_grades(self->GA, grades,&grades_int);
+        size = parse_list_as_grades(self->GA, grades,&grades_int);
         if(size <= 0){
             PyErr_SetString(PyExc_TypeError, "Error parsing grades");
             return NULL;
         }
-        int mv_size = 0;
+
+		grade_bool = get_grade_bool(grades_int, size, MAX_GRADE(self->GA) + 1);
         
-        for(Py_ssize_t i = 0; i < size; i++){
-            mv_size += gt.grade_size[grades_int[i]];
-        }
-        list = PyList_New(mv_size);
-        bitmap = PyList_New(mv_size);
-        
-        // Initialize list with all zeros
-        for(Py_ssize_t i = 0; i < mv_size; i++){
-            PyList_SetItem(list,i,PyFloat_FromDouble(0.0));
-        }
-        Py_ssize_t index = 0;
-        while(iter.next(&iter)){
-            for(Py_ssize_t i = 0; i < size; i++){ // iterate over all grades
-                if(iter.grade == grades_int[i]){ // check if grade in the list
-                    PyObject *value = PyFloat_FromDouble(iter.value);
-                    PyObject *bitmap_obj = PyLong_FromLong(iter.bitmap);
-                    PyList_SetItem(list,index,value);
-                    PyList_SetItem(bitmap,index,bitmap_obj);
-                    index++;
-                }
-            }
-        }
+		size = self->GA->asize;
+    	Py_ssize_t psize = 0;
+    	for (Py_ssize_t i = 0; i < size; i++) {
+      		if (grade_bool[GRADE(i)])
+        		psize++;
+    	}
+		size = psize;
     }else{
-        list = PyList_New(self->GA->asize);
-        bitmap = PyList_New(self->GA->asize);
-         // Initialize list with all zeros
-        for(Py_ssize_t i = 0; i < self->GA->asize; i++){
-            PyList_SetItem(list,i,PyFloat_FromDouble(0.0));
-        }
-        while(iter.next(&iter)){
-            PyObject *value = PyFloat_FromDouble(iter.value);
-            PyObject *bitmap_obj = PyLong_FromLong(iter.bitmap);
-            PyList_SetItem(list,iter.bitmap,value);
-            PyList_SetItem(bitmap,iter.bitmap,bitmap_obj);
-        }
+        grade_bool  = (Py_ssize_t*)PyMem_RawMalloc((MAX_GRADE(self->GA) +1)*sizeof(Py_ssize_t));
+		for(Py_ssize_t i = 0; i < MAX_GRADE(self->GA) +1; i++) 
+			grade_bool[i] = 1;
+		size = self->GA->asize;
     }
+
+	list = PyList_New(size);
+    bitmap = PyList_New(size);
+
+	DenseMultivector dense_data = *((DenseMultivector*)dense->data);
+	Py_ssize_t j = 0;
+	ga_float basis_value = 1;
+	for(int i = 0; i < dense_data.size ; i++){
+		if(grade_bool[GRADE(i)] && j < size){
+			PyObject *value = PyFloat_FromDouble(dense_data.value[i]);
+			PyList_SetItem(list,j,value);
+			if(as_bitmap){
+				PyObject *bitmap_obj = PyLong_FromLong(i);
+            	PyList_SetItem(bitmap,j,bitmap_obj);
+			}else{
+				PyMultivectorObject *mv = populate_multivector_types(self->GA,self->type.type_name);
+				if(!mv){
+					// free memory
+					Py_XDECREF(list);
+					Py_XDECREF(bitmap);
+					PyErr_SetString(PyExc_TypeError, "Cannot populate the types");
+					return NULL; 
+				}
+				gainitfunc init = mv->type.data_funcs->init;
+				mv->data = init(&i,&basis_value,1,self->GA);
+				PyList_SetItem(bitmap,j,(PyObject*)mv);
+			}
+			j++;
+		}else if (j > size) {
+        	break;
+      	}
+	}
 
     PyObject *tuple = PyTuple_New(2);
     PyTuple_SetItem(tuple,0,list);
     PyTuple_SetItem(tuple,1,bitmap);
-    
-    PyMem_RawFree(iter.index);
+	PyMem_RawFree(grade_bool);
 
     return tuple;
-
 }
-
-/*
-PyObject* multivector_list(PyMultivectorObject *self, PyObject *Py_UNUSED(ignored)){
-    PyMultivectorObject *m_object = (PyMultivectorObject*)self;
-    PyObject* list = PyList_New(m_object->GA->asize);
-
-    PyMultivectorIter iter = m_object->type.data_funcs->iter_init(m_object);
-    
-    // Initialize list with all zeros
-    for(Py_ssize_t i = 0; i < m_object->GA->asize; i++){
-        PyList_SetItem(list,i,PyFloat_FromDouble(0.0));
-    }
-
-    while(iter.next(&iter)){
-        PyObject *value = PyFloat_FromDouble(iter.value);
-        PyList_SetItem(list,iter.bitmap,value);
-    }
-
-    PyMem_RawFree(iter.index);
-
-    return list;
-}
-*/
 
 PyObject* multivector_grade(PyMultivectorObject *self, PyObject *Py_UNUSED(ignored)){
     int grade = -1;

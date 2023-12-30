@@ -5,38 +5,20 @@ from gasparse import multivector
 from sympy import poly, nroots
 from sympy.abc import x
 
-vga = gasparse.GA(3,0)
+vga = gasparse.GA(3)
+cga = gasparse.GA(4,1) # Use 3D conformal geometric algebra
+basis = cga.basis()
+locals().update(basis) # Update all of the basis blades variables into the environment
 
 
-ga = gasparse.GA(4,1) # Use 3D conformal geometric algebra
-blades = ga.blades()
-#locals().update(blades) # Update all of the blades variables into the environment
+# compute the cga null basis
+einf = (1.0*e5 - 1.0*e4)*(1/np.sqrt(2))
+eo = (1.0*e5 + 1.0*e4)*(1/np.sqrt(2))
 
-bivectors = ['e12','e13','e14','e15','e23','e24','e25','e34','e35','e45']
-vanilla_vecs = ['e1','e2','e3']
-
-
-e1 = blades['e1']
-e2 = blades['e2']
-e3 = blades['e3']
-
-e12 = blades['e12']
-e13 = blades['e13']
-e23 = blades['e23']
-
-
-einf = (1.0*blades['e5'] - 1.0*blades['e4'])*(1/np.sqrt(2))
-eo = (1.0*blades['e5'] + 1.0*blades['e4'])*(1/np.sqrt(2))
-
-I = blades['e1']*blades['e2']*blades['e3']
+I = e1*e2*e3
 ii = I*(eo^einf)
-three_ones = 0.5*np.ones([3])
-
-def get_float(X):
-    return X.list()[0]
 
 def inv(X):
-    #scalar = 1/((X*~X).list()[0])
     scalar = 1/(X*~X)(0)
     return X*scalar
 
@@ -44,15 +26,22 @@ def normalize(X):
     scalar = 1/np.sqrt((X*~X)(0))
     return X*scalar
 
-# generate random bivector
+def rdn_kvector(ga,grade):
+    size = ga.size(grade)
+    ones = 0.5*np.ones([size])
+    return ga.multivector(list(np.random.rand(size) - ones),grades=grade)
+
+# generate random cga bivector
 def rdn_biv():
-    return ga.multivector(list(np.random.rand(10)),basis=bivectors)
+    return cga.multivector(list(np.random.rand(cga.size(2)) - 0.5*np.ones([cga.size(2)])),grades=2)
 
+# generate random vga vector
 def rdn_vanilla_vec():
-    return ga.multivector(list(np.random.rand(3)-three_ones),basis=vanilla_vecs)
+    return vga.multivector(list(np.random.rand(vga.size(2))-0.5*np.ones([vga.size(2)])),grades=1)
 
+# generate random cga vector
 def rdn_multivector():
-    return ga.multivector(list(np.random.rand(32)),basis=list(blades.keys()))
+    return cga.multivector(list(np.random.rand(cga.size()) -0.5*np.ones([cga.size()])))
 
 def rdn_rotor():
     a = normalize(rdn_vanilla_vec())
@@ -179,7 +168,7 @@ def exp_corrs(X_lst,Y_lst,s,gamma,f):
 
 def rdn_gaussian_vec(mu,sigma):
     s = np.random.normal(mu, sigma, 3)
-    return ga.multivector(list(s),basis = vanilla_vecs)
+    return vga.multivector(list(s),grades=1)
 
 
 def generate_rdn_PC(m):
@@ -340,7 +329,7 @@ def estimate_rbm(P_lst,Q_lst):
     # The optimal rotation and translation
     beta_matrix = np.zeros([4,4])
 
-    basis_rotor = [blades['e'],e12,e13,e23]
+    basis_rotor = [e,e12,e13,e23]
 
     for k in range(len(P_lst)):
         A,B,C,D = get_coeffs(P_lst[k])
@@ -401,7 +390,7 @@ def mv_list_mean(X_lst):
 
 def reciprocal_blades_cga(basis):
     rec_basis = [0]*len(basis) # reciprocal basis blades
-    sigma = blades['e5']
+    sigma = e5
     for i in range(len(basis)):
         rec_basis[i] = -sigma*~grade_involution(basis[i])*sigma
     return rec_basis
@@ -471,7 +460,7 @@ def estimate_rot_SVD(p_lst,q_lst):
     cos_theta = (np.trace(rot_matrix) - 1)/2
     sin_theta = -np.trace(Kn@rot_matrix)/2
 
-    ga_vec = ga.multivector(list(u),basis = vanilla_vecs)
+    ga_vec = vga.multivector(list(u),grade=1)
     rotor = cos_theta + I*ga_vec*sin_theta
 
     return rotor_sqrt(rotor)

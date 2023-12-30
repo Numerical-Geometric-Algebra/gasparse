@@ -22,7 +22,7 @@ def orient_multivectors(X_lst,Xv,Xb):
 
     for i in range(len(X_lst)):
         X = X_lst[i]
-        scalar = get_float(X(1)*Xv) + get_float(X(2)*Xb)
+        scalar = (X(1)*Xv)(0) + (X(2)*Xb)(0)
         if scalar == 0:
             scalar = 1
         else:
@@ -49,7 +49,7 @@ q_reorder = q_lst[0]
 q_lst[0] = q_lst[1]
 q_lst[1] = q_reorder
 
-cga_basis = list(ga.blades(grades=[1,2]).values())
+cga_basis = list(cga.basis(grades=[1,2]).values())
 
 def get_func(X_lst):    
     def F(Y):
@@ -88,7 +88,7 @@ Q_est_oriented = trans_list(P_oriented,T*R)
 T_est,R_est = estimate_rbm(P_oriented,Q_oriented)
 
 print("Angle Error")
-print(np.arccos(get_float(R_est*~R))/np.pi*360)
+print(np.arccos((R_est*~R)(0))/np.pi*360)
 
 '''
 # The eigenmultivectors are orthogonal and they are also blades

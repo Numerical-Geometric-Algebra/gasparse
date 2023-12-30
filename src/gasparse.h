@@ -286,7 +286,7 @@ void sparse_remove_small(SparseMultivector y, ga_float precision, Py_ssize_t *si
 SparseMultivector sparse_dense_to_sparse_sparse(SparseMultivector dense, Py_ssize_t size);
 Py_ssize_t* get_grade_bool(int *grades, Py_ssize_t size, Py_ssize_t n_grades);
 char *bitmap_to_string(int bitmap);
-int get_multivector_basis(PyAlgebraObject *self, PyObject *grades, PyMultivectorObject ***multivectors, Py_ssize_t *mvsize);
+int get_multivector_basis(PyAlgebraObject *self, PyObject *grades, PyMultivectorObject ***multivectors, ga_float **values, Py_ssize_t *mvsize);
 
 PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ssize_t size);
 void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size);

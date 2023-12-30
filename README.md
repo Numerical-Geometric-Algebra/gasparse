@@ -4,6 +4,34 @@ Creating a python library to do computations using sparse representation of mult
 
 ## DONE
 
+- Create a geometric algebra via p,q,r, or via a metric
+```python
+vga = gasparse.GA(3)
+cga = gasparse.GA(4,1) 
+cga = gasparse.GA(metric=[-1,1,1,1,1]) 
+ga = gasparse.GA(p=2,q=3,r=4)
+```
+  - The order of the basis are:
+    1. `p` positive basis vectors
+    2. `q` negative basis vectors
+    3. `r` null basis vectors
+
+Note that the last two lines generate the same algebra yet the symbols represent different basis, as such they are not compatible. Furthermore the last line is not compatible with the vga algebra, since the first basis element is negative. Note that the following will result in an **error**:
+```python
+vga = gasparse.GA(3)
+cga = gasparse.GA(metric=[-1,1,1,1,1])
+t = cga.multivector([1,2,3,4,5],grades=1)
+y = vga.multivector([1,2,3],grades=1)
+z = t + y
+```
+
+- Initialize a basis
+```python
+basis = cga.basis()
+locals().update(basis) # Update all of the basis blades variables into the environment
+```
+The basis will be available as `e1`, `e2`,..., `e12`,...,`e12345`. 
+
 - Initialize multivector via:
   - A given basis (multivector or string)
   ```python
@@ -21,7 +49,17 @@ Creating a python library to do computations using sparse representation of mult
   ```python
   z = ga.multivector([1,2,3,4,5,6,7,8])
   ```
-  Note that the values can be either integer or float. (Everything gets cast to `ga_float`.)
+  - The user can also initialize the multivector in a some chosen type
+  ```python
+  x = ga.multivector([1,23,4,4],[1.0,e1,e2,e12],dtype='dense')
+  ```
+  - When the user wants all multivectors to be of the dense type then he can use the `ga.default` methods as: 
+  ```python
+  ga.default("dense")
+  x = ga.multivector([1,23,4,4],[1.0,e1,e2,e12]) # This will be of type dense
+  ```
+
+  Note that the values for the `ga.multivector` function can be either integer or float. (Everything gets cast to `ga_float`.)
 - Function that returns sizes:
   - For each grade `ga.size(2)`
   - For multiple grades `ga.size([1,2])`
@@ -32,16 +70,69 @@ Creating a python library to do computations using sparse representation of mult
 
 - The function list accepts grades as input, can be a single integer or a list 
 ```python
-values,bitmaps = x.list([0,1]) # returns grades zero and one
-values,bitmaps = x.list() # returns all elements
+values,basis = x.list([0,1]) # returns grades zero and one
+values,basis = x.list() # returns all elements
+values,basis = x.list(1) # returns grade one with a list of the multivector basis
 ```
-The first variable of the output are the values atributed to each basis, the second are the bitmaps that indicates the basis (Maybe it would be better if it where a basis in a multivector type), 
+The first variable of the output are the values atributed to each basis, the second are the bitmaps that indicates the basis, the basis bitmaps can be chosen to be bitmaps or multivectors (in the later  case the basis is of the same dtype as `x`)
+
+- Get the size of the algebra or the size of each grade
+```python
+ga.size() # gets the algebra size
+ga.size(2) # Gets the size of the bivector basis
+ga.size([1,2]) # Gets the sum of the size of  grade one and grade two
+```
+
+- All the operations defined in a geometric algebra are available, given two multivectors x and y in compatible algebras we can write
+```python
+x*y # geometric product
+x|y # Inner product
+x^y # wedge product
+x&y # Regressive product
+x+y # Addition
+x-y # subtraction
+a*x # scalar multiplication
+~x # multivector reverse
+x(g) # projection to grade g
+x([g1,g2]) # projection to grades g1 and g2
+```
+Note that the division `/` operator is not defined since for general multivectors is not simple to compute. Instead for homogeneous multivectors we consider the operation
+```python
+(1/((x*~x)(0)))*x
+```
+(Maybe add the option to be able to divide by scalars...)
+
+- Get the grade of a multivector
+```python
+x.grade()
+```
+Returns `None` if it is not of unique grade.
+
+- Compute the dual and undual of a multivector
+```python
+y = x.dual()
+z = y.undual()
+```
+It is the same as multiplying by the unit pseudoscalar when in a non-null metric. When we have a null basis element the dual is defined in a different way (expalain further...).
+
+  - Atomic operations....
+  - Code generated types...
+  - Casting to another type/algebra...
+    - The user can cast a multivector to some other type
+    ```python
+    x = ga.multivector([1,23,4,4],[1.0,e1,e2,e12],dtype='dense')
+    y = x.cast("sparse")
+    ```
+    Note that casting from the dense type will not remove the basis elements which are zero. If the user wants to get rid of the zeros he can use `y *= 1` or just `y = 1*x.cast("sparse")`.
+
+
 
 ### Coding Strategy
 1. Set errror strings only in the outermost call (the first function that is called from python)
-
+Still trying to averiguate the best strategy for error setting...
 ## TODO
-
+1. Test mixed type operations involving the generated code
+1. Test the cast function
 1. $\checkmark$ Scalars should output as floats and not as gasparse.multivector objects
 1. $\checkmark$ Function to check grade (return `-1` or `None` if it isnt of unique grade)
 
