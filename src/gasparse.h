@@ -107,7 +107,6 @@ typedef struct PyAlgebraObject{
 }_PyAlgebraObject;
 
 
-PyMultivectorObject *populate_multivector_types(PyAlgebraObject *self, char *dtype_str);
 typedef int (*gaiternextfunc)(PyMultivectorIter *iter);
 typedef PyMultivectorIter (*gaiterinitfunc)(PyMultivectorObject *data);
 typedef struct PyMultivectorIter{
@@ -241,8 +240,15 @@ typedef struct DenseMultivector{
     Py_ssize_t size;
 }DenseMultivector;
 
-PyMultivectorObject *new_multivectorbyname(PyMultivectorObject *old, char *name);
-void free_multivector(PyMultivectorObject *self);
+//PyMultivectorObject *new_multivectorbyname(PyMultivectorObject *old, char *name);
+PyMultivectorObject *new_multivector(PyAlgebraObject *ga, char *type);
+PyMultivectorObject *alloc_multivector(PyAlgebraObject *ga);
+PyMultivectorObject *new_multivector_inherit_type(PyMultivectorObject *mv);
+int get_multivector_type_table(PyAlgebraObject *ga, char *name, PyMultivectorSubType *subtype);
+int check_multivector_mixed_type_table(PyMultivectorObject *mv, char *name);
+
+//void free_multivector(PyMultivectorObject *self);
+void free_multivector_data(PyMultivectorObject self);
 PyMultivectorObject *init_multivector(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga, PyTypeObject *obj_type, int type);
 
 // type methods

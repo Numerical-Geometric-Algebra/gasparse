@@ -125,16 +125,44 @@ It is the same as multiplying by the unit pseudoscalar when in a non-null metric
     ```
     Note that casting from the dense type will not remove the basis elements which are zero. If the user wants to get rid of the zeros he can use `y *= 1` or just `y = 1*x.cast("sparse")`.
 
+For the code generated algebras we have two types the `dense` and the `blades`. The key difference is in their internal representations. Both types are dense representations of a multivector. To use a specific type the user can call `y = x.cast('blades')` or using the equivalent for the other types such exemplified previously. The user cannot use the cast function to cast multivectors between different algebras in order to do that we will make available `ga.cast` which casts a multivector to the algebra ga.
+
 
 
 ### Coding Strategy
 1. Set errror strings only in the outermost call (the first function that is called from python)
 Still trying to averiguate the best strategy for error setting...
+
+### Usefull Commands
+- Leak check:
+  `valgrind --leak-check=full --tool=memcheck --suppressions=valgrind-python.supp python3 -E snippets/leak_check_script.py`
+- Debug python code with gdb
+  `gdb -ex r --args python3 snippets/test_template_gen.py`
+
+- Generate code and compile
+```shell
+cd sparse-multivectors
+python3 code_gen.py # Run if a change in multivector.c.src is made
+python3 code_gen_large.py # Run if a change in multivector_large.c.src is made
+python3 genalgebra.py # Run if added a new algebra or changed multivector_gen.c.src
+python3 setup.py build # builds gasparse
+python3 setup.py build --genalgebras # generates the algebra
+```
+
 ## TODO
+
 1. Test mixed type operations involving the generated code
 1. Test the cast function
 1. $\checkmark$ Scalars should output as floats and not as gasparse.multivector objects
 1. $\checkmark$ Function to check grade (return `-1` or `None` if it isnt of unique grade)
+1. Write a script to test all of the functionalities of the package (Also include valgrind to check for memory leaks) The common cases where we usually have leaks is when there is some error, check for leaks in such cases. Use
+```python
+try:
+   # lines of code
+except Exception:
+   pass
+```
+to ignore exception errors.
 
 1. $\checkmark$ Read and Write Multivectors by grade
    
@@ -145,6 +173,7 @@ Still trying to averiguate the best strategy for error setting...
      - [ ] The basis can be multivectors, or positive integers (bitmaps)
 3. Return multivectors in a list by a specified grade
 4. Change the value for which multivectors get converted to zero. Should be an option when generating the algebra (epsilon)
+1. Change code for `x.list()` and `ga.size()` making it accept variable number of arguments like `x.list(1,2)` instead of a list like `x.list([1,2])`
 1. Implement cast to some algebra (Add the option to project to that algebra)
 6. Numpy integration
    

@@ -3,7 +3,7 @@
 import gasparsegen as gasparse
 from gasparsegen import multivector
 
-ga = gasparse.GA(3,print_type_mv=1,computation_mode="generated")
+ga = gasparse.GA(3,print_type_mv=1,compute_mode="generated")
 
 alist = []
 blist = []

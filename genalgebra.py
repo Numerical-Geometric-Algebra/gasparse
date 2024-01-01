@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import gasparse
+import snippets.gasparse as gasparse
 import jinja2
 class algebra:
     def __init__(self,ga,name):
@@ -77,16 +77,16 @@ ga1 = algebra(cga,"3DCGA")
 
 typemin = 2
 
-# algebras = [ga0,ga1]
-algebras = [ga0]
+algebras = [ga0,ga1]
+#algebras = [ga0]
 nalgebras = len(algebras)
 
 templateLoader = jinja2.FileSystemLoader(searchpath="./")
 templateEnv = jinja2.Environment(loader=templateLoader,trim_blocks=True)
 
 
-multivectorgend = templateEnv.get_template("multivector_gen.c.src")
-multivectorgend_h = templateEnv.get_template("multivector_gen.h.src")
+multivectorgend = templateEnv.get_template("src/multivector_gen.c.src")
+multivectorgend_h = templateEnv.get_template("src/multivector_gen.h.src")
 
 types = ['dense','blades']
 Types = ['Dense','Blades']
@@ -95,8 +95,8 @@ textmultivectorc = multivectorgend.render(algebras=algebras,nalgebras=nalgebras,
 textmultivectorh = multivectorgend_h.render(algebras=algebras,nalgebras=nalgebras,types=types,Types=Types,typemin=typemin)
 
 # to save the results
-with open("multivector_gen.c", "w") as fh:
+with open("src/multivector_gen.c", "w") as fh:
     fh.write(textmultivectorc)
 
-with open("multivector_gen.h", "w") as fh:
+with open("src/multivector_gen.h", "w") as fh:
     fh.write(textmultivectorh)

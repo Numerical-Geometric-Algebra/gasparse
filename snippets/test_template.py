@@ -18,6 +18,7 @@ print(x.list(1))
 print(x.list([1,2]))
 print(x.list(1,bitmap=True))
 
+y = x.cast("dense")
 #values,basis = x.list(1)
 
 
