@@ -150,7 +150,7 @@ python3 setup.py build --genalgebras # generates the algebra
 ```
 
 ## TODO
-
+1. For operations involving `PyMultivectorObject` that are transparent to the subtypes, it might make sense to create a new empty multivector and then pass that as reference to function that operates directly on the type.
 1. Test mixed type operations involving the generated code
 1. Test the cast function
 1. $\checkmark$ Scalars should output as floats and not as gasparse.multivector objects

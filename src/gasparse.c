@@ -1078,6 +1078,7 @@ static PyTypeObject PyMultivectorType = {
 
 // Allocs memory for a multivector and fill the mixed type tables and the algebra tables and sets the python type
 PyMultivectorObject *alloc_multivector(PyAlgebraObject *ga){
+	if(!ga) return NULL;
     PyMultivectorObject *self = (PyMultivectorObject*)PyMem_RawMalloc(sizeof(PyMultivectorObject));
     if(!self) return NULL;
     
