@@ -1099,13 +1099,13 @@ PyMultivectorObject *new_multivector(PyAlgebraObject *ga, char *type){
     return self;
 }
 
-int get_multivector_type_table(PyAlgebraObject *ga, char *name, PyMultivectorSubType *subtype){
+int get_multivector_type_table(PyAlgebraObject *ga, char *name, PyMultivectorSubType **subtype){
     
     if(ga->types == NULL) return 0;
 
     for(Py_ssize_t i = 0; i < ga->tsize; i++){
         if(!strncmp(name,ga->types[i].type_name,strlen(name))){
-            *subtype = ga->types[i];
+            *subtype = &ga->types[i];
             return 1;
         }
     }
@@ -1367,7 +1367,7 @@ static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args,
 		return NULL;
 	}
 
-	gainitfunc init = multivector->type.data_funcs->init;
+	gainitfunc init = multivector->type->data_funcs->init;
 	if (init)
 		multivector->data = init(bitmaps_int, values_float, size, self);
 	else {
@@ -1479,7 +1479,7 @@ static PyObject *algebra_basis(PyAlgebraObject *self, PyObject *args,
 		for (Py_ssize_t i = 0; i < size; i++) {
 			multivector = new_multivector(self,self->mdefault.type_name);
 			if(!multivector) goto fail;
-			gainitfunc init = multivector->type.data_funcs->init;
+			gainitfunc init = multivector->type->data_funcs->init;
 			if (!init){
 				Py_XDECREF((PyObject *)multivector);
 				goto fail;

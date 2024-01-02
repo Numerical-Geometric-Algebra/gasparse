@@ -218,7 +218,7 @@ typedef struct PyMultivectorObject{
     void *data;
     PyMultivectorMixedMath_Funcs *mixed;
     PyAlgebraObject *GA;
-    PyMultivectorSubType type;
+    PyMultivectorSubType *type;
 }_PyMultivectorObject;
 
 
@@ -244,7 +244,7 @@ typedef struct DenseMultivector{
 PyMultivectorObject *new_multivector(PyAlgebraObject *ga, char *type);
 PyMultivectorObject *alloc_multivector(PyAlgebraObject *ga);
 PyMultivectorObject *new_multivector_inherit_type(PyMultivectorObject *mv);
-int get_multivector_type_table(PyAlgebraObject *ga, char *name, PyMultivectorSubType *subtype);
+int get_multivector_type_table(PyAlgebraObject *ga, char *name, PyMultivectorSubType **subtype);
 int check_multivector_mixed_type_table(PyMultivectorObject *mv, char *name);
 
 //void free_multivector(PyMultivectorObject *self);

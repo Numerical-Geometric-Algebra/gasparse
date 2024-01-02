@@ -297,13 +297,13 @@ static PyMultivectorIter dense0_iterinit(PyMultivectorObject *data){
     iter.data = data->data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type.ntype;
+    iter.type = data->type->ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.size = 1;
     iter.niters = 8;
-    iter.next = data->type.data_funcs->iter_next;
-    iter.type_name = data->type.type_name;
+    iter.next = data->type->data_funcs->iter_next;
+    iter.type_name = data->type->type_name;
     return iter;
 }
 
@@ -312,14 +312,14 @@ static PyMultivectorIter blades0_iterinit(PyMultivectorObject *data){
     iter.data= data->data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type.ntype;
+    iter.type = data->type->ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(2*sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.index[1] = 0;
     iter.size = 2;
     iter.niters = 8;
-    iter.next = data->type.data_funcs->iter_next;
-    iter.type_name = data->type.type_name;
+    iter.next = data->type->data_funcs->iter_next;
+    iter.type_name = data->type->type_name;
     return iter;
 }
 
@@ -798,13 +798,13 @@ static PyMultivectorIter dense1_iterinit(PyMultivectorObject *data){
     iter.data = data->data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type.ntype;
+    iter.type = data->type->ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.size = 1;
     iter.niters = 32;
-    iter.next = data->type.data_funcs->iter_next;
-    iter.type_name = data->type.type_name;
+    iter.next = data->type->data_funcs->iter_next;
+    iter.type_name = data->type->type_name;
     return iter;
 }
 
@@ -813,14 +813,14 @@ static PyMultivectorIter blades1_iterinit(PyMultivectorObject *data){
     iter.data= data->data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type.ntype;
+    iter.type = data->type->ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(2*sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.index[1] = 0;
     iter.size = 2;
     iter.niters = 32;
-    iter.next = data->type.data_funcs->iter_next;
-    iter.type_name = data->type.type_name;
+    iter.next = data->type->data_funcs->iter_next;
+    iter.type_name = data->type->type_name;
     return iter;
 }
 
