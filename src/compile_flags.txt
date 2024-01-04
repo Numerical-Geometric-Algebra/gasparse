@@ -1,0 +1,2 @@
+-I/home/francisco/.local/lib/python3.11/site-packages/numpy/core/include
+-I/usr/include/python3.11
