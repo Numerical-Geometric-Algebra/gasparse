@@ -24,7 +24,7 @@ for cmode in cmodes:
         basis = ga.basis()
         locals().update(basis)
         a = e1+e2+e3
-        b = e3+e123
+        b = 1.234+e3+e123
         c = e12
         alist.append(a)
         blist.append(b)
@@ -39,6 +39,7 @@ for cmode in cmodes:
         x = a.undual()
         x = b([0,1])
         x = ~b
+        x = b(0)
         x = multivector.add(e1,e2,e3,e123)
         x = multivector.geometric_product(e1,a,b,c)
         x = multivector.geometric_product(a,b,c)

@@ -3333,6 +3333,22 @@ PyObject *multivector_grade_project(PyMultivectorObject *self, PyObject *args, P
     size = parse_list_as_grades(self->GA,grades_obj,&grades);
     if(size <= 0) return NULL;
 
+    if(size == 1 && grades[0] == 0){
+        // If we want grade projection to scalars
+        PyMultivectorIter *iter = init_multivector_iter(self,1);
+        while(iter->next(iter)){
+            if(iter->bitmap == 0){
+                ga_float value = iter->value;
+                PyMem_RawFree(grades);
+                free_multivector_iter(iter,1);
+                return (PyObject*)PyFloat_FromDouble((double)value);
+            }
+        }
+        PyMem_RawFree(grades);
+        free_multivector_iter(iter,1);
+        return (PyObject*)PyFloat_FromDouble((double)0.0);
+    }
+
     gaunarygradefunc grade_project = self->type->math_funcs->grade_project;
     if(grade_project){
         out = grade_project(self,grades,size);
@@ -3625,7 +3641,6 @@ void free_multivector_data(PyMultivectorObject self){
 
     if(self.data) PyMem_RawFree(self.data);
     Py_XDECREF((PyObject*)self.GA);
-    Py_SET_REFCNT((PyObject*)&self,0);
 }
 
 PyMultivectorMixedMath_Funcs multivector_mixed_fn = {

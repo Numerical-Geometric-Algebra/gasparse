@@ -127,7 +127,12 @@ It is the same as multiplying by the unit pseudoscalar when in a non-null metric
 
 For the code generated algebras we have two types the `dense` and the `blades`. The key difference is in their internal representations. Both types are dense representations of a multivector. To use a specific type the user can call `y = x.cast('blades')` or using the equivalent for the other types such exemplified previously. The user cannot use the cast function to cast multivectors between different algebras in order to do that we will make available `ga.cast` which casts a multivector to the algebra ga.
 
-
+ - Grade projection to the grade zero outputs a float, which can be used directly by numpy. That is, the output of 
+ ```python
+ x = ga.multivector(list)
+ print(type(x(0)))
+ ```
+should be `float`.
 
 ### Coding Strategy
 1. Set errror strings only in the outermost call (the first function that is called from python)
