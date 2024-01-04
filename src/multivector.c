@@ -3625,6 +3625,7 @@ void free_multivector_data(PyMultivectorObject self){
 
     if(self.data) PyMem_RawFree(self.data);
     Py_XDECREF((PyObject*)self.GA);
+    Py_SET_REFCNT((PyObject*)&self,0);
 }
 
 PyMultivectorMixedMath_Funcs multivector_mixed_fn = {

@@ -1,7 +1,12 @@
 #include "common.h"
 #define PY_SSIZE_T_CLEAN
 #include "gasparse.h"
+#include "multivector_array.h"
 /* #include "multivector.h" */
+#ifdef INCLUDE_NUMPY
+#define PY_ARRAY_UNIQUE_SYMBOL gasparse_ARRAY_API
+#include <numpy/arrayobject.h>
+#endif
 #ifdef INCLUDE_GENCODE
 #include "multivector_gen.h"
 #endif
@@ -1075,20 +1080,25 @@ static PyTypeObject PyMultivectorType = {
 		.tp_as_number = &PyMultivectorNumberMethods,
 		.tp_methods = multivector_methods};
 
+// Fills the mixed type tables and the algebra tables and sets the python type
+static int init_multivector(PyAlgebraObject *ga, PyMultivectorObject *self){
+	if(!ga) return 0;
+	self->mixed = ga->mixed; // mixed type operations should not change
+    self->GA = ga;
+	self->data = NULL;
+
+    Py_XINCREF((PyObject*)self->GA);
+    Py_SET_TYPE(self, &PyMultivectorType);
+	return 1;
+}
 
 // Allocs memory for a multivector and fill the mixed type tables and the algebra tables and sets the python type
 PyMultivectorObject *alloc_multivector(PyAlgebraObject *ga){
 	if(!ga) return NULL;
     PyMultivectorObject *self = (PyMultivectorObject*)PyMem_RawMalloc(sizeof(PyMultivectorObject));
     if(!self) return NULL;
-    
-    self->mixed = ga->mixed; // mixed type operations should not change
-    self->GA = ga;
-	self->data = NULL;
-
+    if(!init_multivector(ga,self)) return NULL;	
 	Py_SET_REFCNT((PyObject*)self,1);
-    Py_XINCREF((PyObject*)self->GA);
-    Py_SET_TYPE(self, &PyMultivectorType);
     return self;
 }
 
@@ -1098,6 +1108,13 @@ PyMultivectorObject *new_multivector(PyAlgebraObject *ga, char *type){
     if(!get_multivector_type_table(ga, type, &self->type)) return NULL;
     return self;
 }
+
+static int new_multivector_(PyAlgebraObject *ga, char *type, PyMultivectorObject *self){
+    if(!init_multivector(ga,self)) return 0;
+    if(!get_multivector_type_table(ga, type, &self->type)) return 0;
+    return 1;
+}
+
 
 int get_multivector_type_table(PyAlgebraObject *ga, char *name, PyMultivectorSubType **subtype){
     
@@ -1149,8 +1166,8 @@ static Py_ssize_t parse_list_as_values(PyObject *values, ga_float **values_float
 		else if (PyLong_Check(value_i))
 			(*values_float)[i] = (ga_float)PyLong_AsLong(value_i);
 		else {
-			PyErr_SetString(PyExc_TypeError,
-											"Elements of the list of values must be ga_float");
+			//PyErr_SetString(PyExc_TypeError,
+			//								"Elements of the list of values must be flot or");
 			PyMem_RawFree(*values_float);
 			return -1;
 		}
@@ -1270,6 +1287,278 @@ static int parse_list_as_basis_grades(PyAlgebraObject ga, int *grades,
 		}
 	PyMem_RawFree(grade_bool);
 	return psize;
+}
+
+/* Multivector array functions */
+static Py_ssize_t get_ndims(PyObject *data){
+    Py_ssize_t ndims = 0;
+    PyObject *sublist = data;
+    while(PyList_Check(sublist)){
+        if((sublist = PyList_GetItem(sublist,0)) == NULL) break; // Break on empty list
+        ndims++;
+    }
+    return ndims;
+}
+
+static Py_ssize_t *get_shapes(PyObject *data, Py_ssize_t ndims){
+    Py_ssize_t *shapes = (Py_ssize_t*)PyMem_RawMalloc(ndims*sizeof(Py_ssize_t));
+    if(!shapes) return NULL;
+    PyObject *sublist = data;
+    Py_ssize_t i = 0;
+    while(PyList_Check(sublist)){
+        shapes[i] = PyList_Size(sublist);
+        if(!shapes[i]) break;
+        sublist = PyList_GetItem(sublist,0);
+        i++;
+        if(i >= ndims) break;
+    }
+    return shapes;
+}
+
+static int iterate_nested_lists(PyObject *list,
+                                ga_float **array, 
+                                Py_ssize_t *strides,
+                                Py_ssize_t *shape,
+                                Py_ssize_t index, 
+                                Py_ssize_t dim,
+								Py_ssize_t ndims,
+                                Py_ssize_t nbasis){
+    
+    if(!PyList_Check(list))
+        return -1; // Deepest nested element 
+    
+    if(PyList_Size(list) != shape[dim]) return -1; // Not the right shape
+	if(dim == ndims-1){ // The innermost dimension
+		for(Py_ssize_t i = 0; i < (Py_ssize_t)PyList_Size(list); i++){
+        	PyObject *sublist = PyList_GetItem(list, i);
+			Py_ssize_t size = parse_list_as_values(sublist, &array[index + i*strides[dim+1]]);
+            if(size <= 0 && size != nbasis) return -1;
+		}
+	}else {
+		for(Py_ssize_t i = 0; i < (Py_ssize_t)PyList_Size(list); i++){
+			PyObject *sublist = PyList_GetItem(list, i);
+			int flag = iterate_nested_lists(sublist, array, strides, shape, index + i*strides[dim+1], dim+1,ndims,nbasis);
+			if(flag == -1) return -1;
+		}
+	}
+
+    return 0;
+}
+
+static Py_ssize_t *get_strides(Py_ssize_t ndims, Py_ssize_t *shapes){
+    Py_ssize_t *strides = (Py_ssize_t*)PyMem_RawMalloc((ndims+1)*sizeof(Py_ssize_t));
+    if(!strides) return NULL;
+    strides[ndims] = 1;
+
+    for(Py_ssize_t i = ndims; i >= 1; i--)
+        strides[i-1] = strides[i]*shapes[i-1];
+    return strides;
+}
+
+static PyMultivectorArrayObject *multivector_array_dealloc(PyMultivectorArrayObject *self){
+	PyMultivectorObject *data = self->data;
+	for(Py_ssize_t i = 0; i < self->strides[0]; i++){
+		free_multivector_data(data[i]);
+	}
+	PyMem_RawFree(self->strides);
+	PyMem_RawFree(self->shapes);
+	PyMem_RawFree(data);
+	PyMem_RawFree(self);
+
+}
+
+static PyTypeObject PyMultivectorArrayType = {
+		PyVarObject_HEAD_INIT(NULL, 0).tp_name = "gasparse.multivector_array",
+		.tp_doc = PyDoc_STR(
+				"Builds an array of multivectors (PyMultivectorObject)"),
+		.tp_basicsize = sizeof(PyMultivectorArrayObject),
+		.tp_itemsize = 0,
+		.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+		//.tp_dealloc = (destructor)multivector_array_dealloc,
+		//.tp_repr = (reprfunc)multivector_repr,
+		//.tp_str = (reprfunc)multivector_repr,
+		//.tp_call = (ternaryfunc)multivector_grade_project,
+		.tp_new = NULL,
+		//.tp_as_number = &PyMultivectorNumberMethods,
+		//.tp_methods = multivector_methods
+		};
+
+
+
+static PyMultivectorArrayObject *init_multivector_array_obj(void *data, Py_ssize_t ndims, Py_ssize_t *strides_,Py_ssize_t *shapes_){
+	Py_ssize_t *shapes = (Py_ssize_t*)PyMem_RawMalloc((ndims-1)*sizeof(Py_ssize_t));
+	Py_ssize_t *strides = (Py_ssize_t*)PyMem_RawMalloc(ndims*sizeof(Py_ssize_t));
+	for(Py_ssize_t i = 0; i < ndims-1; i++){
+		shapes[i] = shapes_[i];
+	}
+	for(Py_ssize_t i = 0; i < ndims; i++){
+		strides[i] = strides_[i];
+	}
+
+	PyMultivectorArrayObject *array_obj = (PyMultivectorArrayObject*)PyMem_RawMalloc(sizeof(PyMultivectorArrayObject));
+	array_obj->strides = strides;
+	array_obj->shapes = shapes;
+	array_obj->data = data;
+	array_obj->ns = ndims - 1;
+	// set type and increase reference count
+	Py_SET_TYPE(array_obj, &PyMultivectorType);
+	Py_SET_REFCNT((PyObject*)array_obj,1);
+
+	return array_obj;
+}
+
+static PyObject *algebra_multivector_array(PyAlgebraObject *self, PyObject *args,
+																		 PyObject *kwds) {
+	static char *kwlist[] = {"values", "basis", "grades","dtype", NULL};
+	PyObject *values = NULL, *basis = NULL, *grades = NULL;
+	int *bitmaps_int = NULL;
+	int *grades_int = NULL;
+	ga_float *values_float = NULL;
+	ga_float *values_conv = NULL;
+	Py_ssize_t size, bsize;
+	PyMultivectorObject *multivector;
+	char *type_name = NULL;
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|OOs", kwlist, &values, &basis, &grades, &type_name))
+		return NULL;
+
+	if (!values)
+		PyErr_SetString(PyExc_ValueError, "Values must be non empty");
+
+	if (grades && basis) {
+		PyErr_SetString(PyExc_ValueError, "Can only define multivectors through "
+																			"basis blades or grades, not both!");
+		return NULL;
+	}
+
+	// Defining multivectors through some basis
+	if (basis) {
+		if (PyList_Check(basis)) {
+			PyErr_SetString(PyExc_ValueError,
+											"Basis must be a list and of the same size as values");
+			return NULL;
+		}
+		
+        bsize = parse_list_as_bitmaps(basis, &bitmaps_int);
+        if (bsize <= 0) {
+            PyErr_SetString(PyExc_TypeError, "Error parsing basis list as bitmaps");
+            return NULL;
+        }
+		
+	} else if (grades) {
+		
+		Py_ssize_t gsize = parse_list_as_grades(self, grades, &grades_int);
+		if (gsize <= 0) {
+			PyMem_RawFree(values_float);
+			PyErr_SetString(PyExc_ValueError,
+											"Error parsing grades, invalid value or empty");
+			return NULL;
+		}
+		Py_ssize_t mv_size =
+				parse_list_as_basis_grades(*self, grades_int, &bitmaps_int, gsize);
+
+        bsize = mv_size;
+		PyMem_RawFree(grades_int);
+
+	} else {
+		// Defining a multivector through the whole algebra basis
+		size = self->asize;
+		bitmaps_int = (int *)PyMem_RawMalloc(size * sizeof(int));
+		for (int i = 0; i < size; i++)
+			bitmaps_int[i] = i;
+        bsize = size;
+	}
+	if(!type_name)
+		type_name = self->mdefault.type_name;
+
+    size = parse_list_as_values(values, &values_float);
+	if (size >= 0){ 
+        // It's a one dimensional list
+		if(size != bsize){
+			PyMem_RawFree(grades_int);
+			PyMem_RawFree(bitmaps_int);
+			PyMem_RawFree(values_float);
+			PyErr_SetString(PyExc_ValueError,
+							   "Basis grades must be of the same size as values");
+			return NULL;
+		}
+
+        multivector = new_multivector(self,type_name);
+        if (!multivector) {
+            PyMem_RawFree(values_float);
+            PyMem_RawFree(bitmaps_int);
+            PyErr_SetString(PyExc_ValueError,
+                               "dtype name invalid, select from...");
+            return NULL;
+        }
+
+        gainitfunc init = multivector->type->data_funcs->init;
+        if (init)
+            multivector->data = init(bitmaps_int, values_float, size, self);
+        else {
+            PyMem_RawFree(values_float);
+            PyMem_RawFree(bitmaps_int);
+            return NULL; // raise not implemented error
+        }
+
+        PyMem_RawFree(values_float);
+        PyMem_RawFree(bitmaps_int);
+        PyMem_RawFree(grades_int);
+
+        return (PyObject *)multivector;
+    }else{
+        Py_ssize_t ndims = get_ndims(values);
+        if(ndims <= 0){
+            PyErr_SetString(PyExc_ValueError,"Error geting dims");
+            return NULL;
+        }
+        Py_ssize_t *shapes = get_shapes(values,ndims);
+        if(!shapes){
+            PyErr_SetString(PyExc_ValueError,"Error geting shapes");
+            return NULL;
+        }
+        Py_ssize_t *strides = get_strides(ndims-1,shapes);
+        if(!strides){
+            PyErr_SetString(PyExc_ValueError,"Error geting strides");
+            return NULL;
+        }
+        
+        ga_float **values_float_array = (ga_float**)PyMem_RawMalloc(strides[0]*sizeof(ga_float*));
+        if(iterate_nested_lists(values,values_float_array,strides,shapes,0,0,ndims-1,bsize) == -1) {
+            PyErr_SetString(PyExc_ValueError,"Error iterating nested lists");
+            return NULL;
+        }
+
+		PyMultivectorObject *mv_array = (PyMultivectorObject*)PyMem_RawMalloc(strides[0]*sizeof(PyMultivectorObject));
+		if(!new_multivector_(self,type_name,mv_array)){
+			PyErr_SetString(PyExc_ValueError,"Error initializing multivector");
+           	return NULL;
+		}
+		gainitfunc init = mv_array->type->data_funcs->init;
+        if (!init){
+            PyMem_RawFree(values_float_array);
+            PyMem_RawFree(bitmaps_int);
+            return NULL; // raise not implemented error
+        }
+		mv_array->data = init(bitmaps_int,values_float_array[0],bsize,self);
+
+		for(Py_ssize_t i = 1; i < strides[0]; i++){
+			if(!new_multivector_(self,type_name,&mv_array[i])){
+				PyErr_SetString(PyExc_ValueError,"Error initializing multivector");
+            	return NULL;
+			}
+			mv_array[i].data = init(bitmaps_int,values_float_array[i],bsize,self);
+		}
+		PyMultivectorArrayObject *array_obj = init_multivector_array_obj((void*)mv_array,ndims,strides,shapes);
+		for(Py_ssize_t i = 0; i < strides[0]; i++)
+			PyMem_RawFree(values_float_array[i]);
+		PyMem_RawFree(values_float_array);
+		PyMem_RawFree(bitmaps_int);
+		PyMem_RawFree(strides);
+		PyMem_RawFree(shapes);
+		//return (PyObject*)&mv_array[1];
+		return (PyObject*)array_obj;
+    }
 }
 
 static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args,
@@ -1520,6 +1809,7 @@ static PyMethodDef algebra_methods[] = {
 		{"add_basis", (PyCFunction)algebra_add_basis, METH_VARARGS | METH_KEYWORDS,
 		 "adds basis vectors to the algebra"},
 		{"multivector", (PyCFunction)algebra_multivector,
+		//{"multivector", (PyCFunction)algebra_multivector_array,
 		 METH_VARARGS | METH_KEYWORDS, "generate a multivector"},
 		{"basis", (PyCFunction)algebra_basis, METH_VARARGS | METH_KEYWORDS,
 		 "generate blades for the algebra"},
@@ -1567,6 +1857,9 @@ PyMODINIT_FUNC PyInit_gasparse(void) {
 	if (PyType_Ready(&PyMultivectorType) < 0)
 		return NULL;
 
+	if (PyType_Ready(&PyMultivectorArrayType) < 0)
+		return NULL;
+
 	m = PyModule_Create(&gasparse_module);
 	if (m == NULL)
 		return NULL;
@@ -1579,12 +1872,26 @@ PyMODINIT_FUNC PyInit_gasparse(void) {
 	}
 
 	Py_INCREF(&PyMultivectorType);
-	if (PyModule_AddObject(m, "multivector", (PyObject *)&PyMultivectorType) <
-			0) {
+	if (PyModule_AddObject(m, "multivector", (PyObject *)&PyMultivectorType) < 0) {
 		Py_DECREF(&PyMultivectorType);
 		Py_DECREF(m);
 		return NULL;
 	}
+
+	Py_INCREF(&PyMultivectorArrayType);
+	if (PyModule_AddObject(m, "multivector_array", (PyObject *)&PyMultivectorArrayType) < 0) {
+		Py_DECREF(&PyMultivectorArrayType);
+		Py_DECREF(m);
+		return NULL;
+	}
+
+	#ifdef INCLUDE_NUMPY
+	if (import_array() < 0) {
+		PyErr_Print();
+		PyErr_SetString(PyExc_ImportError, "Failed to import NumPy array module.");
+		return NULL;
+	}
+	#endif
 
 	return m;
 }

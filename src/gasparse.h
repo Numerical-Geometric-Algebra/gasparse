@@ -3,7 +3,7 @@
 #define GASPARSE_H_
 #define PY_SSIZE_T_CLEAN
 #include "common.h"
-#include <python3.11/Python.h>
+#include <Python.h>
 
 #define METRIC_SIZE(s) (s->p + s->q + s->r)
 #define MAX_GRADE(s) (s->p + s->q + s->r)
@@ -249,7 +249,7 @@ int check_multivector_mixed_type_table(PyMultivectorObject *mv, char *name);
 
 //void free_multivector(PyMultivectorObject *self);
 void free_multivector_data(PyMultivectorObject self);
-PyMultivectorObject *init_multivector(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga, PyTypeObject *obj_type, int type);
+//PyMultivectorObject *init_multivector(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga, PyTypeObject *obj_type, int type);
 
 // type methods
 void multivector_dealloc(PyMultivectorObject *self);
