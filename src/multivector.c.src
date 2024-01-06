@@ -467,7 +467,7 @@ char *type_iter_repr_1(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t ds
                     // maybe should add this as an option when creating the algebra
                     if(ABS(iter->value) < 1e-12) continue; // don't print small values
 
-                char *value = PyOS_double_to_string((double)iter->value,'f',16,0,NULL);
+                char *value = PyOS_double_to_string((double)iter->value,'g',16,0,NULL);
                 if(iter->bitmap){
                     char *bitmap = bitmap_to_string(iter->bitmap);
                     Py_ssize_t size = strlen(bitmap) + strlen(value)+3;
@@ -526,7 +526,7 @@ char *type_iter_repr_1(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t ds
             while(iter->next(iter)){
                 str_bitmap[i] = bitmap_to_string(iter->bitmap);
                 len_bitmap += strlen(str_bitmap[i]);
-                str_value[i] = PyOS_double_to_string((double)iter->value,'f',6,0,NULL);
+                str_value[i] = PyOS_double_to_string((double)iter->value,'g',6,0,NULL);
                 len_value += strlen(str_value[i]);
                 i++;
             }
@@ -596,7 +596,7 @@ PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t 
                     // maybe should add this as an option when creating the algebra
                     if(ABS(iter->value) < 1e-12) continue; // don't print small values
 
-                char *value = PyOS_double_to_string((double)iter->value,'f',16,0,NULL);
+                char *value = PyOS_double_to_string((double)iter->value,'g',16,0,NULL);
                 if(iter->bitmap){
                     char *bitmap = bitmap_to_string(iter->bitmap);
                     Py_ssize_t size = strlen(bitmap) + strlen(value)+3;
@@ -651,7 +651,7 @@ PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t 
             while(iter->next(iter)){
                 str_bitmap[i] = bitmap_to_string(iter->bitmap);
                 len_bitmap += strlen(str_bitmap[i]);
-                str_value[i] = PyOS_double_to_string((double)iter->value,'f',6,0,NULL);
+                str_value[i] = PyOS_double_to_string((double)iter->value,'g',6,0,NULL);
                 len_value += strlen(str_value[i]);
                 i++;
             }

@@ -38,7 +38,7 @@ typedef struct PyMultipleArrayIter{
     Py_ssize_t nm; // The number of multivector_arrays
     Py_ssize_t *index; // An index for symbol
     Py_ssize_t *shapes; // A shape for symbol
-    Py_ssize_t sym_index; // the current simbol
+    Py_ssize_t dim; // The last iterated dimension
 }PyMultipleArrayIter;
 
 

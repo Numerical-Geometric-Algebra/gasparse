@@ -130,6 +130,8 @@ static PyMvArrayObj *init_multivector_array(PyAlgebraObject *ga, Py_ssize_t ndim
 	array_obj->ns = ndims;
 	// set type and increase reference count
     array_obj->GA = ga;
+    // Set the mixed type operations table
+    array_obj->mixed = ga->mixed;
     Py_XINCREF((PyObject*)array_obj->GA);
 	Py_SET_TYPE(array_obj, &PyMultivectorArrayType);
 	Py_SET_REFCNT((PyObject*)array_obj,1);
@@ -168,6 +170,7 @@ int multiple_arrays_iter_next(PyMultipleArrayIter *iter){
             return 0; // last iteration
         iter->index[i] = 0;
         iter->index[i+1]++;
+        iter->dim = i+1;
         mtp_arrays_iterate(*iter,i+1);
     }
     
@@ -199,7 +202,7 @@ static PyMultipleArrayIter init_artificial_mtp_arrays_iter(PyMvArrayObject *self
         iter.array_iter->index[i] = 0;
         iter.index[i] = 0;
     }
-    iter.sym_index = 0;
+    iter.dim = -1;
     iter.ns = self->ns;
     
     return iter;
@@ -231,45 +234,61 @@ PyMultivectorIter *init_multivector_array_iter(PyMvArrayObj *self, Py_ssize_t si
 PyObject *multivector_array_repr(PyMvArrayObj *self){
     PrintTypeMV ptype = self->GA->print_type_mv;
     PyObject *out = Py_BuildValue("s","");
-    char **mv_str;
-    char *out_str;
-    
-    const char *lbracket = "[";
-    const char *rbracket = "],\n";
-
-    mv_str = (char**)PyMem_RawMalloc(self->strides[0]*sizeof(char*));
-    Py_ssize_t i = 0;
-    Py_ssize_t size = 1;
-    gaiterinitfunc iter_init = self->type->data_funcs->iter_init;
-    PyMultipleArrayIter arr_iter = init_artificial_mtp_arrays_iter(self);
-    do{
-        PyMultivectorIter iter = iter_init(*arr_iter.array_iter->data,self->type);
-        mv_str[i] = type_iter_repr_1(&iter,ptype,iter.niters);
-        size += strlen(mv_str[i]) + 5;
-        PyMem_RawFree(iter.index);
-        i++;
-    }while(multiple_arrays_iter_next(&arr_iter));
-    free_artificial_mtp_arrays_iter(arr_iter);
-    // PyMultivectorIter *iter = init_multivector_array_iter(self,self->strides[0]);
-    
-    // mv_str = (char**)PyMem_RawMalloc(self->strides[0]*sizeof(char*));
-    // Py_ssize_t size = 1;
-    // for(Py_ssize_t i = 0; i < self->strides[0]; i++){
-    //     mv_str[i] = type_iter_repr_1(&iter[i],ptype,iter[i].niters);
-    //     size += strlen(mv_str[i]) + 3;
-    // }
-    out_str = (char*)PyMem_RawMalloc(size*sizeof(char));
+    char *mv_str;
+    char out_str[10000];
     out_str[0] = '\0';
-    for(Py_ssize_t i = 0; i < self->strides[0]; i++){
-        strcat(out_str,lbracket);
-        strcat(out_str,mv_str[i]);
-        strcat(out_str,rbracket);
-        PyMem_RawFree(mv_str[i]);
-    }
-    out = Py_BuildValue("s",out_str);
-    PyMem_RawFree(out_str);
-    PyMem_RawFree(mv_str);
+
+    const char *lbracket = "[";
+    const char *rbracket_nl = "],\n";
+    const char *rbracket = "]";
+
+    Py_ssize_t last_dim = -9;
     
+    //strcat(out_str,"multivector_array(");
+
+    for(Py_ssize_t i = 0; i < self->ns; i++)
+        strcat(out_str,lbracket);
+
+    gaiterinitfunc iter_init = self->type->data_funcs->iter_init;
+    if(self->ns > 0){
+        PyMultipleArrayIter arr_iter = init_artificial_mtp_arrays_iter(self);
+        do{
+            PyMultivectorIter iter = iter_init(*arr_iter.array_iter->data,self->type);
+            mv_str = type_iter_repr_1(&iter,ptype,iter.niters);
+            
+            if(last_dim != arr_iter.dim && last_dim != -9){
+                out_str[strlen(out_str) - 1] = ']';
+                for(Py_ssize_t i = 0; i < arr_iter.dim - 1; i++)
+                    strcat(out_str,rbracket);
+                strcat(out_str,",");
+                strcat(out_str,"\n");
+                strcat(out_str,lbracket);
+                for(Py_ssize_t i = 0; i < arr_iter.dim - 1; i++)
+                    strcat(out_str,lbracket);
+            }
+            strcat(out_str,lbracket);
+            strcat(out_str,mv_str);
+            strcat(out_str,rbracket);
+            strcat(out_str,",");
+            PyMem_RawFree(mv_str);
+            PyMem_RawFree(iter.index);
+            
+            last_dim = arr_iter.dim;
+        }while(multiple_arrays_iter_next(&arr_iter));
+        free_artificial_mtp_arrays_iter(arr_iter);
+        
+        out_str[strlen(out_str) - 1] = ']';
+        for(Py_ssize_t i = 0; i < self->ns - 1; i++)
+           strcat(out_str,rbracket);
+        //strcat(out_str,")");
+    }else{
+        PyMultivectorIter iter = iter_init(*self->data,self->type);
+        mv_str = type_iter_repr_1(&iter,ptype,iter.niters);
+        strcpy(out_str,mv_str);
+        PyMem_RawFree(mv_str);
+    }
+
+    out = Py_BuildValue("s",out_str);
 
     if(ptype == PrintTypeMV_normal){
         PyErr_SetString(PyExc_NotImplementedError, "Not implemented for multivector arrays");
@@ -306,10 +325,6 @@ PyMvArrayObj *new_multivector_array(PyAlgebraObject *ga, char *type, Py_ssize_t 
     return self;
 }
 
-
-
-
-
 PyObject *algebra_multivector_array(PyAlgebraObject *self, PyObject *args,PyObject *kwds) {
 	static char *kwlist[] = {"values", "basis", "grades","dtype", NULL};
 	PyObject *values = NULL, *basis = NULL, *grades = NULL;
@@ -328,7 +343,7 @@ PyObject *algebra_multivector_array(PyAlgebraObject *self, PyObject *args,PyObje
 
 	if (grades && basis) {
 		PyErr_SetString(PyExc_ValueError, "Can only define multivectors through "
-																			"basis blades or grades, not both!");
+										  "basis blades or grades, not both!");
 		return NULL;
 	}
 
@@ -336,9 +351,8 @@ PyObject *algebra_multivector_array(PyAlgebraObject *self, PyObject *args,PyObje
 	
 	if (basis) {
         // Defining multivectors through some basis
-		if (PyList_Check(basis)) {
-			PyErr_SetString(PyExc_ValueError,
-											"Basis must be a list and of the same size as values");
+		if (!PyList_Check(basis)) {
+			PyErr_SetString(PyExc_ValueError,"Basis must be a list and of the same size as values");
 			return NULL;
 		}
         bsize = parse_list_as_multivectors_1(basis, &values_basis, &bitmaps_int);
@@ -356,8 +370,7 @@ PyObject *algebra_multivector_array(PyAlgebraObject *self, PyObject *args,PyObje
 		Py_ssize_t gsize = parse_list_as_grades(self, grades, &grades_int);
 		if (gsize <= 0) {
 			PyMem_RawFree(values_float);
-			PyErr_SetString(PyExc_ValueError,
-											"Error parsing grades, invalid value or empty");
+			PyErr_SetString(PyExc_ValueError,"Error parsing grades, invalid value or empty");
 			return NULL;
 		}
 		Py_ssize_t mv_size =
@@ -402,10 +415,12 @@ PyObject *algebra_multivector_array(PyAlgebraObject *self, PyObject *args,PyObje
         return NULL;
     }
 
-    Py_ssize_t *shapes_ = PyMem_RawMalloc((ndims-1)*sizeof(Py_ssize_t));
-    for(Py_ssize_t i = 0; i < ndims-1; i++) // Discard the innermost shape
-        shapes_[i] = shapes[i];
-    
+    Py_ssize_t *shapes_ = NULL;
+    if(ndims > 1){
+        shapes_ =  PyMem_RawMalloc((ndims-1)*sizeof(Py_ssize_t));
+        for(Py_ssize_t i = 0; i < ndims-1; i++) // Discard the innermost shape
+            shapes_[i] = shapes[i];
+    }
     PyMvArrayObj *mv_array = new_multivector_array(self,type_name,ndims-1,strides,shapes_);
     if(!mv_array){
         PyErr_SetString(PyExc_ValueError,"Error creating new multivector array");
