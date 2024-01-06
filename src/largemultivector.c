@@ -2711,7 +2711,7 @@ PyMultivectorData_Funcs largemultivector_blades_data_fn = {
 };
 
 
-const PyMultivectorSubType largesparse_subtype = {
+ const PyMultivectorSubType largesparse_subtype = {
     .math_funcs = &largemultivector_sparse_math_fn,
     .data_funcs = &largemultivector_sparse_data_fn,
     .name = "",
@@ -2720,8 +2720,9 @@ const PyMultivectorSubType largesparse_subtype = {
     .metric = {-2},
     .msize = -1,
     .ntype = MultivectorType_sparse,
+    .basic_size = sizeof(SparseMultivector),
 };
-const PyMultivectorSubType largedense_subtype = {
+ const PyMultivectorSubType largedense_subtype = {
     .math_funcs = &largemultivector_dense_math_fn,
     .data_funcs = &largemultivector_dense_data_fn,
     .name = "",
@@ -2730,8 +2731,9 @@ const PyMultivectorSubType largedense_subtype = {
     .metric = {-2},
     .msize = -1,
     .ntype = MultivectorType_dense,
+    .basic_size = sizeof(DenseMultivector),
 };
-const PyMultivectorSubType largeblades_subtype = {
+ const PyMultivectorSubType largeblades_subtype = {
     .math_funcs = &largemultivector_blades_math_fn,
     .data_funcs = &largemultivector_blades_data_fn,
     .name = "",
@@ -2740,6 +2742,7 @@ const PyMultivectorSubType largeblades_subtype = {
     .metric = {-2},
     .msize = -1,
     .ntype = MultivectorType_blades,
+    .basic_size = sizeof(BladesMultivector),
 };
 
 PyMultivectorSubType largemultivector_subtypes_array[3] = {largesparse_subtype,largedense_subtype,largeblades_subtype};

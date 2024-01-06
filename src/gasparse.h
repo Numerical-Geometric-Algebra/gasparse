@@ -83,6 +83,7 @@ typedef struct PyAlgebraObject PyAlgebraObject;
 typedef struct PyMultivectorIter PyMultivectorIter;
 typedef struct PyMultivectorObject PyMultivectorObject;
 typedef struct PyMultivectorMixedMath_Funcs PyMultivectorMixedMath_Funcs;
+typedef PyMultivectorObject PyMvObject;
 
 typedef struct MultivectorDefaults{
     char *type_name;
@@ -108,7 +109,8 @@ typedef struct PyAlgebraObject{
 
 
 typedef int (*gaiternextfunc)(PyMultivectorIter *iter);
-typedef PyMultivectorIter (*gaiterinitfunc)(PyMultivectorObject *data);
+//typedef PyMultivectorIter (*gaiterinitfunc)(PyMultivectorObject *data);
+typedef PyMultivectorIter (*gaiterinitfunc)(void *data, PyMultivectorSubType *type);
 typedef struct PyMultivectorIter{
     gaiternextfunc next;
     void *data;
@@ -200,6 +202,7 @@ typedef struct PyMultivectorSubType{
     Py_ssize_t msize; // metric array size number of basis vector
     Py_ssize_t asize; // algebra size number of basis blades
     int ntype;// this is the type identifier use this to compare types
+    Py_ssize_t basic_size; // the size of the type
 }_PyMultivectorSubType;
 
 // mixed type operation tables
@@ -220,8 +223,6 @@ typedef struct PyMultivectorObject{
     PyAlgebraObject *GA;
     PyMultivectorSubType *type;
 }_PyMultivectorObject;
-
-
 
 typedef struct SparseMultivector{
     int *bitmap;
@@ -249,6 +250,10 @@ int check_multivector_mixed_type_table(PyMultivectorObject *mv, char *name);
 
 //void free_multivector(PyMultivectorObject *self);
 void free_multivector_data(PyMultivectorObject self);
+Py_ssize_t parse_list_as_values(PyObject *values, ga_float **values_float);
+int parse_list_as_bitmaps(PyObject *blades, int **bitmap);
+int parse_list_as_basis_grades(PyAlgebraObject ga, int *grades, int **bitmaps, Py_ssize_t gsize);
+int parse_list_as_multivectors_1(PyObject *basis, ga_float **values, int **bitmaps);
 //PyMultivectorObject *init_multivector(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga, PyTypeObject *obj_type, int type);
 
 // type methods
@@ -296,5 +301,7 @@ int get_multivector_basis(PyAlgebraObject *self, PyObject *grades, PyMultivector
 
 PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ssize_t size);
 void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size);
+PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t dsize);
+char *type_iter_repr_1(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t dsize);
 
 #endif // GASPARSE_H_

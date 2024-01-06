@@ -292,34 +292,34 @@ static void* blades0_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgeb
 
 
 
-static PyMultivectorIter dense0_iterinit(PyMultivectorObject *data){
+static PyMultivectorIter dense0_iterinit(void *data, PyMultivectorSubType *type){
     PyMultivectorIter iter;
-    iter.data = data->data;
+    iter.data = data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type->ntype;
+    iter.type = type->ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.size = 1;
     iter.niters = 8;
-    iter.next = data->type->data_funcs->iter_next;
-    iter.type_name = data->type->type_name;
+    iter.next = type->data_funcs->iter_next;
+    iter.type_name = type->type_name;
     return iter;
 }
 
-static PyMultivectorIter blades0_iterinit(PyMultivectorObject *data){
+static PyMultivectorIter blades0_iterinit(void *data, PyMultivectorSubType *type){
     PyMultivectorIter iter;
-    iter.data= data->data;
+    iter.data= data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type->ntype;
+    iter.type = type->ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(2*sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.index[1] = 0;
     iter.size = 2;
     iter.niters = 8;
-    iter.next = data->type->data_funcs->iter_next;
-    iter.type_name = data->type->type_name;
+    iter.next = type->data_funcs->iter_next;
+    iter.type_name = type->type_name;
     return iter;
 }
 
@@ -793,34 +793,34 @@ static void* blades1_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgeb
 
 
 
-static PyMultivectorIter dense1_iterinit(PyMultivectorObject *data){
+static PyMultivectorIter dense1_iterinit(void *data, PyMultivectorSubType *type){
     PyMultivectorIter iter;
-    iter.data = data->data;
+    iter.data = data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type->ntype;
+    iter.type = type->ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.size = 1;
     iter.niters = 32;
-    iter.next = data->type->data_funcs->iter_next;
-    iter.type_name = data->type->type_name;
+    iter.next = type->data_funcs->iter_next;
+    iter.type_name = type->type_name;
     return iter;
 }
 
-static PyMultivectorIter blades1_iterinit(PyMultivectorObject *data){
+static PyMultivectorIter blades1_iterinit(void *data, PyMultivectorSubType *type){
     PyMultivectorIter iter;
-    iter.data= data->data;
+    iter.data= data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type->ntype;
+    iter.type = type->ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(2*sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.index[1] = 0;
     iter.size = 2;
     iter.niters = 32;
-    iter.next = data->type->data_funcs->iter_next;
-    iter.type_name = data->type->type_name;
+    iter.next = type->data_funcs->iter_next;
+    iter.type_name = type->type_name;
     return iter;
 }
 
@@ -13453,6 +13453,7 @@ static const PyMultivectorSubType dense0_subtype = {
     .msize = 3,
     .ntype = 3,
     .asize = 8,
+    .basic_size = sizeof(DenseMultivector),
 };
 
 static const PyMultivectorSubType blades0_subtype = {
@@ -13465,6 +13466,7 @@ static const PyMultivectorSubType blades0_subtype = {
     .msize = 3,
     .ntype = 4,
     .asize = 8,
+    .basic_size = sizeof(BladesMultivector),
 };
 
 
@@ -13524,6 +13526,7 @@ static const PyMultivectorSubType dense1_subtype = {
     .msize = 5,
     .ntype = 5,
     .asize = 32,
+    .basic_size = sizeof(DenseMultivector),
 };
 
 static const PyMultivectorSubType blades1_subtype = {
@@ -13536,6 +13539,7 @@ static const PyMultivectorSubType blades1_subtype = {
     .msize = 5,
     .ntype = 6,
     .asize = 32,
+    .basic_size = sizeof(BladesMultivector),
 };
 
 

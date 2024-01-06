@@ -91,7 +91,7 @@ print("Angle Error")
 print(np.arccos((R_est*~R)(0))/np.pi*360)
 
 '''
-# The eigenmultivectors are orthogonal and they are also blades
+# Check that the eigenmultivectors are orthogonal and they are also blades
 matrix = np.zeros([len(P_lst),len(P_lst)])
 self_prod = [0]*len(P_lst)
 for i in range(len(P_lst)):

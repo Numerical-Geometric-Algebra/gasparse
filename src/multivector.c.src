@@ -376,55 +376,55 @@ void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size){
     free(iter);
 }
 
-PyMultivectorIter sparse_iter_init(PyMultivectorObject *data){
+static PyMultivectorIter sparse_iter_init(void *data, PyMultivectorSubType *type){
     PyMultivectorIter iter;
-    SparseMultivector *sparse = (SparseMultivector*)data->data;
-    iter.data= data->data;
+    SparseMultivector *sparse = (SparseMultivector*)data;
+    iter.data= data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type->ntype;
+    iter.type = type->ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.size = 1;
     iter.niters = sparse->size;
-    iter.next = data->type->data_funcs->iter_next;
-    iter.type_name = data->type->type_name;
+    iter.next = type->data_funcs->iter_next;
+    iter.type_name = type->type_name;
     return iter;
 }
 
-static PyMultivectorIter dense_iter_init(PyMultivectorObject *data){
+static PyMultivectorIter dense_iter_init(void *data, PyMultivectorSubType *type){
     PyMultivectorIter iter;
-    DenseMultivector *dense = (DenseMultivector*)data->data;
-    iter.data= data->data;
+    DenseMultivector *dense = (DenseMultivector*)data;
+    iter.data= data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type->ntype;
+    iter.type = type->ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.size = 1;
     iter.niters = dense->size;
-    iter.next = data->type->data_funcs->iter_next;
-    iter.type_name = data->type->type_name;
+    iter.next = type->data_funcs->iter_next;
+    iter.type_name = type->type_name;
     return iter;
 }
 
-static PyMultivectorIter blades_iter_init(PyMultivectorObject *data){
+static PyMultivectorIter blades_iter_init(void *data, PyMultivectorSubType *type){
     PyMultivectorIter iter;
-    BladesMultivector *blades = (BladesMultivector*)data->data;
-    iter.data= data->data;
+    BladesMultivector *blades = (BladesMultivector*)data;
+    iter.data= data;
     iter.bitmap = -1;
     iter.value = 0;
-    iter.type = data->type->ntype;
+    iter.type = type->ntype;
     iter.index = (Py_ssize_t*)PyMem_RawMalloc(2*sizeof(Py_ssize_t));
     iter.index[0] = 0;
     iter.index[1] = 0;
     iter.size = 2;
     iter.niters = 0;
-    iter.type_name = data->type->type_name;
+    iter.type_name = type->type_name;
     for(Py_ssize_t i = 0; i < blades->size; i++)
         iter.niters += blades->data[i].size;
 
-    iter.next = data->type->data_funcs->iter_next;
+    iter.next = type->data_funcs->iter_next;
     return iter;
 }
 
@@ -432,7 +432,7 @@ PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ssize_t s
     PyMultivectorIter *iter = (PyMultivectorIter*)PyMem_RawMalloc(size*sizeof(PyMultivectorIter));
     for(Py_ssize_t i = 0; i < size; i++){
         gaiterinitfunc iter_init = data[i].type->data_funcs->iter_init;
-        iter[i] = iter_init(&data[i]);
+        iter[i] = iter_init(data[i].data,data[i].type);
     }
     return iter;
 }
@@ -452,7 +452,135 @@ char *bitmap_to_string(int bitmap){
     return str;
 }
 
-static PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t dsize){
+char *type_iter_repr_1(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t dsize){
+    char *out_str;
+    if(ptype == PrintTypeMV_reduced){
+        if(dsize){
+            char **str_blade = (char**)PyMem_RawMalloc(dsize*sizeof(char*));
+            Py_ssize_t len = 0;
+            char sep[] = " + ";
+
+            Py_ssize_t i = 0;
+            while(iter->next(iter)){
+                // only skip small values if its not sparse or blades type
+                if(iter->type != MultivectorType_sparse && iter->type != MultivectorType_blades)
+                    // maybe should add this as an option when creating the algebra
+                    if(ABS(iter->value) < 1e-12) continue; // don't print small values
+
+                char *value = PyOS_double_to_string((double)iter->value,'f',16,0,NULL);
+                if(iter->bitmap){
+                    char *bitmap = bitmap_to_string(iter->bitmap);
+                    Py_ssize_t size = strlen(bitmap) + strlen(value)+3;
+                    str_blade[i] = (char*)PyMem_RawMalloc(size*sizeof(char));
+                    PyOS_snprintf(str_blade[i],size,"%s^%s",value,bitmap);
+                    PyMem_RawFree(bitmap);
+                    PyMem_Free(value);
+                }else{
+                    Py_ssize_t size = strlen(value) + 1;
+                    str_blade[i] = (char*)PyMem_RawMalloc(size*sizeof(char));
+                    strcpy(str_blade[i],value);
+                    PyMem_Free(value);
+                }
+                len += strlen(str_blade[i]);
+                i++;
+            }
+            if(iter->type != MultivectorType_sparse && iter->type != MultivectorType_blades)
+                dsize = i;
+            if(!dsize){
+                PyMem_RawFree(str_blade);
+                out_str = PyMem_RawMalloc(4*sizeof(char));
+                out_str[3] = '\0';
+                strcpy(out_str,"0.0");
+                return out_str;
+            }
+            len += dsize*3 + 3;
+            out_str = (char*)PyMem_RawMalloc(len*sizeof(char));
+
+            Py_ssize_t j = 0;
+            for(i = 0; i < dsize-1; i++){
+                strcpy(out_str + j, str_blade[i]);
+                j += strlen(str_blade[i]);
+                strcpy(out_str + j, sep);
+                j += strlen(sep);
+            }
+            strcpy(out_str + j, str_blade[i]);
+            j += strlen(str_blade[i]);
+
+            for(Py_ssize_t i = 0; i < dsize; i++)
+                PyMem_RawFree(str_blade[i]);
+            PyMem_RawFree(str_blade);
+
+            return out_str;
+        }else{ 
+            out_str = PyMem_RawMalloc(4*sizeof(char));
+            out_str[3] = '\0';
+            strcpy(out_str,"0.0");
+            return out_str;
+        }
+    }else if(ptype == PrintTypeMV_normal){
+        if(dsize){
+            char **str_bitmap = (char**)PyMem_RawMalloc(dsize*sizeof(char*));
+            char **str_value =  (char**)PyMem_RawMalloc(dsize*sizeof(char*));
+            Py_ssize_t len_bitmap = 0, len_value = 0;
+            Py_ssize_t i = 0;
+            while(iter->next(iter)){
+                str_bitmap[i] = bitmap_to_string(iter->bitmap);
+                len_bitmap += strlen(str_bitmap[i]);
+                str_value[i] = PyOS_double_to_string((double)iter->value,'f',6,0,NULL);
+                len_value += strlen(str_value[i]);
+                i++;
+            }
+            len_value += dsize + 3;
+            len_bitmap += dsize + 3;
+            char *format_value = (char*)PyMem_RawMalloc((len_value)*sizeof(char));
+            char *format_bitmap = (char*)PyMem_RawMalloc((len_bitmap)*sizeof(char));
+
+            Py_ssize_t j = 0, k = 0; i = 0;
+            for(i = 0; i < dsize - 1; i++){
+                strcpy(format_bitmap + j, str_bitmap[i]);
+                j += strlen(str_bitmap[i]);
+                format_bitmap[j++] = ',';
+
+                strcpy(format_value + k, str_value[i]);
+                k += strlen(str_value[i]);
+                format_value[k++] = ',';
+            }
+            strcpy(format_bitmap + j, str_bitmap[i]);
+            j += strlen(str_bitmap[i]);
+            format_bitmap[j] = '\0';
+
+
+            strcpy(format_value + k, str_value[i]);
+            k += strlen(str_value[i]);
+            format_value[k] = '\0';
+
+            char *format = ".multivector([%s],blades=[%s],dtype=%s)";
+            size_t size = len_value + len_bitmap + strlen(format);
+            char *format_out = (char*)PyMem_RawMalloc(size*sizeof(char));
+
+            PyOS_snprintf(format_out,size,format,format_value,format_bitmap,iter->type_name);
+
+            for(Py_ssize_t i = 0; i < dsize; i++){
+                PyMem_RawFree(str_bitmap[i]);
+                PyMem_Free(str_value[i]);
+            }
+            PyMem_RawFree(str_bitmap);
+            PyMem_RawFree(str_value);
+            PyMem_RawFree(format_value);
+            PyMem_RawFree(format_bitmap);
+            return format_out;
+        }else {
+            const char* zero = ".multivector(0.0)";
+            out_str = PyMem_RawMalloc((strlen(zero)+1)*sizeof(char));
+            out_str[strlen(zero)] = '\0';
+            strcpy(out_str,zero);
+            return out_str;
+        };
+    }
+    return NULL; // raise error
+}
+
+PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t dsize){
     if(ptype == PrintTypeMV_reduced){
         if(dsize){
             char **str_blade = (char**)PyMem_RawMalloc(dsize*sizeof(char*));
@@ -572,6 +700,7 @@ static PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_s
     }
     return NULL; // raise error
 }
+
 
 static SparseMultivector sparse_copy_(SparseMultivector sparse){
     SparseMultivector copy = {.size = -1, .bitmap = NULL, .value = NULL};
@@ -2239,7 +2368,7 @@ PyObject* multivector_list(PyMultivectorObject *self, PyObject *args, PyObject *
 
 	list = PyList_New(size);
     bitmap = PyList_New(size);
-    iter = dense->type->data_funcs->iter_init(dense);
+    iter = dense->type->data_funcs->iter_init(dense->data,dense->type);
 	
 	Py_ssize_t j = 0;
 	ga_float basis_value = 1;
@@ -2283,7 +2412,7 @@ PyObject* multivector_list(PyMultivectorObject *self, PyObject *args, PyObject *
 
 PyObject* multivector_grade(PyMultivectorObject *self, PyObject *Py_UNUSED(ignored)){
     int grade = -1;
-    PyMultivectorIter iter = self->type->data_funcs->iter_init(self);
+    PyMultivectorIter iter = self->type->data_funcs->iter_init(self->data,self->type);
 
     while(iter.next(&iter)){
 
@@ -2553,6 +2682,22 @@ PyObject *multivector_grade_project(PyMultivectorObject *self, PyObject *args, P
 
     size = parse_list_as_grades(self->GA,grades_obj,&grades);
     if(size <= 0) return NULL;
+
+    if(size == 1 && grades[0] == 0){
+        // If we want grade projection to scalars
+        PyMultivectorIter *iter = init_multivector_iter(self,1);
+        while(iter->next(iter)){
+            if(iter->bitmap == 0){
+                ga_float value = iter->value;
+                PyMem_RawFree(grades);
+                free_multivector_iter(iter,1);
+                return (PyObject*)PyFloat_FromDouble((double)value);
+            }
+        }
+        PyMem_RawFree(grades);
+        free_multivector_iter(iter,1);
+        return (PyObject*)PyFloat_FromDouble((double)0.0);
+    }
 
     gaunarygradefunc grade_project = self->type->math_funcs->grade_project;
     if(grade_project){
@@ -2900,6 +3045,7 @@ static PyMultivectorData_Funcs multivector_{{type}}_data_fn = {
 {% endfor %}
 
 {% for type in type_list %}
+{% set Type = Type_list[loop.index0] %}
 static const PyMultivectorSubType {{type}}_subtype = {
     .math_funcs = &multivector_{{type}}_math_fn,
     .data_funcs = &multivector_{{type}}_data_fn,
@@ -2909,6 +3055,7 @@ static const PyMultivectorSubType {{type}}_subtype = {
     .metric = {-2},
     .msize = -1,
     .ntype = MultivectorType_{{type}},
+    .basic_size = sizeof({{Type}}Multivector),
 };
 {% endfor %}
 
