@@ -105,15 +105,11 @@ static Py_ssize_t *get_strides(Py_ssize_t ndims, Py_ssize_t *shapes){
 }
 
 static void multivector_array_dealloc(PyMvArrayObj *self){
-	void **data = self->data;
+	void *data = self->data;
     gafreefunc free_type = self->type->data_funcs->free;
     if(free_type)
-    for(Py_ssize_t i = 0; i < self->strides[0]; i++){
-        if(self->data[i]){
-            free_type(self->data[i]);
-            PyMem_RawFree(self->data[i]);
-        }
-    }
+    for(Py_ssize_t i = 0; i < self->strides[0]; i++)
+        free_type(self->data + i*self->type->basic_size);
 
 	Py_XDECREF((PyObject*)self->GA);
 	PyMem_RawFree(self->strides);
@@ -143,10 +139,10 @@ static int multivector_array_iter_next(PyMvArrayIter *iter, Py_ssize_t dim){
     if(dim < 0) return 1; // Ignore iteration
     if(dim >= iter->ns) return 0;
     
-    iter->data += iter->strides[dim+1];
+    iter->data += iter->strides[dim+1]*iter->basic_size;
     iter->index[dim]++;
     if(iter->index[dim] >= iter->shapes[dim]){
-        iter->data -= iter->shapes[dim]*iter->strides[dim+1];
+        iter->data -= iter->shapes[dim]*iter->strides[dim+1]*iter->basic_size;
         iter->index[dim] = 0;
         return 0; // last iteration
     }
@@ -186,6 +182,7 @@ static PyMultipleArrayIter init_artificial_mtp_arrays_iter(PyMvArrayObject *self
     iter.array_iter->shapes = self->shapes;
     iter.array_iter->next = multivector_array_iter_next;
     iter.array_iter->ns = self->ns;
+    iter.array_iter->basic_size = self->type->basic_size;
     iter.nm = 1;
     iter.shapes = self->shapes;
     iter.dims = (Py_ssize_t***)PyMem_RawMalloc(self->ns*sizeof(Py_ssize_t**));
@@ -227,7 +224,7 @@ PyMultivectorIter *init_multivector_array_iter(PyMvArrayObj *self, Py_ssize_t si
     PyMultivectorIter *iter = (PyMultivectorIter*)PyMem_RawMalloc(size*sizeof(PyMultivectorIter));
     gaiterinitfunc iter_init = self->type->data_funcs->iter_init;
     for(Py_ssize_t i = 0; i < size; i++)
-        iter[i] = iter_init(self->data[i],self->type);
+        iter[i] = iter_init(self->data + i*self->type->basic_size,self->type);
     return iter;
 }
 
@@ -253,7 +250,7 @@ PyObject *multivector_array_repr(PyMvArrayObj *self){
     if(self->ns > 0){
         PyMultipleArrayIter arr_iter = init_artificial_mtp_arrays_iter(self);
         do{
-            PyMultivectorIter iter = iter_init(*arr_iter.array_iter->data,self->type);
+            PyMultivectorIter iter = iter_init(arr_iter.array_iter->data,self->type);
             mv_str = type_iter_repr_1(&iter,ptype,iter.niters);
             
             if(last_dim != arr_iter.dim && last_dim != -9){
@@ -282,10 +279,11 @@ PyObject *multivector_array_repr(PyMvArrayObj *self){
            strcat(out_str,rbracket);
         //strcat(out_str,")");
     }else{
-        PyMultivectorIter iter = iter_init(*self->data,self->type);
+        PyMultivectorIter iter = iter_init(self->data,self->type);
         mv_str = type_iter_repr_1(&iter,ptype,iter.niters);
         strcpy(out_str,mv_str);
         PyMem_RawFree(mv_str);
+        PyMem_RawFree(iter.index);
     }
 
     out = Py_BuildValue("s",out_str);
@@ -443,14 +441,12 @@ PyObject *algebra_multivector_array(PyAlgebraObject *self, PyObject *args,PyObje
         }
         PyMem_RawFree(values_basis);
     }
-    mv_array->data = (void**)PyMem_RawMalloc(strides[0]*sizeof(void*));
-
-    for(Py_ssize_t i = 0; i < strides[0]; i++)
-        mv_array->data[i] = NULL;
+    mv_array->data = (void*)PyMem_RawMalloc(strides[0]*mv_array->type->basic_size);
+    if(!mv_array->data)
+        return NULL;
     
     for(Py_ssize_t i = 0; i < strides[0]; i++){
-        mv_array->data[i] = init(bitmaps_int,values_float_array[i],bsize,self);
-        if(!mv_array->data[i]){
+        if(!init(mv_array->data + i*mv_array->type->basic_size,bitmaps_int,values_float_array[i],bsize,self)){
             // dealloc the memory from all the initialized objects
             multivector_array_dealloc(mv_array);
             PyErr_SetString(PyExc_ValueError,"Error initializing a single multivector!");

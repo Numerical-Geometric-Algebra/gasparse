@@ -149,7 +149,7 @@ typedef PyMultivectorObject *(*gascalarfunc)(PyMultivectorObject *self, ga_float
 typedef PyMultivectorObject *(*gascalaraddfunc)(PyMultivectorObject *self, ga_float value, int sign);
 
 typedef int (*gacastfunc)(PyMultivectorObject *from, PyMultivectorObject *to);
-typedef void *(*gainitfunc)(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga);
+typedef int (*gainitfunc)(void*, int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga);
 typedef void (*gafreefunc)(void *data);
 typedef PyObject *(*gareprfunc)(void *data, PrintTypeMV ptype);
 

@@ -154,6 +154,14 @@ python3 setup.py build # builds gasparse
 python3 setup.py build --genalgebras # generates the algebra
 ```
 
+
+### Code Structure
+
+`gasparse.c` -> algebra declarations and initializations
+`multivector_object.c` -> multivector array object calls
+`multivector_types.c, multivector_large.c, multivector_gen.c` -> Different implementations of the different types. 
+
+
 ## TODO
 1. Deprecate `type_iter_repr` function and replace by `type_iter_repr_1`
 1. For operations involving `PyMultivectorObject` that are transparent to the subtypes, it might make sense to create a new empty multivector and then pass that as reference to function that operates directly on the type.

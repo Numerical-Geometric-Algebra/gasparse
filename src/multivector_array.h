@@ -8,7 +8,7 @@
 
 typedef struct PyMultivectorArrayObject{
     PyObject_HEAD
-    void **data; // PyMultivectorObject or any other subtype such as dense and sparse
+    void *data; // PyMultivectorObject or any other subtype such as dense and sparse
     PyMultivectorMixedMath_Funcs *mixed;
     PyAlgebraObject *GA;
     PyMultivectorSubType *type;
@@ -22,7 +22,8 @@ typedef struct PyMvArrayIter PyMvArrayIter;
 typedef int (*mvarrayiternextfunc)(PyMvArrayIter*,Py_ssize_t);
 
 typedef struct PyMvArrayIter{
-    void **data;
+    void *data;
+    Py_ssize_t basic_size;
     Py_ssize_t ns; // Size of shapes and strides
     Py_ssize_t *strides; // Has ns + 1 elements
     Py_ssize_t *shapes; // Has ns elements

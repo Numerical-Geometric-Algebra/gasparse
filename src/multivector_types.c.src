@@ -1,5 +1,5 @@
-#include <python3.11/Python.h>
-#include "gasparse.h"
+#include <Python.h>
+#include "types.h"
 
 /* #include "multivector.h" */
 
@@ -14,6 +14,29 @@ int comp_abs(ga_float v, ga_float p){
 int ga_check_value_precision(PyAlgebraObject *ga, ga_float v){
     ga_float r = (v < 0) ? -v : v;
     return r < ga->precision;
+}
+
+PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ssize_t size){
+    PyMultivectorIter *iter = (PyMultivectorIter*)PyMem_RawMalloc(size*sizeof(PyMultivectorIter));
+    for(Py_ssize_t i = 0; i < size; i++){
+        gaiterinitfunc iter_init = data[i].type->data_funcs->iter_init;
+        iter[i] = iter_init(data[i].data,data[i].type);
+    }
+    return iter;
+}
+
+void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size){
+    for(Py_ssize_t i = 0; i < size; i++)
+        if(iter[i].index)
+            free(iter[i].index);
+    free(iter);
+}
+
+PyMultivectorObject *new_multivector_inherit_type(PyMultivectorObject *mv){
+    PyMultivectorObject *self = alloc_multivector(mv->GA);
+    if(!self) return NULL;
+    self->type = mv->type;
+    return self;
 }
 
 SparseMultivector init_sparse_empty(Py_ssize_t size){
@@ -369,12 +392,7 @@ static int blades_iter_next(PyMultivectorIter *iter){
     return 1;
 }
 
-void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size){
-    for(Py_ssize_t i = 0; i < size; i++)
-        if(iter[i].index)
-            free(iter[i].index);
-    free(iter);
-}
+
 
 static PyMultivectorIter sparse_iter_init(void *data, PyMultivectorSubType *type){
     PyMultivectorIter iter;
@@ -428,15 +446,6 @@ static PyMultivectorIter blades_iter_init(void *data, PyMultivectorSubType *type
     return iter;
 }
 
-PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ssize_t size){
-    PyMultivectorIter *iter = (PyMultivectorIter*)PyMem_RawMalloc(size*sizeof(PyMultivectorIter));
-    for(Py_ssize_t i = 0; i < size; i++){
-        gaiterinitfunc iter_init = data[i].type->data_funcs->iter_init;
-        iter[i] = iter_init(data[i].data,data[i].type);
-    }
-    return iter;
-}
-
 
 char *bitmap_to_string(int bitmap){
     Py_ssize_t size = GRADE((Py_ssize_t)bitmap) + 2;
@@ -452,254 +461,6 @@ char *bitmap_to_string(int bitmap){
     return str;
 }
 
-char *type_iter_repr_1(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t dsize){
-    char *out_str;
-    if(ptype == PrintTypeMV_reduced){
-        if(dsize){
-            char **str_blade = (char**)PyMem_RawMalloc(dsize*sizeof(char*));
-            Py_ssize_t len = 0;
-            char sep[] = " + ";
-
-            Py_ssize_t i = 0;
-            while(iter->next(iter)){
-                // only skip small values if its not sparse or blades type
-                if(iter->type != MultivectorType_sparse && iter->type != MultivectorType_blades)
-                    // maybe should add this as an option when creating the algebra
-                    if(ABS(iter->value) < 1e-12) continue; // don't print small values
-
-                char *value = PyOS_double_to_string((double)iter->value,'g',16,0,NULL);
-                if(iter->bitmap){
-                    char *bitmap = bitmap_to_string(iter->bitmap);
-                    Py_ssize_t size = strlen(bitmap) + strlen(value)+3;
-                    str_blade[i] = (char*)PyMem_RawMalloc(size*sizeof(char));
-                    PyOS_snprintf(str_blade[i],size,"%s^%s",value,bitmap);
-                    PyMem_RawFree(bitmap);
-                    PyMem_Free(value);
-                }else{
-                    Py_ssize_t size = strlen(value) + 1;
-                    str_blade[i] = (char*)PyMem_RawMalloc(size*sizeof(char));
-                    strcpy(str_blade[i],value);
-                    PyMem_Free(value);
-                }
-                len += strlen(str_blade[i]);
-                i++;
-            }
-            if(iter->type != MultivectorType_sparse && iter->type != MultivectorType_blades)
-                dsize = i;
-            if(!dsize){
-                PyMem_RawFree(str_blade);
-                out_str = PyMem_RawMalloc(4*sizeof(char));
-                out_str[3] = '\0';
-                strcpy(out_str,"0.0");
-                return out_str;
-            }
-            len += dsize*3 + 3;
-            out_str = (char*)PyMem_RawMalloc(len*sizeof(char));
-
-            Py_ssize_t j = 0;
-            for(i = 0; i < dsize-1; i++){
-                strcpy(out_str + j, str_blade[i]);
-                j += strlen(str_blade[i]);
-                strcpy(out_str + j, sep);
-                j += strlen(sep);
-            }
-            strcpy(out_str + j, str_blade[i]);
-            j += strlen(str_blade[i]);
-
-            for(Py_ssize_t i = 0; i < dsize; i++)
-                PyMem_RawFree(str_blade[i]);
-            PyMem_RawFree(str_blade);
-
-            return out_str;
-        }else{ 
-            out_str = PyMem_RawMalloc(4*sizeof(char));
-            out_str[3] = '\0';
-            strcpy(out_str,"0.0");
-            return out_str;
-        }
-    }else if(ptype == PrintTypeMV_normal){
-        if(dsize){
-            char **str_bitmap = (char**)PyMem_RawMalloc(dsize*sizeof(char*));
-            char **str_value =  (char**)PyMem_RawMalloc(dsize*sizeof(char*));
-            Py_ssize_t len_bitmap = 0, len_value = 0;
-            Py_ssize_t i = 0;
-            while(iter->next(iter)){
-                str_bitmap[i] = bitmap_to_string(iter->bitmap);
-                len_bitmap += strlen(str_bitmap[i]);
-                str_value[i] = PyOS_double_to_string((double)iter->value,'g',6,0,NULL);
-                len_value += strlen(str_value[i]);
-                i++;
-            }
-            len_value += dsize + 3;
-            len_bitmap += dsize + 3;
-            char *format_value = (char*)PyMem_RawMalloc((len_value)*sizeof(char));
-            char *format_bitmap = (char*)PyMem_RawMalloc((len_bitmap)*sizeof(char));
-
-            Py_ssize_t j = 0, k = 0; i = 0;
-            for(i = 0; i < dsize - 1; i++){
-                strcpy(format_bitmap + j, str_bitmap[i]);
-                j += strlen(str_bitmap[i]);
-                format_bitmap[j++] = ',';
-
-                strcpy(format_value + k, str_value[i]);
-                k += strlen(str_value[i]);
-                format_value[k++] = ',';
-            }
-            strcpy(format_bitmap + j, str_bitmap[i]);
-            j += strlen(str_bitmap[i]);
-            format_bitmap[j] = '\0';
-
-
-            strcpy(format_value + k, str_value[i]);
-            k += strlen(str_value[i]);
-            format_value[k] = '\0';
-
-            char *format = ".multivector([%s],blades=[%s],dtype=%s)";
-            size_t size = len_value + len_bitmap + strlen(format);
-            char *format_out = (char*)PyMem_RawMalloc(size*sizeof(char));
-
-            PyOS_snprintf(format_out,size,format,format_value,format_bitmap,iter->type_name);
-
-            for(Py_ssize_t i = 0; i < dsize; i++){
-                PyMem_RawFree(str_bitmap[i]);
-                PyMem_Free(str_value[i]);
-            }
-            PyMem_RawFree(str_bitmap);
-            PyMem_RawFree(str_value);
-            PyMem_RawFree(format_value);
-            PyMem_RawFree(format_bitmap);
-            return format_out;
-        }else {
-            const char* zero = ".multivector(0.0)";
-            out_str = PyMem_RawMalloc((strlen(zero)+1)*sizeof(char));
-            out_str[strlen(zero)] = '\0';
-            strcpy(out_str,zero);
-            return out_str;
-        };
-    }
-    return NULL; // raise error
-}
-
-PyObject *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t dsize){
-    if(ptype == PrintTypeMV_reduced){
-        if(dsize){
-            char **str_blade = (char**)PyMem_RawMalloc(dsize*sizeof(char*));
-            Py_ssize_t len = 0;
-            PyObject *out = NULL;
-            char *out_str;
-            char sep[] = " + ";
-
-            Py_ssize_t i = 0;
-            while(iter->next(iter)){
-                // only skip small values if its not sparse or blades type
-                if(iter->type != MultivectorType_sparse && iter->type != MultivectorType_blades)
-                    // maybe should add this as an option when creating the algebra
-                    if(ABS(iter->value) < 1e-12) continue; // don't print small values
-
-                char *value = PyOS_double_to_string((double)iter->value,'g',16,0,NULL);
-                if(iter->bitmap){
-                    char *bitmap = bitmap_to_string(iter->bitmap);
-                    Py_ssize_t size = strlen(bitmap) + strlen(value)+3;
-                    str_blade[i] = (char*)PyMem_RawMalloc(size*sizeof(char));
-                    PyOS_snprintf(str_blade[i],size,"%s^%s",value,bitmap);
-                    PyMem_RawFree(bitmap);
-                    PyMem_Free(value);
-                }else{
-                    Py_ssize_t size = strlen(value) + 1;
-                    str_blade[i] = (char*)PyMem_RawMalloc(size*sizeof(char));
-                    strcpy(str_blade[i],value);
-                    PyMem_Free(value);
-                }
-                len += strlen(str_blade[i]);
-                i++;
-            }
-            if(iter->type != MultivectorType_sparse && iter->type != MultivectorType_blades)
-                dsize = i;
-            if(!dsize){
-                PyMem_RawFree(str_blade);
-                return Py_BuildValue("s","0.0");
-            }
-            len += dsize*3 + 3;
-            out_str = (char*)PyMem_RawMalloc(len*sizeof(char));
-
-            Py_ssize_t j = 0;
-            for(i = 0; i < dsize-1; i++){
-                strcpy(out_str + j, str_blade[i]);
-                j += strlen(str_blade[i]);
-                strcpy(out_str + j, sep);
-                j += strlen(sep);
-            }
-            strcpy(out_str + j, str_blade[i]);
-            j += strlen(str_blade[i]);
-
-            out = Py_BuildValue("s",out_str);
-
-            for(Py_ssize_t i = 0; i < dsize; i++)
-                PyMem_RawFree(str_blade[i]);
-            PyMem_RawFree(str_blade);
-            PyMem_RawFree(out_str);
-
-            return out;
-        }else return Py_BuildValue("s","0.0");
-    }else if(ptype == PrintTypeMV_normal){
-        if(dsize){
-            char **str_bitmap = (char**)PyMem_RawMalloc(dsize*sizeof(char*));
-            char **str_value =  (char**)PyMem_RawMalloc(dsize*sizeof(char*));
-            Py_ssize_t len_bitmap = 0, len_value = 0;
-            PyObject *out = NULL;
-            Py_ssize_t i = 0;
-            while(iter->next(iter)){
-                str_bitmap[i] = bitmap_to_string(iter->bitmap);
-                len_bitmap += strlen(str_bitmap[i]);
-                str_value[i] = PyOS_double_to_string((double)iter->value,'g',6,0,NULL);
-                len_value += strlen(str_value[i]);
-                i++;
-            }
-            len_value += dsize + 3;
-            len_bitmap += dsize + 3;
-            char *format_value = (char*)PyMem_RawMalloc((len_value)*sizeof(char));
-            char *format_bitmap = (char*)PyMem_RawMalloc((len_bitmap)*sizeof(char));
-
-            Py_ssize_t j = 0, k = 0; i = 0;
-            for(i = 0; i < dsize - 1; i++){
-                strcpy(format_bitmap + j, str_bitmap[i]);
-                j += strlen(str_bitmap[i]);
-                format_bitmap[j++] = ',';
-
-                strcpy(format_value + k, str_value[i]);
-                k += strlen(str_value[i]);
-                format_value[k++] = ',';
-            }
-            strcpy(format_bitmap + j, str_bitmap[i]);
-            j += strlen(str_bitmap[i]);
-            format_bitmap[j] = '\0';
-
-
-            strcpy(format_value + k, str_value[i]);
-            k += strlen(str_value[i]);
-            format_value[k] = '\0';
-
-            char *format = ".multivector([%s],blades=[%s],dtype=%s)";
-            size_t size = len_value + len_bitmap + strlen(format);
-            char *format_out = (char*)PyMem_RawMalloc(size*sizeof(char));
-
-            PyOS_snprintf(format_out,size,format,format_value,format_bitmap,iter->type_name);
-            out = Py_BuildValue("s",format_out);
-
-            for(Py_ssize_t i = 0; i < dsize; i++){
-                PyMem_RawFree(str_bitmap[i]);
-                PyMem_Free(str_value[i]);
-            }
-            PyMem_RawFree(str_bitmap);
-            PyMem_RawFree(str_value);
-            PyMem_RawFree(format_value);
-            PyMem_RawFree(format_bitmap);
-            PyMem_RawFree(format_out);
-            return out;
-        }else return Py_BuildValue("s",".multivector(0.0)");
-    }
-    return NULL; // raise error
-}
 
 
 static SparseMultivector sparse_copy_(SparseMultivector sparse){
@@ -738,6 +499,65 @@ SparseMultivector sparse_new_(Py_ssize_t size){
     return sparse;
 }
 
+
+static int unary_sparse_scalaradd(void *out, void *data0, PyAlgebraObject *GA, ga_float value, int sign){
+    SparseMultivector *sparse0 = sparse0;
+    SparseMultivector *sparse = out;
+    sparse->size = -1;
+    Py_ssize_t scalarindex = -1;
+    for(Py_ssize_t i = 0; i < sparse0->size; i++){
+        if(sparse0->bitmap[i] == 0){
+            scalarindex = i;
+            break;
+        }
+    }
+
+    if((scalarindex != -1 && ga_check_value_precision(ga,sign*sparse0->value[scalarindex] + value)) ||
+       (scalarindex == -1 && ga_check_value_precision(ga,value))){
+        Py_ssize_t size = sparse0->size;
+        if(scalarindex != -1)
+            size -= 1;
+
+        *sparse = init_sparse_empty(size);
+        if(sparse->size == -1)
+            return 0;
+
+        Py_ssize_t j = 0;
+        for(Py_ssize_t i = 0; i < sparse0->size; i++){
+            if(i == scalarindex) i++; // skip scalar index
+            sparse->value[j] = sign*sparse0->value[i];
+            sparse->bitmap[j] = sparse0->bitmap[i];
+            j++;
+        }
+        return  1;
+    }
+
+
+    if(scalarindex != -1){
+        sparse = init_sparse_empty(sparse0->size);
+        if(sparse->size == -1)
+            return sparse;
+
+        for(Py_ssize_t i = 0; i < sparse0->size; i++){
+            sparse->value[i] = sign*sparse0->value[i];
+            sparse->bitmap[i] = sparse0->bitmap[i];
+        }
+        sparse->value[scalarindex] += value;
+    }
+    else{
+        *sparse = init_sparse_empty(sparse0->size + 1);
+        if(sparse->size == -1)
+            return sparse;
+        sparse->value[0] = value;
+        sparse->bitmap[0] = 0;
+
+        for(Py_ssize_t i = 0; i < sparse0->size; i++){
+            sparse->value[i+1] = sign*sparse0->value[i];
+            sparse->bitmap[i+1] = sparse0->bitmap[i];
+        }
+    }
+    return 1;
+}
 
 static SparseMultivector unary_sparse_scalaradd_(SparseMultivector sparse0, PyAlgebraObject *ga, ga_float value, int sign){
     SparseMultivector sparse = {.size = -1};
@@ -2244,757 +2064,6 @@ static int {{type}}_init(void *data, int *bitmap, ga_float *value, Py_ssize_t si
 
 {% endfor %}
 
-/*
-  Method calls of PyMultivectorType:
-    print(a) -> multivector_repr(self): prints the multivector
-    a(2)     -> multivector_grade_project(self): grade projection
-  Method calls for the number protocol:
-    a*b -> multivector_geometric_product: geometric product
-    a^b -> multivector_outer_product: wedge product
-    a|b -> multivector_inner_product: inner product
-    a+b -> multivector_add: multivector addition
-    a-b -> multivector_subtract: multivector subtraction
-    ~a  -> multivector_invert: reverse the order of the basis vector by changing the sign
-*/
-
-
-
-PyObject *multivector_repr(PyMultivectorObject *self){
-    PyObject *mv_repr;
-    PyObject *ga_repr;
-    PrintTypeMV ptype = self->GA->print_type_mv;
-    PyObject *out;
-
-    PyMultivectorIter *iter = init_multivector_iter(self,1);
-    mv_repr = type_iter_repr(iter,ptype,iter->niters);
-    free_multivector_iter(iter,1);
-
-    if(ptype == PrintTypeMV_normal){
-        ga_repr = PyObject_Repr((PyObject*)self->GA);
-        out =  PySequence_Concat(ga_repr,mv_repr);
-        Py_XDECREF(ga_repr);
-        Py_XDECREF(mv_repr);
-        return out;
-    }else if(ptype == PrintTypeMV_reduced){
-        return mv_repr;
-    }else {
-        PyErr_SetString(PyExc_ValueError,"The selected print type is not valid");
-        return NULL;
-    }
-}
-
-static int get_scalar(PyObject *self, ga_float *value){
-    if(PyFloat_Check(self)){
-        *value = (ga_float)PyFloat_AsDouble(self);
-        return 1;
-    }
-    if(PyLong_Check(self)){
-        *value = (ga_float)PyLong_AsDouble(self);
-        return 1;
-    }
-    return 0;
-}
-
-PyObject* multivector_list(PyMultivectorObject *self, PyObject *args, PyObject *kwds){
-    static char *kwlist[] = {"grades","bitmap",NULL};
-    PyObject *grades = NULL;
-    int *grades_int = NULL;
-    PyObject *list = NULL;
-    PyObject *bitmap = NULL;
-    PyMultivectorObject *dense;
-    PyMultivectorIter iter;
-	Py_ssize_t *grade_bool = NULL;
-	Py_ssize_t size;
-    int free_mv = 1;
-
-    int as_bitmap = 0;
-    
-    if(!PyArg_ParseTupleAndKeywords(args, kwds, "|Op", kwlist, &grades,&as_bitmap))
-        return NULL;
-
-    
-
-    // Cast to dense if the multivector is not dense and is not a generated type
-    if(!self->type->generated && strcmp(self->type->type_name,"dense")){
-
-        dense = new_multivector(self->GA,"dense");
-
-        if(!dense){
-            PyErr_SetString(PyExc_TypeError,"Error populating types table");
-            return NULL;
-        }
-        gacastfunc cast = dense->type->data_funcs->cast;
-        if(!cast){ // Check if cast  function is available
-            // Free the data0 multivector
-            multivector_dealloc(dense);
-            PyErr_SetString(PyExc_TypeError,"cast function not available for this type");
-            return NULL;
-        }
-        
-        if(!cast(self,dense)){
-            // Free the dense multivector
-            multivector_dealloc(dense);
-            PyErr_SetString(PyExc_TypeError,"Error casting the multivector");
-            return NULL;
-        }
-
-    }else {
-        free_mv = 0;
-        dense = self;
-    }
-    
-    if(grades){
-        size = parse_list_as_grades(self->GA, grades,&grades_int);
-        if(size <= 0){
-            PyErr_SetString(PyExc_TypeError, "Error parsing grades");
-            return NULL;
-        }
-
-		grade_bool = get_grade_bool(grades_int, size, MAX_GRADE(self->GA) + 1);
-        PyMem_RawFree(grades_int);
-		size = self->GA->asize;
-    	Py_ssize_t psize = 0;
-    	for (Py_ssize_t i = 0; i < size; i++) {
-      		if (grade_bool[GRADE(i)])
-        		psize++;
-    	}
-		size = psize;
-    }else{
-        grade_bool  = (Py_ssize_t*)PyMem_RawMalloc((MAX_GRADE(self->GA) +1)*sizeof(Py_ssize_t));
-		for(Py_ssize_t i = 0; i < MAX_GRADE(self->GA) +1; i++) 
-			grade_bool[i] = 1;
-		size = self->GA->asize;
-    }
-
-	list = PyList_New(size);
-    bitmap = PyList_New(size);
-    iter = dense->type->data_funcs->iter_init(dense->data,dense->type);
-	
-	Py_ssize_t j = 0;
-	ga_float basis_value = 1;
-    while(iter.next(&iter)){
-        if(grade_bool[GRADE(iter.bitmap)] && j < size){
-			PyObject *value = PyFloat_FromDouble(iter.value);
-			PyList_SetItem(list,j,value);
-			if(as_bitmap){
-				PyObject *bitmap_obj = PyLong_FromLong(iter.bitmap);
-            	PyList_SetItem(bitmap,j,bitmap_obj);
-			}else{
-				PyMultivectorObject *mv = new_multivector(self->GA,self->type->type_name);
-				if(!mv){
-					// free memory
-					Py_XDECREF(list);
-					Py_XDECREF(bitmap);
-					PyErr_SetString(PyExc_TypeError, "Cannot populate the types");
-					return NULL; 
-				}
-				gainitfunc init = mv->type->data_funcs->init;
-                mv->data = (void*)PyMem_RawMalloc(mv->type->basic_size);
-				init(mv->data,&iter.bitmap,&basis_value,1,self->GA);
-				PyList_SetItem(bitmap,j,(PyObject*)mv);
-			}
-			j++;
-		}else if (j > size) {
-        	break;
-      	}
-    }
-	
-    PyMem_RawFree(iter.index);
-
-    PyObject *tuple = PyTuple_New(2);
-    PyTuple_SetItem(tuple,0,list);
-    PyTuple_SetItem(tuple,1,bitmap);
-	PyMem_RawFree(grade_bool);
-    if(free_mv)
-        Py_XDECREF((PyObject*)dense);
-
-    return tuple;
-}
-
-PyObject* multivector_grade(PyMultivectorObject *self, PyObject *Py_UNUSED(ignored)){
-    int grade = -1;
-    PyMultivectorIter iter = self->type->data_funcs->iter_init(self->data,self->type);
-
-    while(iter.next(&iter)){
-
-        if(grade == -1){ //First iteration
-            if(iter.value != 0.0)
-                grade = iter.grade;
-        }else if(grade != iter.grade){
-            if(iter.value != 0.0){
-                PyMem_RawFree(iter.index);
-                Py_RETURN_NONE;
-            }
-        }
-    }if(grade == -1) grade = 0;
-
-    PyMem_RawFree(iter.index);
-    return PyLong_FromLong(grade);
-}
-
-static PyObject *multivector_product(PyObject *left, PyObject *right, ProductType ptype){
-    PyMultivectorObject *data0 = NULL, *data1 = NULL, *def = NULL, *out = NULL;
-    ga_float value = 0;
-    int is_left = -1;
-    gaprodfunc product;
-    gamixedprodfunc mixed_product;
-    gascalarfunc scalar_product;
-
-    if(get_scalar(right,&value)) // check if right is a scalar
-        data0 = (PyMultivectorObject*)left,is_left=1;
-    else if(get_scalar(left,&value)) // check if left is a scalar
-        data0 = (PyMultivectorObject*)right,is_left=0;
-
-    // One of the arguments is scalar apply multiplication by scalar
-    if(data0){
-        // return 0 if inner product with scalar
-        if(ptype == ProductType_inner){
-            out = new_multivector_inherit_type(data0);
-            out->data = (void*)PyMem_RawMalloc(data0->type->basic_size);
-            data0->type->data_funcs->init(out->data,NULL,NULL,0,data0->GA); // initialize empty multivector
-            return (PyObject*)out;
-        }else if(ptype == ProductType_regressive){
-            // convert value to multivector and then apply the product
-            ga_float *pvalue = (ga_float*)PyMem_RawMalloc(sizeof(ga_float));
-            int *pbitmap = (int*)PyMem_RawMalloc(sizeof(int));
-            *pvalue = value; *pbitmap = 0;
-            data1 = new_multivector_inherit_type(data0);
-            data1->data = (void*)PyMem_RawMalloc(data1->type->basic_size);
-            data0->type->data_funcs->init(data1->data,pbitmap,pvalue,1,data0->GA);
-            product = data0->type->math_funcs->product;
-            if(product){
-                if(is_left)
-                    out = product(data0,data1,ptype);
-                else
-                    out = product(data1,data0,ptype);
-            }else{
-
-            }
-            Py_XDECREF((PyObject*)data1);
-            PyMem_RawFree(pvalue);
-            PyMem_RawFree(pbitmap);
-            return (PyObject*)out;
-        }
-        // multiply by scalar
-        scalar_product = data0->type->math_funcs->scalar_product;
-        if(scalar_product){
-            return (PyObject*)scalar_product(data0,value);
-        }else{
-            PyErr_SetString(PyExc_NotImplementedError,"The scalar product for this types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }
-
-    if(PyObject_TypeCheck(left,Py_TYPE(right))){
-        data0 = (PyMultivectorObject*)left;
-        data1 = (PyMultivectorObject*)right;
-    }else{
-        PyErr_SetString(PyExc_TypeError,"operands must be of the same type or int or ga_float");
-        return NULL;
-    }
-    if(data0->GA != data1->GA){
-        int is0_bigger;// METRIC_SIZE(data0->GA) > METRIC_SIZE(data1->GA)
-        if((is0_bigger = is_bigger_metric(data0->GA,data1->GA)) == -1){
-            PyErr_SetString(PyExc_TypeError,"operands must have overlaping metric");
-            return NULL;
-        }
-        if(is0_bigger) mixed_product = data0->mixed->product,def = data0; // data0's GA is bigger
-        else           mixed_product = data1->mixed->product,def = data1; // data1's GA is bigger
-        if(mixed_product){
-            return (PyObject*)mixed_product(data0,data1,def,ptype);
-        }else {
-            PyErr_SetString(PyExc_NotImplementedError,"The product for mixed types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }
-
-    if(data0->type->ntype == data1->type->ntype){
-        product = data0->type->math_funcs->product;
-        if(product){
-            return (PyObject*)product(data0,data1,ptype);
-        } else {
-            PyErr_SetString(PyExc_NotImplementedError,"The product for these types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    } else{
-        mixed_product = data0->mixed->product;
-        if(mixed_product){
-            return (PyObject*)mixed_product(data0,data1,data0,ptype);
-        } else {
-            PyErr_SetString(PyExc_NotImplementedError,"The product for mixed types is not implemented");
-            return NULL; // raise not implemented error
-        }
-
-    }
-
-    return NULL;
-}
-
-static PyObject *multivector_add_subtract(PyObject *left, PyObject *right, int sign){
-    PyMultivectorObject *data0 = NULL, *data1 = NULL, *def = NULL;
-    ga_float value = 0;
-    gaaddfunc add;
-    gamixedaddfunc mixed_add;
-    gascalaraddfunc scalar_add;
-
-    if(get_scalar(right,&value)){ // check if right is a scalar
-        data0 = (PyMultivectorObject*)left;
-        value *= sign; // multiply by sign
-        sign = 1;
-    }else if(get_scalar(left,&value)){ // check if left is a scalar
-        data0 = (PyMultivectorObject*)right;
-    }
-
-    if(data0){
-        // add a scalar
-        scalar_add = data0->type->math_funcs->scalar_add;
-        if(scalar_add){
-            return (PyObject*)scalar_add(data0,value,sign);
-        }else{
-            PyErr_SetString(PyExc_NotImplementedError,"The scalar product for this types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }
-
-    if(PyObject_TypeCheck(left,Py_TYPE(right))){
-        data0 = (PyMultivectorObject*)left;
-        data1 = (PyMultivectorObject*)right;
-    }else{
-        PyErr_SetString(PyExc_TypeError,"operands must be of the same type or int or ga_float");
-        return NULL;
-    }
-    if(data0->GA != data1->GA){
-        int is0_bigger;// METRIC_SIZE(data0->GA) > METRIC_SIZE(data1->GA)
-        if((is0_bigger = is_bigger_metric(data0->GA,data1->GA)) == -1){
-            PyErr_SetString(PyExc_TypeError,"operands must have overlapping metric");
-            return NULL;
-        }
-        if(is0_bigger) mixed_add = data0->mixed->add, def = data0; // data0's GA is bigger
-        else           mixed_add = data1->mixed->add, def = data1; // data1's GA is bigger
-        if(mixed_add){
-            return (PyObject*)mixed_add(data0,data1,def,sign);
-        }else {
-            PyErr_SetString(PyExc_NotImplementedError,"The product for mixed types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }
-
-    if(data0->type->ntype == data1->type->ntype){
-        add = data0->type->math_funcs->add;
-        if(add){
-            return (PyObject*)add(data0,data1,sign);
-        } else {
-            PyErr_SetString(PyExc_NotImplementedError,"The product for these types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    } else{
-        mixed_add = data0->mixed->add;
-        if(mixed_add){
-            return (PyObject*)mixed_add(data0,data1,data0,sign);
-        } else {
-            PyErr_SetString(PyExc_NotImplementedError,"The product for mixed types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }
-
-    return NULL;
-}
-
-
-
-PyObject *multivector_outer_product(PyObject *left, PyObject *right){
-    return multivector_product(left,right,ProductType_outer);
-}
-
-PyObject *multivector_inner_product(PyObject *left, PyObject *right){
-    return multivector_product(left,right,ProductType_inner);
-}
-
-PyObject *multivector_geometric_product(PyObject *left, PyObject *right){
-    return multivector_product(left,right,ProductType_geometric);
-}
-
-PyObject *multivector_regressive_product(PyObject *left, PyObject *right){
-    return multivector_product(left,right,ProductType_regressive);
-}
-
-PyObject *multivector_cast(PyMultivectorObject *self, PyObject *args) {
-    char *type_name = NULL;
-    PyMultivectorObject *data0;
-    if(!PyArg_ParseTuple(args, "s", &type_name))
-        return NULL;
-
-    data0 = new_multivector(self->GA,type_name);
-    if(!data0){
-        PyErr_SetString(PyExc_TypeError,"Error populating types table");
-        return NULL;
-    }
-    gacastfunc cast = data0->type->data_funcs->cast;
-    if(!cast){
-        // Free the data0 multivector
-        multivector_dealloc(data0);
-        PyErr_SetString(PyExc_TypeError,"cast function not available for this type");
-        return NULL;
-    }
-    
-    if(!cast(self,data0)){
-        // Free the data0 multivector
-        multivector_dealloc(data0);
-        PyErr_SetString(PyExc_TypeError,"Error casting the multivector");
-        return NULL;
-    }
-    // Free the data0 multivector
-    return (PyObject*)data0;
-}
-
-Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades){
-    Py_ssize_t size = -1;
-    if(PyLong_Check(grades_obj)){ // check if object is an integer
-        int grade = (int)PyLong_AsLong(grades_obj);
-        if(grade > MAX_GRADE(ga) || grade < 0) // not a valid grade
-            return -1; // raise error
-        *(grades) = (int*)PyMem_RawMalloc(sizeof(int));
-        **grades = grade;
-        size = 1;
-    }else if(PyList_Check(grades_obj)){ // check if object is a list type
-        size = PyList_Size(grades_obj);
-        if(!size) return -1;
-        *grades = (int*)PyMem_RawMalloc(size*sizeof(int));
-        for(Py_ssize_t i = 0; i < size; i++){
-            PyObject *grade_obj = PyList_GetItem(grades_obj,i);
-            if(!PyLong_Check(grade_obj))
-                return -1; // raise error
-            (*grades)[i] = (int)PyLong_AsLong(grade_obj);
-            if((*grades)[i] > MAX_GRADE(ga)){
-                PyMem_RawFree(grades);
-                return -1; // raise error
-            }
-        }
-    }
-    return size;
-}
-
-PyObject *multivector_grade_project(PyMultivectorObject *self, PyObject *args, PyObject *kwds){
-    static char *kwlist[] = {"grades",NULL};
-    int *grades = NULL;
-    PyObject *grades_obj = NULL;
-    Py_ssize_t size = -1;
-    PyMultivectorObject *out = NULL;
-    if(!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &grades_obj))
-        return NULL; // raise error
-
-    size = parse_list_as_grades(self->GA,grades_obj,&grades);
-    if(size <= 0) return NULL;
-
-    if(size == 1 && grades[0] == 0){
-        // If we want grade projection to scalars
-        PyMultivectorIter *iter = init_multivector_iter(self,1);
-        while(iter->next(iter)){
-            if(iter->bitmap == 0){
-                ga_float value = iter->value;
-                PyMem_RawFree(grades);
-                free_multivector_iter(iter,1);
-                return (PyObject*)PyFloat_FromDouble((double)value);
-            }
-        }
-        PyMem_RawFree(grades);
-        free_multivector_iter(iter,1);
-        return (PyObject*)PyFloat_FromDouble((double)0.0);
-    }
-
-    gaunarygradefunc grade_project = self->type->math_funcs->grade_project;
-    if(grade_project){
-        out = grade_project(self,grades,size);
-    }else{
-        return NULL; // raise error
-    }
-
-    PyMem_RawFree(grades);
-    return (PyObject*)out;
-}
-
-PyObject *multivector_add(PyObject *left, PyObject *right){
-    return (PyObject*)multivector_add_subtract(left,right,1);
-}
-
-PyObject *multivector_subtract(PyObject *left, PyObject *right){
-    return (PyObject*)multivector_add_subtract(left,right,-1);
-}
-
-PyObject *multivector_invert(PyMultivectorObject *self){
-    gaunaryfunc reverse = self->type->math_funcs->reverse;
-    PyMultivectorObject *out;
-    if(reverse){
-        out = reverse(self);
-    }else{
-        return NULL; // raise error
-    }
-    return (PyObject*)out;
-}
-
-PyObject* multivector_dual(PyMultivectorObject *self, PyObject *Py_UNUSED(ignored)){
-    gaunaryfunc dual = self->type->math_funcs->dual;
-    if(dual){
-        return (PyObject*)dual(self);
-    }else {
-        return NULL; // raise error
-    }
-    return NULL;
-}
-
-PyObject* multivector_undual(PyMultivectorObject *self, PyObject *Py_UNUSED(ignored)){
-    gaunaryfunc undual = self->type->math_funcs->undual;
-    if(undual){
-        return (PyObject*)undual(self);
-    }else {
-        return NULL; // raise error
-    }
-    return NULL;
-}
-
-static PyObject *multivector_sign(PyMultivectorObject *self, ga_float value){
-    gascalarfunc scalar_product = self->type->math_funcs->scalar_product;
-    PyMultivectorObject *out;
-    if(scalar_product){
-        out = scalar_product(self,value);
-    }else{
-        return NULL; // raise error
-    }
-    return (PyObject*)out;
-}
-
-PyObject *multivector_negative(PyMultivectorObject *self){
-    return multivector_sign(self,-1);
-}
-
-PyObject *multivector_positive(PyMultivectorObject *self){
-    return multivector_sign(self,1);
-}
-
-int get_biggest_algebra_index(PyObject *cls, PyObject *args){
-    PyAlgebraObject *biggest_ga;
-    Py_ssize_t index = 0;
-    int same_algebra_and_type = 1;
-    PyMultivectorObject *data0;
-    Py_ssize_t size = PyTuple_Size(args);
-    PyObject *arg0 = PyTuple_GetItem(args,0);
-    int ntype;
-    if(!PyObject_IsInstance(arg0,cls)) return -1;
-    data0 = (PyMultivectorObject*)arg0;
-    biggest_ga = data0->GA;
-    ntype = data0->type->ntype;
-
-    for(Py_ssize_t i = 1; i < size; i++){
-        PyObject *argi = PyTuple_GetItem(args,i);
-        // check if objects are multivectors
-        if(!PyObject_IsInstance(argi,cls)){
-            PyErr_SetString(PyExc_TypeError,"objects must be an instance of gasparse.multivector");
-            return -1;
-        }
-        data0 = (PyMultivectorObject*)argi;
-        // check if object are compatible
-        if(biggest_ga != data0->GA){
-            int is0_bigger = is_bigger_metric(data0->GA,biggest_ga);
-            if(is0_bigger == -1) return -1;
-            else if(is0_bigger == 1) biggest_ga = data0->GA, index = i;
-            same_algebra_and_type = 0;
-        }else if(data0->type->ntype != ntype) same_algebra_and_type = 0;
-    }
-
-    if(same_algebra_and_type) return -2;
-    return index;
-}
-
-
-PyObject* multivector_atomic_add(PyObject *cls, PyObject *args){
-    Py_ssize_t size = PyTuple_Size(args);
-    gaatomicfunc add = NULL;
-    gamixedatomicfunc mixed_add = NULL;
-    PyMultivectorObject *data0, *data1, *out;
-    PyMultivectorObject *data_array;
-    Py_ssize_t index;
-
-    if(size <= 1){
-        PyErr_SetString(PyExc_ValueError,"number of arguments must be at least two");
-        return NULL;
-    }
-    if((index = get_biggest_algebra_index(cls,args)) == -1)
-        return NULL;
-
-    if(index == -2){
-        if(size == 2){
-            gaaddfunc binary_add;
-            data0 = (PyMultivectorObject*)PyTuple_GetItem(args,0);
-            data1 = (PyMultivectorObject*)PyTuple_GetItem(args,1);
-            binary_add = data0->type->math_funcs->add;
-            if(binary_add){
-                return (PyObject*)binary_add(data0,data1,1);
-            }else{
-                PyErr_SetString(PyExc_NotImplementedError,"The binary sum operation for these types is not implemented");
-                return NULL;
-            }
-        }
-    }
-
-    data_array = (PyMultivectorObject*)PyMem_RawMalloc(size*sizeof(PyMultivectorObject));
-    for(Py_ssize_t i = 0; i < size; i++)
-        data_array[i] = *((PyMultivectorObject*)PyTuple_GetItem(args,i));
-
-    if(index >= 0){ // dispatch mixed type operations
-        mixed_add = data_array[index].mixed->atomic_add;
-        if(mixed_add){
-            out = mixed_add(data_array,size,&data_array[index]);
-        }else{
-            PyMem_RawFree(data_array);
-            PyErr_SetString(PyExc_NotImplementedError,"The atomic mixed sum operation for these types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }
-    else{
-        add = data_array->type->math_funcs->atomic_add;
-        if(add){
-            out = add(data_array,size);
-        }else{
-            PyMem_RawFree(data_array);
-            PyErr_SetString(PyExc_NotImplementedError,"The atomic sum operation for these types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }
-
-    PyMem_RawFree(data_array);
-    return (PyObject*)out;
-}
-
-
-
-
-static PyObject* multivector_atomic_product(PyObject *cls, PyObject *args, ProductType ptype){
-    Py_ssize_t size = PyTuple_Size(args);
-    gaatomicprodfunc product = NULL;
-    gamixedatomicprodfunc mixed_product = NULL;
-    PyMultivectorObject *data0 = NULL, *data1 = NULL, *data2 = NULL, *out = NULL;
-    PyMultivectorObject *data_array = NULL;
-    Py_ssize_t index;
-
-    if(size <= 1){
-        PyErr_SetString(PyExc_ValueError,"number of arguments must be at least two");
-        return NULL;
-    }
-    // check if objects are multivectors
-    if((index = get_biggest_algebra_index(cls,args)) == -1)
-        return NULL;
-
-    if(index == -2){
-        if(size == 2){
-            gaprodfunc binary_product;
-            data0 = (PyMultivectorObject*)PyTuple_GetItem(args,0);
-            data1 = (PyMultivectorObject*)PyTuple_GetItem(args,1);
-            binary_product = data0->type->math_funcs->product;
-            if(binary_product){
-                return (PyObject*)binary_product(data0,data1,ptype);
-            }else{
-                PyErr_SetString(PyExc_NotImplementedError,"The binary product operation for these types is not implemented");
-                return NULL;
-            }
-        }else if(size == 3){
-            gaternaryprodfunc ternary_product;
-            data0 = (PyMultivectorObject*)PyTuple_GetItem(args,0);
-            data1 = (PyMultivectorObject*)PyTuple_GetItem(args,1);
-            data2 = (PyMultivectorObject*)PyTuple_GetItem(args,2);
-
-            ternary_product = data0->type->math_funcs->ternary_product;
-            if(ternary_product){
-                return (PyObject*)ternary_product(data0,data1,data2,ptype);
-            }else{
-                PyErr_SetString(PyExc_NotImplementedError,"The ternary product operation for these types is not implemented");
-                return NULL;
-            }
-        }
-    }
-
-    data_array = (PyMultivectorObject*)PyMem_RawMalloc(size*sizeof(PyMultivectorObject));
-    for(Py_ssize_t i = 0; i < size; i++)
-        data_array[i] = *((PyMultivectorObject*)PyTuple_GetItem(args,i));
-
-    if(index >= 0){ // dispatch mixed type operations
-        mixed_product = data_array[index].mixed->atomic_product;
-        if(mixed_product){
-            out = mixed_product(data_array,size,&data_array[index],ptype);
-        }else{
-            PyMem_RawFree(data_array);
-            PyErr_SetString(PyExc_NotImplementedError,"The atomic mixed sum operation for these types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }else{
-        product = data_array->type->math_funcs->atomic_product;
-        if(product){
-            out = product(data_array,size,ptype);
-        }else{
-            PyMem_RawFree(data_array);
-            PyErr_SetString(PyExc_NotImplementedError,"The atomic product operation for these types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }
-
-    PyMem_RawFree(data_array);
-    return (PyObject*)out;
-}
-
-
-PyObject* multivector_atomic_geometric_product(PyObject *cls, PyObject *args){
-    return multivector_atomic_product(cls,args,ProductType_geometric);
-}
-
-PyObject* multivector_atomic_outer_product(PyObject *cls, PyObject *args){
-    return multivector_atomic_product(cls,args,ProductType_outer);
-}
-
-PyObject* multivector_exponential(PyObject *cls, PyObject *args){
-    Py_ssize_t size = PyTuple_Size(args);
-    gaunaryfunc exponential;
-    PyMultivectorObject *data0 = NULL;
-
-    if(size != 1){
-        PyErr_SetString(PyExc_ValueError,"number of arguments must be one");
-        return NULL;
-    }
-    // check if objects are multivectors
-    if(get_biggest_algebra_index(cls,args) == -1){
-        PyErr_SetString(PyExc_ValueError,"the input must be a multivector");
-        return NULL;
-    }
-
-    data0 = (PyMultivectorObject*)PyTuple_GetItem(args,0);
-    exponential = data0->type->math_funcs->exp;
-    if(exponential){
-        return (PyObject*)exponential(data0);
-    }else{
-        PyErr_SetString(PyExc_NotImplementedError,"The exponential operation for this type is not implemented");
-        return NULL;
-    }
-    return NULL;
-}
-
-
-
-void multivector_dealloc(PyMultivectorObject *self){
-    gafreefunc free_type = self->type->data_funcs->free;
-    if(free_type)
-        free_type(self->data);
-
-    if(self->data) PyMem_RawFree(self->data);
-    Py_XDECREF((PyObject*)self->GA);
-    PyMem_RawFree(self);
-}
-
-void free_multivector_data(PyMultivectorObject self){
-    gafreefunc free_type = self.type->data_funcs->free;
-    if(free_type)
-        free_type(self.data);
-
-    if(self.data) PyMem_RawFree(self.data);
-    Py_XDECREF((PyObject*)self.GA);
-}
 
 PyMultivectorMixedMath_Funcs multivector_mixed_fn = {
   .add = binary_mixed_add,

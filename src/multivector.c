@@ -2992,10 +2992,10 @@ static PyMultivectorObject *cast_atomic_mixed_product(PyMultivectorObject *data,
     sparse_free_(*((SparseMultivector*)sparse));
 }
 
-static void* sparse_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
-    SparseMultivector *sparse = (SparseMultivector*)PyMem_RawMalloc(sizeof(SparseMultivector));
+static int sparse_init(void *data, int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
+    SparseMultivector *sparse = (SparseMultivector *)data;
     *sparse = sparse_init_(bitmap,value,size,ga);
-    return (void*)sparse;
+    return 1;
 }
 
  void blades_free(void *blades){
@@ -3004,10 +3004,10 @@ static void* sparse_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebr
     blades_free_(*((BladesMultivector*)blades));
 }
 
-static void* blades_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
-    BladesMultivector *blades = (BladesMultivector*)PyMem_RawMalloc(sizeof(BladesMultivector));
+static int blades_init(void *data, int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
+    BladesMultivector *blades = (BladesMultivector *)data;
     *blades = blades_init_(bitmap,value,size,ga);
-    return (void*)blades;
+    return 1;
 }
 
  void dense_free(void *dense){
@@ -3016,10 +3016,10 @@ static void* blades_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebr
     dense_free_(*((DenseMultivector*)dense));
 }
 
-static void* dense_init(int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
-    DenseMultivector *dense = (DenseMultivector*)PyMem_RawMalloc(sizeof(DenseMultivector));
+static int dense_init(void *data, int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
+    DenseMultivector *dense = (DenseMultivector *)data;
     *dense = dense_init_(bitmap,value,size,ga);
-    return (void*)dense;
+    return 1;
 }
 
 
@@ -3168,7 +3168,8 @@ PyObject* multivector_list(PyMultivectorObject *self, PyObject *args, PyObject *
 					return NULL; 
 				}
 				gainitfunc init = mv->type->data_funcs->init;
-				mv->data = init(&iter.bitmap,&basis_value,1,self->GA);
+                mv->data = (void*)PyMem_RawMalloc(mv->type->basic_size);
+				init(mv->data,&iter.bitmap,&basis_value,1,self->GA);
 				PyList_SetItem(bitmap,j,(PyObject*)mv);
 			}
 			j++;
@@ -3228,7 +3229,8 @@ static PyObject *multivector_product(PyObject *left, PyObject *right, ProductTyp
         // return 0 if inner product with scalar
         if(ptype == ProductType_inner){
             out = new_multivector_inherit_type(data0);
-            out->data = data0->type->data_funcs->init(NULL,NULL,0,data0->GA); // initialize empty multivector
+            out->data = (void*)PyMem_RawMalloc(data0->type->basic_size);
+            data0->type->data_funcs->init(out->data,NULL,NULL,0,data0->GA); // initialize empty multivector
             return (PyObject*)out;
         }else if(ptype == ProductType_regressive){
             // convert value to multivector and then apply the product
@@ -3236,7 +3238,8 @@ static PyObject *multivector_product(PyObject *left, PyObject *right, ProductTyp
             int *pbitmap = (int*)PyMem_RawMalloc(sizeof(int));
             *pvalue = value; *pbitmap = 0;
             data1 = new_multivector_inherit_type(data0);
-            data1->data = data0->type->data_funcs->init(pbitmap,pvalue,1,data0->GA);
+            data1->data = (void*)PyMem_RawMalloc(data1->type->basic_size);
+            data0->type->data_funcs->init(data1->data,pbitmap,pvalue,1,data0->GA);
             product = data0->type->math_funcs->product;
             if(product){
                 if(is_left)
