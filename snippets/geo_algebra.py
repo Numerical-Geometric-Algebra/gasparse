@@ -325,6 +325,13 @@ def estimate_rot(p_lst,q_lst):
     return R_est
     
 
+
+'''
+Try to replace this function by the multilinear eigenvalue estimator function
+I still don't compreedn well how can this work since it does not use the reciprocal basis
+to form the matrix of F. 
+'''
+
 def estimate_rbm(P_lst,Q_lst):
     # The optimal rotation and translation
     beta_matrix = np.zeros([4,4])
