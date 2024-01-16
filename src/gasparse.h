@@ -292,10 +292,10 @@ void sparse_free_(SparseMultivector sparse);
 void blades_free_(BladesMultivector blades);
 void dense_free_(DenseMultivector dense);
 
-Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades);
+//Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades);
 void sparse_remove_small(SparseMultivector y, ga_float precision, Py_ssize_t *size);
 SparseMultivector sparse_dense_to_sparse_sparse(SparseMultivector dense, Py_ssize_t size);
-Py_ssize_t* get_grade_bool(int *grades, Py_ssize_t size, Py_ssize_t n_grades);
+//Py_ssize_t* get_grade_bool(int *grades, Py_ssize_t size, Py_ssize_t n_grades);
 char *bitmap_to_string(int bitmap);
 int get_multivector_basis(PyAlgebraObject *self, PyObject *grades, PyMultivectorObject ***multivectors, ga_float **values, Py_ssize_t *mvsize);
 

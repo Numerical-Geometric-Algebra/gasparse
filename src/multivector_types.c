@@ -244,6 +244,11 @@ static int blades_init(void *out,PyAlgebraObject *ga,int *bitmap, ga_float *valu
 static int dense_init(void *out, PyAlgebraObject *ga,int *bitmap, ga_float *value, Py_ssize_t size){
     Py_ssize_t algebra_size = ga->asize;
     DenseMultivector *dense = (DenseMultivector *)out;
+    if(!size){
+        dense->size = 0;
+        dense->value = NULL;
+        return 1;
+    }
     dense->value = (ga_float*)PyMem_RawMalloc(algebra_size*sizeof(ga_float));
     dense->size = algebra_size;
     // set all values to 0
@@ -266,7 +271,7 @@ static int cast_to_sparse(PyMultivectorIter *from, void *to, PyAlgebraObject *GA
     if(!from || !psparse){
         return 0;
     }
-
+    
     SparseMultivector sparse;
     sparse.value = (ga_float*)PyMem_RawMalloc(from->niters*sizeof(ga_float));
     sparse.bitmap = (int*)PyMem_RawMalloc(from->niters*sizeof(int));
@@ -276,6 +281,7 @@ static int cast_to_sparse(PyMultivectorIter *from, void *to, PyAlgebraObject *GA
         sparse.bitmap[i] = from->bitmap;
         i++;
     }
+    sparse.size = from->niters;
     *psparse = sparse;
     return 1;
 }
@@ -431,9 +437,9 @@ char *bitmap_to_string(int bitmap){
 }
 
 
-static int sparse_copy(void*out, void* input){
-    SparseMultivector *sparse = input;
-    SparseMultivector *copy;// = {.size = -1, .bitmap = NULL, .value = NULL};
+static int sparse_copy(void* out, void* input){
+    SparseMultivector *sparse = (SparseMultivector *)input;
+    SparseMultivector *copy = (SparseMultivector *)out;// = {.size = -1, .bitmap = NULL, .value = NULL};
     if(sparse->size < 0) return 0;
     if(sparse->size == 0){
         copy->size = 0;
@@ -469,8 +475,8 @@ SparseMultivector sparse_new_(Py_ssize_t size){
 }
 
 static int unary_sparse_scalaradd(void *out, void *data0, PyAlgebraObject *GA, ga_float value, int sign){
-    SparseMultivector *sparse0 = sparse0;
-    SparseMultivector *sparse = out;
+    SparseMultivector *sparse0 = (SparseMultivector *)data0;
+    SparseMultivector *sparse = (SparseMultivector *)out;
     sparse->size = -1;
     Py_ssize_t scalarindex = -1;
     for(Py_ssize_t i = 0; i < sparse0->size; i++){
@@ -1629,11 +1635,10 @@ static int binary_mixed_add(void *out, PyMultivectorIter *iter0, PyMultivectorIt
 
 static int binary_mixed_product(void *out, PyMultivectorIter *iter0, PyMultivectorIter *iter1, PyAlgebraObject *ga, ProductType ptype){
     CliffordMap m = ga->product[ptype];
-    SparseMultivector *dense = (SparseMultivector*)out;
-    *dense = init_sparse_empty(m.size);
-    if(dense->size == -1) return 0;
+    SparseMultivector *sparse = (SparseMultivector*)out;
+    SparseMultivector dense = init_sparse_empty(m.size);
+    if(dense.size == -1) return 0;
 
-    SparseMultivector sparse;
     Py_ssize_t size = 0;
     int sign; Py_ssize_t bitmap;
     while(iter0->next(iter0)){
@@ -1641,14 +1646,14 @@ static int binary_mixed_product(void *out, PyMultivectorIter *iter0, PyMultivect
             sign = m.sign[iter0->bitmap][iter1->bitmap];
             if(!sign) continue;
             bitmap = m.bitmap[iter0->bitmap][iter1->bitmap];
-            if(dense->bitmap[bitmap] == -1) dense->bitmap[bitmap] = bitmap, size++;
-            dense->value[bitmap] += iter0->value*iter1->value*sign;
+            if(dense.bitmap[bitmap] == -1) dense.bitmap[bitmap] = bitmap, size++;
+            dense.value[bitmap] += iter0->value*iter1->value*sign;
         }
     }
 
-    sparse_remove_small(*dense,ga->precision,&size);
-    sparse = sparse_dense_to_sparse_sparse(*dense,size);
-    sparse_free_(*dense);
+    sparse_remove_small(dense,ga->precision,&size);
+    *sparse = sparse_dense_to_sparse_sparse(dense,size);
+    sparse_free_(dense);
     return 1;
 }
 

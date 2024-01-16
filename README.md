@@ -134,6 +134,38 @@ For the code generated algebras we have two types the `dense` and the `blades`. 
  ```
 should be `float`.
 
+Now the user can create arrays of multivectors for example it takes lists of lists
+```python
+ga = gasparse.GA(3)
+basis = ga.basis()
+locals().update(basis)
+lst = [[[[1.1,2.2,3.3],[4.0,5.0,6.0]],
+        [[7.0,8.0,9.0],[10.0,11.0,12.0]]],
+       [[[1.0,2.0,3.0],[4.0,5.0,6.0]],
+        [[7.0,8.0,9.0],[10.0,11.4,12.0]]],
+       [[[1.0,2.0,3.0],[4.0,5.0,6.0]],
+        [[7.0,8.0,9.0],[10.0,11.0,12.6]]],
+       [[[1.0,2.0,3.0],[4.0,5.0,6.0]],
+        [[7.0,8.0,9.0],[10.9999,11.0,12.0]]]]
+        
+y = ga.multivector(lst,basis=[e1,e2,e3])
+```
+Then to retrieve the exact same list he can use
+```python
+lst,basis = y.list(1)
+```
+Note how the list function also outputs the basis.
+
+ - To get information regarding a multivector the user can use
+	```python
+	x.GA() # Returns the geometric algebra of that element
+	x.Type() # Returns a string indicating the type
+
+	```
+	- `'sparse'`, `'dense'`, `'blades'` are the generic types.
+	- `'dense0'`,`'dense1'`, ... ,`'blades0'`,`'blades1'`, ...  are the code generated types.
+	- `'denselarge'`,`'sparselarge'`,`'bladeslarge'`  are the types that use the large computation mode.
+
 ### Coding Strategy
 1. Set errror strings only in the outermost call (the first function that is called from python)
 Still trying to averiguate the best strategy for error setting...
@@ -162,9 +194,29 @@ python3 setup.py build --genalgebras # generates the algebra
 `multivector_types.c, multivector_large.c, multivector_gen.c` -> Different implementations of the different types. 
 
 
-## TODO
+### Note
+When creating specific function types if we want that the compiler warns incompantible function pointer do not cast a function pointer otherwise if the function is not as specified in the typedef we will have probably segmentation faults
 
-1. Create seperate github repository for the rigid body motion estimation algorithm. (Also for the python snippets)
+## TODO
+1. Get algebra from a specific element
+  ```x.GA()```
+1. Print what is the compute mode of the algbra
+1. Generate lists of lists when
+  - asking for grades
+
+
+
+1. $\checkmark$ Test nested lists approach with single multivector.
+1. $\checkmark$ Create seperate github repository for the rigid body motion estimation algorithm. (Also for the python snippets) 
+1. Add option to print multivectors with `*` instead of `^` to be able to copy it's value and declare it as variable in python, otherwise because of the operator precedence the output would not result in what is expected, that is these are not equivalent
+    ```python
+    x = 1.234*e1 + 5.342*e4 + 5.678*e12
+    x = 1.234^e1 + 5.342^e4 + 5.678^e12
+    ```
+    to be equivalent we would need to put parenthesis around each operation as
+    ```python
+    x = (1.234^e1) + (5.342^e4) + (5.678^e12)
+    ```
 
 1. Deprecate `type_iter_repr` function and replace by `type_iter_repr_1`
 1. For operations involving `PyMultivectorObject` that are transparent to the subtypes, it might make sense to create a new empty multivector and then pass that as reference to function that operates directly on the type.

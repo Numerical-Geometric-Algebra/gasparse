@@ -17,5 +17,5 @@ if "--numpy" in sys.argv:
 
 
 setup(name=name, version="1.0",
-    ext_modules=[Extension(name,["src/gasparse.c","src/multivector.c","src/largemultivector.c","src/multivector_gen.c","src/multivector_array.c"],\
+        ext_modules=[Extension(name,["src/gasparse.c","src/multivector_object.c","src/multivector_types.c","src/multivector_large.c","src/multivector_gen.c","src/common.c"],\
     extra_compile_args = ["-O0", "-mpopcnt","-g3"],define_macros=macros)])

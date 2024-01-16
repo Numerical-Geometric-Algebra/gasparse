@@ -1,36 +1,43 @@
 #ifndef MULTIVECTOR_OBJECT_H_
 #define MULTIVECTOR_OBJECT_H_
+#include "pytypedefs.h"
 #define PY_SSIZE_T_CLEAN
 #include "types.h" 
 #include <Python.h>
 
-typedef struct PyMvArrayIter PyMvArrayIter;
+typedef struct PyMvBasicArray PyMvBasicArray;
 
-typedef int (*mvarrayiternextfunc)(PyMvArrayIter*,Py_ssize_t);
+//typedef int (*mvarrayiternextfunc)(PyMvArrayIter*,Py_ssize_t);
 
-typedef struct PyMvArrayIter{
-    void *data;
+// Holds the data for a multivector array, to use in the array iterator
+typedef struct PyMvBasicArray{   
+    void *data; // The current iteration data
+    void *data0; // The first element
     Py_ssize_t basic_size;
-    Py_ssize_t ns; // Size of shapes and strides
-    Py_ssize_t *strides; // Has ns + 1 elements
-    Py_ssize_t *shapes; // Has ns elements
-    Py_ssize_t *index; // Has ns elements, size of the shape
-    mvarrayiternextfunc next;
-}PyMvArrayIter;
+    Py_ssize_t ns; // Size of strides
+    Py_ssize_t *strides; // Has ns + 1 elements, 1st element is the total size of the array
+}PyMvBasicArray;
 
 typedef struct PyMultipleArrayIter{
-    PyMvArrayIter *array_iter;
-    Py_ssize_t **repeat; // The number of repeated symbols, also the size of dim[i][z]
-    Py_ssize_t ***dims; // A dim array for each dimension
+    PyMvBasicArray *arrays; 
     Py_ssize_t ns; // The number of symbols
-    Py_ssize_t nm; // The number of multivector_arrays
+    Py_ssize_t nm; // The number of arrays
     Py_ssize_t *index; // An index for symbol
     Py_ssize_t *shapes; // A shape for symbol
     Py_ssize_t dim; // The last iterated dimension
 }PyMultipleArrayIter;
 
+struct ListGraph;
 
-typedef PyMvArrayIter PyMultivectorArrayIter;
+typedef struct ListGraph{
+    struct ListGraph *parent;
+    PyObject *element;
+    PyObject *self;
+    Py_ssize_t index;
+}ListGraph;
+
+
+typedef int (*mixedoperation)(void*, PyMultivectorIter *, PyMultivectorIter * , PyAlgebraObject *,void *);
 
 extern PyTypeObject PyMultivectorArrayType;
 PyObject *algebra_multivector_array(PyAlgebraObject *self, PyObject *args, PyObject *kwds);
@@ -81,7 +88,7 @@ PyObject* multivector_cast(PyMultivectorObject *self, PyObject *args);
 
 
 Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades);
-Py_ssize_t* get_grade_bool(int *grades, Py_ssize_t size, Py_ssize_t n_grades);
+//Py_ssize_t* get_grade_bool(int *grades, Py_ssize_t size, Py_ssize_t n_grades);
 char *bitmap_to_string(int bitmap);
 int get_multivector_basis(PyAlgebraObject *self, PyObject *grades, PyMultivectorObject ***multivectors, ga_float **values, Py_ssize_t *mvsize);
 

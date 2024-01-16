@@ -1,5 +1,6 @@
 #ifndef MULTIVECTOR_GEN_H_
 #define MULTIVECTOR_GEN_H_
+#include "types.h"
 
 #define N_GEN_SUBTYPES 4
 

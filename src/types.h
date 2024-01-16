@@ -13,6 +13,7 @@
 #define ABS(value) (((value) < 0) ? -(value): (value))
 #define MAX_SHAPE_SIZE 10
 #define GRADE(value) (__builtin_popcountll(value))
+#define INDEX_DATA(s,i) ((s)->data + (i)*(s)->type->basic_size)
 
 typedef double ga_float;
 

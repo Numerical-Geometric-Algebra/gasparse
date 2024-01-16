@@ -4,6 +4,7 @@
 //#include "multivector_array.h"
 #include "types.h"
 #include "common.h"
+#include "multivector_object.h"
 /* #include "multivector.h" */
 #ifdef INCLUDE_NUMPY
 #define PY_ARRAY_UNIQUE_SYMBOL gasparse_ARRAY_API
@@ -615,7 +616,8 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds) {
 		self->tsize = k;
 		for (Py_ssize_t i = 0; i < k; i++)
 			self->types[i] = gen_subtypes_array[index[i]];
-		self->mixed = &cast_multivector_mixed_fn;
+		// For generated types we cannot use the mixed operation, will cast to the biggest algebra
+		self->mixed = NULL; 
 		// set default type
 		
 		self->mdefault.type_name = self->types->type_name;
@@ -1026,43 +1028,6 @@ static PyObject *algebra_cayley_table(PyAlgebraObject *self, PyObject *args) {
 }
 
 
-/*
-// Fills the mixed type tables and the algebra tables and sets the python type
-static int init_multivector(PyAlgebraObject *ga, PyMultivectorObject *self){
-	if(!ga) return 0;
-	self->mixed = ga->mixed; // mixed type operations should not change
-    self->GA = ga;
-	self->data = NULL;
-
-    Py_XINCREF((PyObject*)self->GA);
-    Py_SET_TYPE(self, &PyMultivectorType);
-	return 1;
-}
-
-// Allocs memory for a multivector and fill the mixed type tables and the algebra tables and sets the python type
-PyMultivectorObject *alloc_multivector(PyAlgebraObject *ga){
-	if(!ga) return NULL;
-    PyMultivectorObject *self = (PyMultivectorObject*)PyMem_RawMalloc(sizeof(PyMultivectorObject));
-    if(!self) return NULL;
-    if(!init_multivector(ga,self)) return NULL;
-	Py_SET_REFCNT((PyObject*)self,1);
-    return self;
-}
-
-PyMultivectorObject *new_multivector(PyAlgebraObject *ga, char *type){
-    PyMultivectorObject *self = alloc_multivector(ga);
-    if(!self) return NULL;
-    if(!get_multivector_type_table(ga, type, &self->type)) return NULL;
-    return self;
-}
-
-static int new_multivector_(PyAlgebraObject *ga, char *type, PyMultivectorObject *self){
-    if(!init_multivector(ga,self)) return 0;
-    if(!get_multivector_type_table(ga, type, &self->type)) return 0;
-    return 1;
-}
-*/
-
 static PyObject *algebra_set_multivector_defaults(PyAlgebraObject *self,
 																									PyObject *args,
 																									PyObject *kwds) {
@@ -1091,123 +1056,7 @@ static PyObject *algebra_set_multivector_defaults(PyAlgebraObject *self,
 	PyErr_SetString(PyExc_TypeError, "dtype not found!");
 	return NULL; // raise error couldn't find the type
 }
-/*
 
-static PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args,
-																		 PyObject *kwds) {
-	static char *kwlist[] = {"values", "basis", "grades","dtype", NULL};
-	PyObject *values = NULL, *basis = NULL, *grades = NULL;
-	int *bitmaps_int = NULL;
-	int *grades_int = NULL;
-	ga_float *values_float = NULL;
-	ga_float *values_conv = NULL;
-	Py_ssize_t size, bsize;
-	PyMultivectorObject *multivector;
-	char *type_name = NULL;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|OOs", kwlist, &values, &basis, &grades, &type_name))
-		return NULL;
-
-	if (!values)
-		PyErr_SetString(PyExc_ValueError, "Values must be non empty");
-
-	if (grades && basis) {
-		PyErr_SetString(PyExc_ValueError, "Can only define multivectors through "
-																			"basis blades or grades, not both!");
-		return NULL;
-	}
-
-	size = parse_list_as_values(values, &values_float);
-	if (size <= 0) {
-		PyErr_SetString(PyExc_TypeError,
-										"values must be a non empty list of integers or floats");
-		return NULL;
-	}
-
-	// Defining multivectors through some basis
-	if (basis) {
-		if (size != PyList_Size(basis)) {
-			PyErr_SetString(PyExc_ValueError,
-											"Basis must be of the same size as values");
-			return NULL;
-		}
-		if (!parse_list_as_multivectors(basis, values_float, &values_conv,
-																		&bitmaps_int)) {
-			// If not multivectors
-			bsize = parse_list_as_bitmaps(basis, &bitmaps_int);
-			if (bsize <= 0) {
-				PyErr_SetString(PyExc_TypeError, "Error parsing basis list as bitmaps");
-				return NULL;
-			}
-		} else {
-			// If they are multivectors
-			PyMem_RawFree(values_float);
-			values_float = values_conv;
-		}
-	} else if (grades) {
-		
-		Py_ssize_t gsize = parse_list_as_grades(self, grades, &grades_int);
-		if (gsize <= 0) {
-			PyMem_RawFree(values_float);
-			PyErr_SetString(PyExc_ValueError,
-											"Error parsing grades, invalid value or empty");
-			return NULL;
-		}
-		Py_ssize_t mv_size =
-				parse_list_as_basis_grades(*self, grades_int, &bitmaps_int, gsize);
-
-		if (mv_size != size) {
-			PyMem_RawFree(grades_int);
-			PyMem_RawFree(bitmaps_int);
-			PyMem_RawFree(values_float);
-			PyErr_SetString(PyExc_ValueError,
-											"Basis grades must be of the same size as values");
-			return NULL;
-		}
-
-	} else {
-		// Defining a multivector through the whole algebra basis
-		if (size != self->asize) {
-			PyErr_SetString(PyExc_ValueError,
-											"If basis is not given then values must be of the same "
-											"size as the basis of the entire algebra");
-			return NULL;
-		}
-		bitmaps_int = (int *)PyMem_RawMalloc(size * sizeof(int));
-		for (int i = 0; i < size; i++)
-			bitmaps_int[i] = i;
-	}
-	if(!type_name)
-		type_name = self->mdefault.type_name;
-	multivector = new_multivector(self,type_name);
-	if (!multivector) {
-		PyMem_RawFree(values_float);
-		PyMem_RawFree(bitmaps_int);
-		PyErr_SetString(PyExc_ValueError, "dtype name invalid, select from...");
-		return NULL;
-	}
-
-	gainitfunc init = multivector->type->data_funcs->init;
-	if (init){
-		multivector->data = (void*)PyMem_RawMalloc(multivector->type->basic_size);
-		if(!init(multivector->data,bitmaps_int, values_float, size, self)){
-		 	return NULL;
-			PyMem_RawFree(values_float);
-			PyMem_RawFree(bitmaps_int);
-		}
-	}else{
-		PyMem_RawFree(values_float);
-		PyMem_RawFree(bitmaps_int);
-		return NULL; // raise not implemented error
-	}
-
-	PyMem_RawFree(values_float);
-	PyMem_RawFree(bitmaps_int);
-	PyMem_RawFree(grades_int);
-
-	return (PyObject *)multivector;
-}
-*/
 static PyObject *algebra_size(PyAlgebraObject *self, PyObject *args) {
 	PyObject *grades = NULL;
 	int *grade_array = NULL;
@@ -1309,8 +1158,8 @@ static PyObject *algebra_basis(PyAlgebraObject *self, PyObject *args,
 				Py_XDECREF((PyObject *)multivector);
 				goto fail;
 			}
-			multivector->data = (void*)PyMem_RawMalloc(multivector->type->basic_size);
-			init(multivector->data,&bitmap[i], &value, 1, self);
+
+			init(multivector->data,self,&bitmap[i], &value, 1);
 			bitmap_char = bitmap_to_string(bitmap[i]);
 			key = Py_BuildValue("s", bitmap_char);
 			PyDict_SetItem(dict_basis, key, (PyObject *)multivector);

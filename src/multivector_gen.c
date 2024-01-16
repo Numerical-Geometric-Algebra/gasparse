@@ -225,14 +225,14 @@ static int cast_to_dense0(PyMultivectorIter *from, void *to, PyAlgebraObject *GA
 }
 
  
-static int dense0_init(void *data, int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
+static int dense0_init(void *data, PyAlgebraObject *ga, int *bitmap, ga_float *value, Py_ssize_t size){
     gen0_DenseMultivector *dense = data;
     *dense = dense0_init_(bitmap,value,size,ga);
     return 1;
 }
 
  
-static int blades0_init(void *data, int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
+static int blades0_init(void *data, PyAlgebraObject *ga, int *bitmap, ga_float *value, Py_ssize_t size){
     gen0_BladesMultivector *blades = data;
     *blades = blades0_init_(bitmap,value,size,ga);
     return 1;
@@ -623,14 +623,14 @@ static int cast_to_dense1(PyMultivectorIter *from, void *to, PyAlgebraObject *GA
 }
 
  
-static int dense1_init(void *data, int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
+static int dense1_init(void *data, PyAlgebraObject *ga, int *bitmap, ga_float *value, Py_ssize_t size){
     gen1_DenseMultivector *dense = data;
     *dense = dense1_init_(bitmap,value,size,ga);
     return 1;
 }
 
  
-static int blades1_init(void *data, int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
+static int blades1_init(void *data, PyAlgebraObject *ga, int *bitmap, ga_float *value, Py_ssize_t size){
     gen1_BladesMultivector *blades = data;
     *blades = blades1_init_(bitmap,value,size,ga);
     return 1;
@@ -2462,7 +2462,7 @@ static int ternary_blades0_product(void *out, void *data0, void *data1, void *da
 
 static int unary_dense0_gradeproject(void *out, void *self, PyAlgebraObject *GA, int *grades, Py_ssize_t size){
     
-    gen0_DenseMultivector dense = {{0}};
+    //gen0_DenseMultivector dense = {{0}};
     gen0_DenseMultivector *pdense = (gen0_DenseMultivector *)out;
     gen0_DenseMultivector *pdense0 = (gen0_DenseMultivector*)self;
 
@@ -2472,7 +2472,7 @@ static int unary_dense0_gradeproject(void *out, void *self, PyAlgebraObject *GA,
 }
 static int unary_blades0_gradeproject(void *out, void *self, PyAlgebraObject *GA, int *grades, Py_ssize_t size){
     
-    gen0_BladesMultivector blades =  blades0zero;
+    //gen0_BladesMultivector blades =  blades0zero;
     gen0_BladesMultivector *pblades = (gen0_BladesMultivector *)out;
     gen0_BladesMultivector *pblades0 = (gen0_BladesMultivector*)self;
 
@@ -12657,7 +12657,7 @@ static int ternary_blades1_product(void *out, void *data0, void *data1, void *da
 
 static int unary_dense1_gradeproject(void *out, void *self, PyAlgebraObject *GA, int *grades, Py_ssize_t size){
     
-    gen1_DenseMultivector dense = {{0}};
+    //gen1_DenseMultivector dense = {{0}};
     gen1_DenseMultivector *pdense = (gen1_DenseMultivector *)out;
     gen1_DenseMultivector *pdense0 = (gen1_DenseMultivector*)self;
 
@@ -12667,7 +12667,7 @@ static int unary_dense1_gradeproject(void *out, void *self, PyAlgebraObject *GA,
 }
 static int unary_blades1_gradeproject(void *out, void *self, PyAlgebraObject *GA, int *grades, Py_ssize_t size){
     
-    gen1_BladesMultivector blades =  blades1zero;
+    //gen1_BladesMultivector blades =  blades1zero;
     gen1_BladesMultivector *pblades = (gen1_BladesMultivector *)out;
     gen1_BladesMultivector *pblades0 = (gen1_BladesMultivector*)self;
 
@@ -12762,48 +12762,48 @@ static int atomic_blades1_product(void *out, void *data0, PyAlgebraObject *GA, P
 
 
 static PyMultivectorMath_Funcs dense0_math_funcs = {
-    .atomic_add = (gaatomicfunc)atomic_dense0_add,
-    .atomic_product = (gaatomicprodfunc) atomic_dense0_product,
-    .add = (gaaddfunc) binary_dense0_add,
-    .product = (gaprodfunc) binary_dense0_product,
-    .grade_project = (gaunarygradefunc) unary_dense0_gradeproject,
-    .scalar_product = (gascalarfunc) binary_dense0_scalarproduct,
-    .scalar_add = (gascalaraddfunc) binary_dense0_scalaradd,
-    .reverse = (gaunaryfunc) unary_dense0_reverse,
-    .dual = (gaunaryfunc) unary_dense0_dual,
-    .undual = (gaunaryfunc) unary_dense0_undual,
-    .ternary_product = (gaternaryprodfunc) ternary_dense0_product,
-    .graded_product = (gabinarygradefunc) binary_dense0_gradeproduct,
+    .atomic_add = atomic_dense0_add,
+    .atomic_product =  atomic_dense0_product,
+    .add =  binary_dense0_add,
+    .product =  binary_dense0_product,
+    .grade_project =  unary_dense0_gradeproject,
+    .scalar_product = binary_dense0_scalarproduct,
+    .scalar_add = binary_dense0_scalaradd,
+    .reverse = unary_dense0_reverse,
+    .dual = unary_dense0_dual,
+    .undual = unary_dense0_undual,
+    .ternary_product = ternary_dense0_product,
+    .graded_product = binary_dense0_gradeproduct,
 };
 
 static PyMultivectorMath_Funcs blades0_math_funcs = {
-    .atomic_add = (gaatomicfunc)atomic_blades0_add,
-    .atomic_product = (gaatomicprodfunc) atomic_blades0_product,
-    .add = (gaaddfunc) binary_blades0_add,
-    .product = (gaprodfunc) binary_blades0_product,
-    .grade_project = (gaunarygradefunc) unary_blades0_gradeproject,
-    .scalar_product = (gascalarfunc) binary_blades0_scalarproduct,
-    .scalar_add = (gascalaraddfunc) binary_blades0_scalaradd,
-    .reverse = (gaunaryfunc) unary_blades0_reverse,
-    .dual = (gaunaryfunc) unary_blades0_dual,
-    .undual = (gaunaryfunc) unary_blades0_undual,
-    .ternary_product = (gaternaryprodfunc) ternary_blades0_product,
-    .graded_product = (gabinarygradefunc) binary_blades0_gradeproduct,
+    .atomic_add = atomic_blades0_add,
+    .atomic_product =  atomic_blades0_product,
+    .add =  binary_blades0_add,
+    .product =  binary_blades0_product,
+    .grade_project =  unary_blades0_gradeproject,
+    .scalar_product = binary_blades0_scalarproduct,
+    .scalar_add = binary_blades0_scalaradd,
+    .reverse = unary_blades0_reverse,
+    .dual = unary_blades0_dual,
+    .undual = unary_blades0_undual,
+    .ternary_product = ternary_blades0_product,
+    .graded_product = binary_blades0_gradeproduct,
 };
 
 
 static PyMultivectorData_Funcs dense0_data_funcs = {
-  .iter_next = (gaiternextfunc) dense0_iternext,
-  .iter_init = (gaiterinitfunc) dense0_iterinit,
-  .init = (gainitfunc) dense0_init,
-  .cast = (gacastfunc) cast_to_dense0,
+  .iter_next = dense0_iternext,
+  .iter_init = dense0_iterinit,
+  .init = dense0_init,
+  .cast = cast_to_dense0,
 };
 
 static PyMultivectorData_Funcs blades0_data_funcs = {
-  .iter_next = (gaiternextfunc) blades0_iternext,
-  .iter_init = (gaiterinitfunc) blades0_iterinit,
-  .init = (gainitfunc) blades0_init,
-  .cast = (gacastfunc) cast_to_blades0,
+  .iter_next = blades0_iternext,
+  .iter_init = blades0_iterinit,
+  .init = blades0_init,
+  .cast = cast_to_blades0,
 };
 
 
@@ -12817,7 +12817,7 @@ static const PyMultivectorSubType dense0_subtype = {
     .msize = 3,
     .ntype = 3,
     .asize = 8,
-    .basic_size = sizeof(DenseMultivector),
+    .basic_size = sizeof(gen0_DenseMultivector),
 };
 
 static const PyMultivectorSubType blades0_subtype = {
@@ -12830,53 +12830,53 @@ static const PyMultivectorSubType blades0_subtype = {
     .msize = 3,
     .ntype = 4,
     .asize = 8,
-    .basic_size = sizeof(BladesMultivector),
+    .basic_size = sizeof(gen0_BladesMultivector),
 };
 
 
 static PyMultivectorMath_Funcs dense1_math_funcs = {
-    .atomic_add = (gaatomicfunc)atomic_dense1_add,
-    .atomic_product = (gaatomicprodfunc) atomic_dense1_product,
-    .add = (gaaddfunc) binary_dense1_add,
-    .product = (gaprodfunc) binary_dense1_product,
-    .grade_project = (gaunarygradefunc) unary_dense1_gradeproject,
-    .scalar_product = (gascalarfunc) binary_dense1_scalarproduct,
-    .scalar_add = (gascalaraddfunc) binary_dense1_scalaradd,
-    .reverse = (gaunaryfunc) unary_dense1_reverse,
-    .dual = (gaunaryfunc) unary_dense1_dual,
-    .undual = (gaunaryfunc) unary_dense1_undual,
-    .ternary_product = (gaternaryprodfunc) ternary_dense1_product,
-    .graded_product = (gabinarygradefunc) binary_dense1_gradeproduct,
+    .atomic_add = atomic_dense1_add,
+    .atomic_product =  atomic_dense1_product,
+    .add =  binary_dense1_add,
+    .product =  binary_dense1_product,
+    .grade_project =  unary_dense1_gradeproject,
+    .scalar_product = binary_dense1_scalarproduct,
+    .scalar_add = binary_dense1_scalaradd,
+    .reverse = unary_dense1_reverse,
+    .dual = unary_dense1_dual,
+    .undual = unary_dense1_undual,
+    .ternary_product = ternary_dense1_product,
+    .graded_product = binary_dense1_gradeproduct,
 };
 
 static PyMultivectorMath_Funcs blades1_math_funcs = {
-    .atomic_add = (gaatomicfunc)atomic_blades1_add,
-    .atomic_product = (gaatomicprodfunc) atomic_blades1_product,
-    .add = (gaaddfunc) binary_blades1_add,
-    .product = (gaprodfunc) binary_blades1_product,
-    .grade_project = (gaunarygradefunc) unary_blades1_gradeproject,
-    .scalar_product = (gascalarfunc) binary_blades1_scalarproduct,
-    .scalar_add = (gascalaraddfunc) binary_blades1_scalaradd,
-    .reverse = (gaunaryfunc) unary_blades1_reverse,
-    .dual = (gaunaryfunc) unary_blades1_dual,
-    .undual = (gaunaryfunc) unary_blades1_undual,
-    .ternary_product = (gaternaryprodfunc) ternary_blades1_product,
-    .graded_product = (gabinarygradefunc) binary_blades1_gradeproduct,
+    .atomic_add = atomic_blades1_add,
+    .atomic_product =  atomic_blades1_product,
+    .add =  binary_blades1_add,
+    .product =  binary_blades1_product,
+    .grade_project =  unary_blades1_gradeproject,
+    .scalar_product = binary_blades1_scalarproduct,
+    .scalar_add = binary_blades1_scalaradd,
+    .reverse = unary_blades1_reverse,
+    .dual = unary_blades1_dual,
+    .undual = unary_blades1_undual,
+    .ternary_product = ternary_blades1_product,
+    .graded_product = binary_blades1_gradeproduct,
 };
 
 
 static PyMultivectorData_Funcs dense1_data_funcs = {
-  .iter_next = (gaiternextfunc) dense1_iternext,
-  .iter_init = (gaiterinitfunc) dense1_iterinit,
-  .init = (gainitfunc) dense1_init,
-  .cast = (gacastfunc) cast_to_dense1,
+  .iter_next = dense1_iternext,
+  .iter_init = dense1_iterinit,
+  .init = dense1_init,
+  .cast = cast_to_dense1,
 };
 
 static PyMultivectorData_Funcs blades1_data_funcs = {
-  .iter_next = (gaiternextfunc) blades1_iternext,
-  .iter_init = (gaiterinitfunc) blades1_iterinit,
-  .init = (gainitfunc) blades1_init,
-  .cast = (gacastfunc) cast_to_blades1,
+  .iter_next = blades1_iternext,
+  .iter_init = blades1_iterinit,
+  .init = blades1_init,
+  .cast = cast_to_blades1,
 };
 
 
@@ -12890,7 +12890,7 @@ static const PyMultivectorSubType dense1_subtype = {
     .msize = 5,
     .ntype = 5,
     .asize = 32,
-    .basic_size = sizeof(DenseMultivector),
+    .basic_size = sizeof(gen1_DenseMultivector),
 };
 
 static const PyMultivectorSubType blades1_subtype = {
@@ -12903,7 +12903,7 @@ static const PyMultivectorSubType blades1_subtype = {
     .msize = 5,
     .ntype = 6,
     .asize = 32,
-    .basic_size = sizeof(BladesMultivector),
+    .basic_size = sizeof(gen1_BladesMultivector),
 };
 
 

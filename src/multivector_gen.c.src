@@ -174,7 +174,7 @@ static int cast_to_dense{{i}}(PyMultivectorIter *from, void *to, PyAlgebraObject
 {% set type = types[j] %}
 {% set Type = Types[j] %}
 
-static int {{type}}{{i}}_init(void *data, int *bitmap, ga_float *value, Py_ssize_t size, PyAlgebraObject *ga){
+static int {{type}}{{i}}_init(void *data, PyAlgebraObject *ga, int *bitmap, ga_float *value, Py_ssize_t size){
     gen{{i}}_{{Type}}Multivector *{{type}} = data;
     *{{type}} = {{type}}{{i}}_init_(bitmap,value,size,ga);
     return 1;
@@ -786,7 +786,7 @@ static int ternary_{{type}}{{i}}_product(void *out, void *data0, void *data1, vo
 {% set Type = Types[loop.index0] %}
 static int unary_{{type}}{{i}}_gradeproject(void *out, void *self, PyAlgebraObject *GA, int *grades, Py_ssize_t size){
     
-    gen{{i}}_{{Type}}Multivector {{type}} = {% if type == "dense" %}{% raw -%}{{0}}{%- endraw %}{% else %} blades{{i}}zero{% endif %};
+    //gen{{i}}_{{Type}}Multivector {{type}} = {% if type == "dense" %}{% raw -%}{{0}}{%- endraw %}{% else %} blades{{i}}zero{% endif %};
     gen{{i}}_{{Type}}Multivector *p{{type}} = (gen{{i}}_{{Type}}Multivector *)out;
     gen{{i}}_{{Type}}Multivector *p{{type}}0 = (gen{{i}}_{{Type}}Multivector*)self;
 
@@ -832,28 +832,28 @@ static int atomic_{{type}}{{i}}_product(void *out, void *data0, PyAlgebraObject 
 
 {% for type in types %}
 static PyMultivectorMath_Funcs {{type}}{{i}}_math_funcs = {
-    .atomic_add = (gaatomicfunc)atomic_{{type}}{{i}}_add,
-    .atomic_product = (gaatomicprodfunc) atomic_{{type}}{{i}}_product,
-    .add = (gaaddfunc) binary_{{type}}{{i}}_add,
-    .product = (gaprodfunc) binary_{{type}}{{i}}_product,
-    .grade_project = (gaunarygradefunc) unary_{{type}}{{i}}_gradeproject,
-    .scalar_product = (gascalarfunc) binary_{{type}}{{i}}_scalarproduct,
-    .scalar_add = (gascalaraddfunc) binary_{{type}}{{i}}_scalaradd,
-    .reverse = (gaunaryfunc) unary_{{type}}{{i}}_reverse,
-    .dual = (gaunaryfunc) unary_{{type}}{{i}}_dual,
-    .undual = (gaunaryfunc) unary_{{type}}{{i}}_undual,
-    .ternary_product = (gaternaryprodfunc) ternary_{{type}}{{i}}_product,
-    .graded_product = (gabinarygradefunc) binary_{{type}}{{i}}_gradeproduct,
+    .atomic_add = atomic_{{type}}{{i}}_add,
+    .atomic_product =  atomic_{{type}}{{i}}_product,
+    .add =  binary_{{type}}{{i}}_add,
+    .product =  binary_{{type}}{{i}}_product,
+    .grade_project =  unary_{{type}}{{i}}_gradeproject,
+    .scalar_product = binary_{{type}}{{i}}_scalarproduct,
+    .scalar_add = binary_{{type}}{{i}}_scalaradd,
+    .reverse = unary_{{type}}{{i}}_reverse,
+    .dual = unary_{{type}}{{i}}_dual,
+    .undual = unary_{{type}}{{i}}_undual,
+    .ternary_product = ternary_{{type}}{{i}}_product,
+    .graded_product = binary_{{type}}{{i}}_gradeproduct,
 };
 
 {% endfor %}
 
 {% for type in types %}
 static PyMultivectorData_Funcs {{type}}{{i}}_data_funcs = {
-  .iter_next = (gaiternextfunc) {{type}}{{i}}_iternext,
-  .iter_init = (gaiterinitfunc) {{type}}{{i}}_iterinit,
-  .init = (gainitfunc) {{type}}{{i}}_init,
-  .cast = (gacastfunc) cast_to_{{type}}{{i}},
+  .iter_next = {{type}}{{i}}_iternext,
+  .iter_init = {{type}}{{i}}_iterinit,
+  .init = {{type}}{{i}}_init,
+  .cast = cast_to_{{type}}{{i}},
 };
 
 {% endfor %}
@@ -870,7 +870,7 @@ static const PyMultivectorSubType {{type}}{{i}}_subtype = {
     .msize = {{algebra.metric_size}},
     .ntype = {{typemin + 1 + i*2 + loop.index0}},
     .asize = {{algebra.size}},
-    .basic_size = sizeof({{Type}}Multivector),
+    .basic_size = sizeof(gen{{i}}_{{Type}}Multivector),
 };
 
 {% endfor %}
