@@ -1144,133 +1144,6 @@ static PyMvObject* multivector_scalar_product(PyMvObject *data, ga_float scalar,
 }
 
 
-// static PyObject *multivector_product_(PyObject *left, PyObject *right, ProductType ptype){
-//     PyMultivectorObject *data0 = NULL, *data1 = NULL, *def = NULL, *out = NULL;
-//     ga_float value = 0;
-//     int is_left = -1;
-//     gaprodfunc product;
-//     gamixedprodfunc mixed_product;
-//     gascalarfunc scalar_product;
-
-//     if(get_scalar(right,&value)) // check if right is a scalar
-//         data0 = (PyMultivectorObject*)left,is_left=1;
-//     else if(get_scalar(left,&value)) // check if left is a scalar
-//         data0 = (PyMultivectorObject*)right,is_left=0;
-
-//     // One of the arguments is scalar apply multiplication by scalar
-//     if(data0){
-//         // return 0 if inner product with scalar
-//         if(ptype == ProductType_inner){
-//             out = new_multivector_inherit_type(data0->GA,data0->type);
-//             data0->type->data_funcs->init(out->data,data0->GA,NULL,NULL,0); // initialize empty multivector
-//             return (PyObject*)out;
-//         }else if(ptype == ProductType_regressive){
-//             // convert value to multivector and then apply the product
-//             ga_float *pvalue = (ga_float*)PyMem_RawMalloc(sizeof(ga_float));
-//             int *pbitmap = (int*)PyMem_RawMalloc(sizeof(int));
-//             *pvalue = value; *pbitmap = 0;
-//             data1 = new_multivector_inherit_type(data0->GA,data0->type);
-//             data1->data = (void*)PyMem_RawMalloc(data1->type->basic_size);
-//             data0->type->data_funcs->init(data1->data,data0->GA,pbitmap,pvalue,1);
-//             product = data0->type->math_funcs->product;
-//             if(product){
-//                 if(is_left){
-//                     if(!product(out->data,data0->data,data1->data,data0->GA,ptype))
-//                         return NULL;
-//                     else
-//                         return (PyObject*)out;
-//                 } else
-//                     if(!product(out->data,data0->data,data1->data,data0->GA,ptype))
-//                         return NULL;
-//                     else
-//                         return (PyObject*)out;
-//             }else{
-//                 return NULL;
-//             }
-//             Py_XDECREF((PyObject*)data1);
-//             PyMem_RawFree(pvalue);
-//             PyMem_RawFree(pbitmap);
-//             return (PyObject*)out;
-//         }
-//         // multiply by scalar
-//         scalar_product = data0->type->math_funcs->scalar_product;
-//         if(scalar_product){
-//             // Allocate single multivector and data
-//             PyMvObject *out = new_multivector_inherit_type(data0->GA, data0->type);
-//             if(!scalar_product(out->data,data0->data,data0->GA,value))
-//                 return NULL;
-//         }else{
-//             PyErr_SetString(PyExc_NotImplementedError,"The scalar product for this types is not implemented");
-//             return NULL; // raise not implemented error
-//         }
-//     }
-
-//     if(PyObject_TypeCheck(left,Py_TYPE(right))){
-//         data0 = (PyMultivectorObject*)left;
-//         data1 = (PyMultivectorObject*)right;
-//     }else{
-//         PyErr_SetString(PyExc_TypeError,"operands must be of the same type or int or ga_float");
-//         return NULL;
-//     }
-//     if(data0->GA != data1->GA){
-//         int is0_bigger;// METRIC_SIZE(data0->GA) > METRIC_SIZE(data1->GA)
-//         if((is0_bigger = is_bigger_metric(data0->GA,data1->GA)) == -1){
-//             PyErr_SetString(PyExc_TypeError,"operands must have overlaping metric");
-//             return NULL;
-//         }
-//         if(is0_bigger) mixed_product = data0->mixed->product,def = data0; // data0's GA is bigger
-//         else           mixed_product = data1->mixed->product,def = data1; // data1's GA is bigger
-//         if(mixed_product){
-//             gaiterinitfunc iter_init = def->type->data_funcs->iter_init;
-//             out = new_multivector(data0->GA, "sparse");
-//             PyMultivectorIter iter0 = iter_init(data0->data,data0->type);
-//             PyMultivectorIter iter1 = iter_init(data1->data,data1->type);
-//             if(!mixed_product(out,&iter0,&iter1,data0->GA,ptype)){
-//                 PyErr_SetString(PyExc_ValueError, "Error computing the mixed product!!!");
-//                 return NULL;
-//             }
-//             return (PyObject*)out;
-//         }else {
-//             PyErr_SetString(PyExc_NotImplementedError,"The product for mixed types is not implemented");
-//             return NULL; // raise not implemented error
-//         }
-//     }
-
-//     if(data0->type->ntype == data1->type->ntype){
-//         product = data0->type->math_funcs->product;
-//         if(product){
-//             PyMvObject *out = new_multivector_inherit_type(data0->GA, data0->type);
-//             if(!product(out->data,data0->data,data1->data,out->GA,ptype))
-//                 return NULL;
-//             else
-//                 return (PyObject*)out;
-//         } else {
-//             PyErr_SetString(PyExc_NotImplementedError,"The product for these types is not implemented");
-//             return NULL; // raise not implemented error
-//         }
-//     } else{
-//         mixed_product = data0->mixed->product;
-//         if(mixed_product){
-//             gaiterinitfunc iter_init = def->type->data_funcs->iter_init;
-//             out = new_multivector(data0->GA, "sparse");
-//             PyMultivectorIter iter0 = iter_init(data0->data,data0->type);
-//             PyMultivectorIter iter1 = iter_init(data1->data,data1->type);
-//             if(!mixed_product(out,&iter0,&iter1,data0->GA,ptype)){
-//                 PyErr_SetString(PyExc_ValueError, "Error computing the mixed product!!!");
-//                 return NULL;
-//             }
-//             return (PyObject*)out;
-//         } else {
-//             PyErr_SetString(PyExc_NotImplementedError,"The product for mixed types is not implemented");
-//             return NULL; // raise not implemented error
-//         }
-
-//     }
-
-//     return NULL;
-// }
-
-
 static int compare_shapes(PyObject *data0, PyObject *data1){
     PyMvObject *mv0 = (PyMvObject*)data0;
     PyMvObject *mv1 = (PyMvObject*)data1;
@@ -1566,84 +1439,6 @@ static PyObject *multivector_add_subtract(PyObject *left, PyObject *right,int si
     return (PyObject*)out;
 }
 
-/*
-static PyObject *multivector_add_subtract(PyObject *left, PyObject *right, int sign){
-    PyMultivectorObject *data0 = NULL, *data1 = NULL, *def = NULL;
-    ga_float value = 0;
-    gaaddfunc add;
-    gamixedaddfunc mixed_add;
-    gascalaraddfunc scalar_add;
-
-    if(get_scalar(right,&value)){ // check if right is a scalar
-        data0 = (PyMultivectorObject*)left;
-        value *= sign; // multiply by sign
-        sign = 1;
-    }else if(get_scalar(left,&value)){ // check if left is a scalar
-        data0 = (PyMultivectorObject*)right;
-    }
-
-    if(data0){
-        // add a scalar
-        scalar_add = data0->type->math_funcs->scalar_add;
-        if(scalar_add){
-            PyMvObject *out = new_multivector_inherit_type(data0->GA, data0->type);
-            if(!scalar_add(out->data,data0->data,out->GA,value,sign))
-                return NULL;
-        }else{
-            PyErr_SetString(PyExc_NotImplementedError,"The scalar product for this types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }
-
-    if(PyObject_TypeCheck(left,Py_TYPE(right))){
-        data0 = (PyMultivectorObject*)left;
-        data1 = (PyMultivectorObject*)right;
-    }else{
-        PyErr_SetString(PyExc_TypeError,"operands must be of the same type or int or ga_float");
-        return NULL;
-    }
-    if(data0->GA != data1->GA){
-        int is0_bigger;// METRIC_SIZE(data0->GA) > METRIC_SIZE(data1->GA)
-        if((is0_bigger = is_bigger_metric(data0->GA,data1->GA)) == -1){
-            PyErr_SetString(PyExc_TypeError,"operands must have overlapping metric");
-            return NULL;
-        }
-        if(is0_bigger) mixed_add = data0->mixed->add, def = data0; // data0's GA is bigger
-        else           mixed_add = data1->mixed->add, def = data1; // data1's GA is bigger
-        if(mixed_add){
-            return (PyObject*)mixed_add(data0,data1,def,sign);
-        }else {
-            PyErr_SetString(PyExc_NotImplementedError,"The product for mixed types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }
-
-    if(data0->type->ntype == data1->type->ntype){
-        add = data0->type->math_funcs->add;
-        if(add){
-            PyMvObject *out = new_multivector_inherit_type(data0->GA, data0->type);
-            if(!add(out->data,data0->data,data1->data,out->GA,sign))
-                return NULL;
-            else
-                return (PyObject*)out;
-        } else {
-            PyErr_SetString(PyExc_NotImplementedError,"The product for these types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    } else{
-        mixed_add = data0->mixed->add;
-        if(mixed_add){
-            return (PyObject*)mixed_add(data0,data1,data0,sign);
-        } else {
-            PyErr_SetString(PyExc_NotImplementedError,"The product for mixed types is not implemented");
-            return NULL; // raise not implemented error
-        }
-    }
-
-    return NULL;
-}
-
-*/
 
 PyObject *multivector_outer_product(PyObject *left, PyObject *right){
     return multivector_product(left,right,ProductType_outer);
@@ -1886,6 +1681,63 @@ static PyObject *multivector_type(PyMvObject *self, PyObject *Py_UNUSED(ignored)
 	return Py_BuildValue("s", self->type->type_name);
 }
 
+PyObject *multivector_sum(PyMvObject *self, PyObject *Py_UNUSED(ignored)){
+    // In the mean time should also add axis as an optional argument (when einsum is implemented)
+
+    gaatomicfunc atomic_add = self->type->math_funcs->atomic_add;
+    if(!atomic_add){
+        PyErr_SetString(PyExc_NotImplementedError,"The atomic sum operation for these types is not implemented");
+        return NULL; 
+    }
+    PyMvObject *out = new_multivector_inherit_type(self->GA, self->type);
+    if(!out){
+        PyErr_SetString(PyExc_MemoryError,"Error creating new multivector");
+        return NULL; 
+    }
+    if(!atomic_add(out->data,self->data,self->GA,self->strides[0])){
+        multivector_array_dealloc(out);
+        PyErr_SetString(PyExc_ValueError,"Error atomic adding multivectors");
+        return NULL; 
+    }
+    return (PyObject*)out;
+}
+
+PyObject *multivector_atomic_product(PyMvObject *self, ProductType ptype){
+    // In the mean time should also add axis as an optional argument (when einsum is implemented)
+
+    gaatomicprodfunc atomic_product = self->type->math_funcs->atomic_product;
+    if(!atomic_product){
+        PyErr_SetString(PyExc_NotImplementedError,"The atomic product operation for these types is not implemented");
+        return NULL; 
+    }
+    PyMvObject *out = new_multivector_inherit_type(self->GA, self->type);
+    if(!out){
+        PyErr_SetString(PyExc_MemoryError,"Error creating new multivector");
+        return NULL; 
+    }
+    if(!atomic_product(out->data,self->data,self->GA,self->strides[0],ptype)){
+        multivector_array_dealloc(out);
+        PyErr_SetString(PyExc_ValueError,"Error atomic producting multivectors");
+        return NULL; 
+    }
+    return (PyObject*)out;
+}
+
+PyObject *multivector_atomic_geometric_product(PyMvObject *self, PyObject *Py_UNUSED(ignored)){
+    return multivector_atomic_product(self,ProductType_geometric);
+}
+
+PyObject *multivector_atomic_outer_product(PyMvObject *self, PyObject *Py_UNUSED(ignored)){
+    return multivector_atomic_product(self,ProductType_outer);
+}
+
+PyObject *multivector_atomic_inner_product(PyMvObject *self, PyObject *Py_UNUSED(ignored)){
+    return multivector_atomic_product(self,ProductType_inner);
+}
+
+PyObject *multivector_atomic_regressive_product(PyMvObject *self, PyObject *Py_UNUSED(ignored)){
+    return multivector_atomic_product(self,ProductType_regressive);
+}
 /*
 PyObject* multivector_atomic_add(PyObject *cls, PyObject *args){
     Py_ssize_t size = PyTuple_Size(args);
@@ -2161,17 +2013,34 @@ PyDoc_STRVAR(cast_doc, "Casts the multivector to the specified type");
 PyDoc_STRVAR(grade_doc, "Returns the grade of a multivector");
 PyDoc_STRVAR(algebra_doc, "Returns the algebra of a multivector");
 PyDoc_STRVAR(type_doc, "Returns a string indicating the type of the multivector");
+PyDoc_STRVAR(sum_doc, "Sums all of the multivectors in the array together");
+PyDoc_STRVAR(prod_doc, "Geometric multiplies all of the multivectors in the array together, \
+                        the first element on the array is the leftmost element to be geometric multipled");
+PyDoc_STRVAR(outer_prod_doc, "Outer multiplies all of the multivectors in the array together, \
+                              the first element on the array is the leftmost element to be geometric multipled");
+PyDoc_STRVAR(inner_prod_doc, "Inner multiplies all of the multivectors in the array together, \
+                              the first element on the array is the leftmost element to be geometric multipled.\
+                              Carefull with precedence, the multiplication starts in the first element!!");
+PyDoc_STRVAR(regressive_prod_doc, "Regressive multiplies all of the multivectors in the array together, \
+                                   the first element on the array is the leftmost element to be geometric multipled.\
+                                   Carefull with precedence, the multiplication starts in the first element!!");
+
 
 PyMethodDef multivector_methods[] = {
         {"GA",(PyCFunction)multivector_algebra,METH_NOARGS,algebra_doc},
         {"Type",(PyCFunction)multivector_type,METH_NOARGS,type_doc},
 		{"dual", (PyCFunction)multivector_dual, METH_NOARGS, dual_doc},
 		{"undual", (PyCFunction)multivector_undual, METH_NOARGS, undual_doc},
+        {"sum",(PyCFunction)multivector_sum, METH_NOARGS, sum_doc},
+        {"prod",(PyCFunction)multivector_atomic_geometric_product, METH_NOARGS, prod_doc},
+        {"outer_prod",(PyCFunction)multivector_atomic_outer_product, METH_NOARGS, outer_prod_doc},
+        {"inner_prod",(PyCFunction)multivector_atomic_inner_product, METH_NOARGS, inner_prod_doc},
+        {"regressive_prod",(PyCFunction)multivector_atomic_regressive_product, METH_NOARGS, regressive_prod_doc},
 		//{"add", (PyCFunction)multivector_atomic_add, METH_VARARGS | METH_CLASS, add_doc},
 		//{"geometric_product", (PyCFunction)multivector_atomic_geometric_product,METH_VARARGS | METH_CLASS, product_doc},
 		//{"outer_product", (PyCFunction)multivector_atomic_outer_product,METH_VARARGS | METH_CLASS, product_doc},
 		//{"exp", (PyCFunction)multivector_exponential, METH_VARARGS | METH_CLASS,exponential_doc},
-		{"list", (PyCFunction)multivector_list, METH_VARARGS | METH_KEYWORDS,
+		{"tolist", (PyCFunction)multivector_list, METH_VARARGS | METH_KEYWORDS,
 		 list_doc},
 		{"cast", (PyCFunction)multivector_cast, METH_VARARGS, cast_doc},
 		{"grade", (PyCFunction)multivector_grade, METH_NOARGS, grade_doc},

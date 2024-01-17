@@ -37,6 +37,9 @@ z = x*y
 z = 1*y
 z = 1+y
 print((x+y)(1))
+print("Type:", (x+y).Type())
+print((x+y).sum())
+print((x+y).prod())
 
 y = cga.multivector(ylst,basis=ybasis)
 w = cga.multivector([1.0],basis=wbasis)
@@ -47,7 +50,8 @@ z = 1+y
 z = w + y
 z = w*y
 print((x+y)(1))
-
+print((x+y).sum())
+print((x+y).prod())
 vgagen = gasparsegen.GA(3,compute_mode="generated",print_type_mv=0)
 cgagen = gasparsegen.GA(4,1,compute_mode="generated",print_type_mv=0)
 
@@ -60,6 +64,8 @@ z = 1+y
 z = e1 + y
 z = e1*y
 print((x+y)(1))
+print((x+y).sum())
+print((x+y).prod())
 y = cgagen.multivector(ylst,basis=ybasis)
 z = x + y
 z = x*y
@@ -68,7 +74,8 @@ z = 1+y
 z = e1 + y
 z = e1*y
 print((x+y)(1))
-
+print((x+y).sum())
+print((x+y).prod())
 vgagen = gasparsegen.GA(3,compute_mode="generated",print_type_mv=0)
 x = vgagen.multivector(xlst,basis=xbasis)
 y = cga.multivector(ylst,basis=ybasis)
@@ -79,7 +86,8 @@ z = 1+y
 z = e1 + y
 z = e1*y
 print((x+y)(1))
-
+print((x+y).sum())
+print((x+y).prod())
 vgalarge = gasparsegen.GA(3,compute_mode="large",print_type_mv=0)
 cgalarge = gasparsegen.GA(4,1,compute_mode="large",print_type_mv=0)
 
@@ -92,15 +100,16 @@ z = 1+y
 z = e1 + y
 z = e1*y
 print((x+y)(1))
+print((x+y).sum())
+print((x+y).prod())
 
-
-#print(x.list())
+#print(x.tolist())
 #print(x)
 #print()
 #print(y)
-#print(y.list()[0])
-#print(y.list(1)[0])
+#print(y.tolist()[0])
+#print(y.tolist(1)[0])
 #print()
-#print(y.list(0)[0])
+#print(y.tolist(0)[0])
 
 

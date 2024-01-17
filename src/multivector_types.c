@@ -1360,30 +1360,30 @@ static int unary_dense_undual(void *out, void *data0, PyAlgebraObject *ga){
 
 static int atomic_sparse_add(void *out, void *data0, PyAlgebraObject *ga, Py_ssize_t dsize){
     SparseMultivector *data = (SparseMultivector*)data0;
-    SparseMultivector *dense = (SparseMultivector*)out;
-    *dense = init_sparse_empty(ga->asize);
-    if(dense->size == -1) return 0;
-    SparseMultivector sparse;
+    SparseMultivector *sparse = (SparseMultivector*)out;
+
+    SparseMultivector dense = init_sparse_empty(ga->asize);
+    if(dense.size == -1) return 0;
     Py_ssize_t size = 0;
 
     for(Py_ssize_t j = 0; j < dsize; j++){
         for(Py_ssize_t i = 0; i < data[j].size; i++){
-            if(dense->bitmap[data[j].bitmap[i]] == -1){
-                dense->bitmap[data[j].bitmap[i]] = data[j].bitmap[i];
+            if(dense.bitmap[data[j].bitmap[i]] == -1){
+                dense.bitmap[data[j].bitmap[i]] = data[j].bitmap[i];
                 size++;
             }
-            dense->value[data[j].bitmap[i]] += data[j].value[i];
+            dense.value[data[j].bitmap[i]] += data[j].value[i];
         }
     }
 
-    sparse_remove_small(*dense,ga->precision,&size);
-    sparse = sparse_dense_to_sparse_sparse(*dense,size);
-    if(sparse.size == -1){
-        sparse_free_(*dense);
+    sparse_remove_small(dense,ga->precision,&size);
+    *sparse = sparse_dense_to_sparse_sparse(dense,size);
+    if(sparse->size == -1){
+        sparse_free_(dense);
         return 0;
     }
 
-    sparse_free_(*dense);
+    sparse_free_(dense);
     return 1;
 }
 
@@ -1391,19 +1391,18 @@ static int atomic_sparse_add(void *out, void *data0, PyAlgebraObject *ga, Py_ssi
 
 static int atomic_sparse_product(void *out, void *data0, PyAlgebraObject *ga,Py_ssize_t dsize, ProductType ptype){
     SparseMultivector *data = (SparseMultivector*)data0;
-    SparseMultivector *dense = (SparseMultivector*)out;
+    SparseMultivector *sparse = (SparseMultivector*)out;
     CliffordMap m = ga->product[ptype];
 
     // Allocate memory for a dense y
-    *dense = init_sparse_empty(m.size);
-    if(dense->size == -1) return 1;
+    SparseMultivector dense = init_sparse_empty(m.size);
+    if(dense.size == -1) return 1;
     SparseMultivector temp = init_sparse_empty(m.size);
     if(temp.size == -1) {
-        sparse_free_(*dense);
+        sparse_free_(dense);
         return 0;
     }
 
-    SparseMultivector sparse;
     Py_ssize_t tsize = 1;
     *temp.bitmap = 0; *temp.value = 1; // initialize temp to unit scalar
 
@@ -1415,31 +1414,31 @@ static int atomic_sparse_product(void *out, void *data0, PyAlgebraObject *ga,Py_
                 sign = m.sign[temp.bitmap[k]][data[i].bitmap[j]];
                 if(!sign) continue;
                 bitmap = m.bitmap[temp.bitmap[k]][data[i].bitmap[j]];
-                dense->bitmap[bitmap] = bitmap;
-                dense->value[bitmap] += temp.value[k]*data[i].value[j]*sign;
+                dense.bitmap[bitmap] = bitmap;
+                dense.value[bitmap] += temp.value[k]*data[i].value[j]*sign;
             }
         }
         tsize = 0;
-        for(Py_ssize_t l = 0; l < dense->size; l++){
-            if(dense->bitmap[l] != -1){
-                temp.bitmap[tsize] = dense->bitmap[l];
-                temp.value[tsize] = dense->value[l];
+        for(Py_ssize_t l = 0; l < dense.size; l++){
+            if(dense.bitmap[l] != -1){
+                temp.bitmap[tsize] = dense.bitmap[l];
+                temp.value[tsize] = dense.value[l];
                 tsize++;
             }
-            dense->bitmap[l] = -1;
-            dense->value[l] = 0;
+            dense.bitmap[l] = -1;
+            dense.value[l] = 0;
         }
     }
 
     sparse_remove_small(temp,ga->precision,&tsize);
-    sparse = sparse_dense_to_sparse_sparse(temp,tsize);
-    if(sparse.size == -1){
-        sparse_free_(*dense);
+    *sparse = sparse_dense_to_sparse_sparse(temp,tsize);
+    if(sparse->size == -1){
+        sparse_free_(dense);
         sparse_free_(temp);
         return 0;
     }
 
-    sparse_free_(*dense);
+    sparse_free_(dense);
     sparse_free_(temp);
     return 1;
 }
@@ -1572,13 +1571,13 @@ static int atomic_dense_add(void *out, void *data0,PyAlgebraObject *ga, Py_ssize
 
 static int atomic_dense_product(void *out, void *data0, PyAlgebraObject *ga, Py_ssize_t dsize, ProductType ptype){
     DenseMultivector *data = (DenseMultivector*)data0;
-    DenseMultivector *dense = (DenseMultivector*)out;
+    DenseMultivector *dense_out = (DenseMultivector*)out;
     CliffordMap m = ga->product[ptype];
-    *dense = init_dense_empty(m.size);
-    if(dense->size == -1) return 0;
+    DenseMultivector dense = init_dense_empty(m.size);
+    if(dense.size == -1) return 0;
     DenseMultivector temp = init_dense_empty(m.size);
     if(temp.size == -1) {
-        dense_free_(*dense);
+        dense_free_(dense);
         return 0;
     }
 
@@ -1589,17 +1588,18 @@ static int atomic_dense_product(void *out, void *data0, PyAlgebraObject *ga, Py_
             for(Py_ssize_t k = 0; k < temp.size; k++){
                 sign = m.sign[k][j];
                 if(!sign) continue;
-                dense->value[m.bitmap[k][j]] += temp.value[k]*data[i].value[j]*sign;
+                dense.value[m.bitmap[k][j]] += temp.value[k]*data[i].value[j]*sign;
             }
         }
         // copy values
-        for(Py_ssize_t l = 0; l < dense->size; l++){
-            temp.value[l] = dense->value[l];
-            dense->value[l] = 0;
+        for(Py_ssize_t l = 0; l < dense.size; l++){
+            temp.value[l] = dense.value[l];
+            dense.value[l] = 0;
         }
     }
 
-    dense_free_(*dense);
+    dense_free_(dense);
+    *dense_out = temp;
     return 1;
 }
 

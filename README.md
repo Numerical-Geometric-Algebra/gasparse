@@ -166,6 +166,26 @@ Note how the list function also outputs the basis.
 	- `'dense0'`,`'dense1'`, ... ,`'blades0'`,`'blades1'`, ...  are the code generated types.
 	- `'denselarge'`,`'sparselarge'`,`'bladeslarge'`  are the types that use the large computation mode.
 
+  - Operations on a single multivector array
+  ```python
+  x = ga.multivector([[0,1],[2,1]],basis=['e1','e2'])
+  z = x.prod() # Geometric Multiplies the element the first element is the leftmost element in the product
+  z = x.outer_prod() # Outer Multiplies the element the first element is the leftmost element in the product
+  z = x.sum() # Sums all the multivectors in the array
+  ```
+  Note that for the inner and regressive products we have precedence to consider, that is
+  ```python
+  z = a|b|c # This is the same as the next line
+  z = (a|b)|c
+  z = a|(b|c) # Which is not the same as this
+  ```
+  Since the inner and regressive product is more ambiguous the user has to be carefull when using it since the following relations hold
+  ```python
+  a|b|c|d <=> ((a|b)|c)|d
+  a.inner_prod() <=> a[1]|a[2]|a[3]|a[4] <=> ((a[1]|a[2])|a[3])|a[4]
+  ```
+
+
 ### Coding Strategy
 1. Set errror strings only in the outermost call (the first function that is called from python)
 Still trying to averiguate the best strategy for error setting...
@@ -198,6 +218,7 @@ python3 setup.py build --genalgebras # generates the algebra
 When creating specific function types if we want that the compiler warns incompantible function pointer do not cast a function pointer otherwise if the function is not as specified in the typedef we will have probably segmentation faults
 
 ## TODO
+1. Masking multivector arrays. I want to be able to eliminate some multivectors that do not satisfy some requirements.
 1. Get algebra from a specific element
   ```x.GA()```
 1. Print what is the compute mode of the algbra
