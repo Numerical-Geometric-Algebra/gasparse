@@ -7,7 +7,7 @@
 #include "pytypedefs.h"
 #include "types.h"
 #include <string.h>
-
+#include <math.h>
 
 
 // Multivector Array Initializers
@@ -420,6 +420,16 @@ PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyObject *k
 	}
 	if(!type_name)
 		type_name = self->mdefault.type_name;
+
+    
+    if(!strcmp(type_name,"scalar")){
+        // If the size of the basis is not one and the basis is not a scalar
+        if(!(bsize == 1 && !bitmaps_int[0])){
+            PyErr_SetString(PyExc_ValueError, "The scalar type multivector needs a scalar basis!!");
+            PyMem_RawFree(bitmaps_int);
+            return NULL;
+        }
+    }
     
     // Determine strides and shapes from the nested lists
     Py_ssize_t ndims = get_ndims(values);
@@ -473,7 +483,7 @@ PyObject *algebra_multivector(PyAlgebraObject *self, PyObject *args, PyObject *k
     
     // Write the data into the multivector array
     for(Py_ssize_t i = 0; i < strides[0]; i++){
-        if(!init(mv_array->data + i*mv_array->type->basic_size,self,bitmaps_int,values_float_array[i],bsize)){
+        if(!init(INDEX_DATA(mv_array,i),self,bitmaps_int,values_float_array[i],bsize)){
             // dealloc the memory from all the initialized objects
             multivector_array_dealloc(mv_array);
             PyErr_SetString(PyExc_ValueError,"Error initializing a single multivector!");
@@ -633,6 +643,7 @@ char *type_iter_repr(PyMultivectorIter *iter, PrintTypeMV ptype, Py_ssize_t dsiz
     a+b -> multivector_add: multivector addition
     a-b -> multivector_subtract: multivector subtraction
     ~a  -> multivector_invert: reverse the order of the basis vector by changing the sign
+    a/b -> multivector_divide: Divide by scalar or scalar arrays
 */
 
 // Prints the array of multivectors as a list of lists
@@ -1137,8 +1148,6 @@ static PyMvObject* multivector_scalar_array_product(PyMvObject *left, PyMvObject
     return out;
 }
 
-
-
 static int compare_shapes(PyObject *data0, PyObject *data1){
     PyMvObject *mv0 = (PyMvObject*)data0;
     PyMvObject *mv1 = (PyMvObject*)data1;
@@ -1158,9 +1167,9 @@ static PyObject *multivector_product(PyObject *left, PyObject *right, ProductTyp
     int isleft_single = -1;
     
     if(get_scalar(right,&value)) // check if right is a scalar
-        data0 = (PyMultivectorObject*)left,scalar_left = 1;
+        data0 = (PyMultivectorObject*)left,scalar_left = 0;
     else if(get_scalar(left,&value)) // check if left is a scalar
-        data0 = (PyMultivectorObject*)right,scalar_left = 0;
+        data0 = (PyMultivectorObject*)right,scalar_left = 1;
 
     if(scalar_left != -1){ // One of the arguments is a scalar
         out = multivector_scalar_product(data0,value,ptype,scalar_left);
@@ -1825,6 +1834,143 @@ PyObject *multivector_atomic_inner_product(PyMvObject *self, PyObject *Py_UNUSED
 PyObject *multivector_atomic_regressive_product(PyMvObject *self, PyObject *Py_UNUSED(ignored)){
     return multivector_atomic_product(self,ProductType_regressive);
 }
+
+// Element wise division by a scalar array
+static PyMvObject* multivector_scalar_array_divide(PyMvObject *data, PyMvObject *scalar){
+    PyMvObject *out = NULL;
+    PyMvObject *scalar_mv = NULL;
+    gaprodfunc product = NULL; 
+    gascalarfunc scalar_product = NULL;
+
+    out = new_mvarray_inherit_type(data->GA, data->ns, data->strides, data->shapes, data->type);
+    
+    scalar_product = data->type->math_funcs->scalar_product;
+    if(!scalar_product){
+        multivector_array_dealloc(out);
+        return NULL;
+    }
+    for(Py_ssize_t i = 0; i < data->strides[0]; i++){
+        ScalarMultivector *scalar_mv = INDEX_DATA(scalar, i);
+        if(!scalar_product(INDEX_DATA(out, i),INDEX_DATA(data, i),data->GA,1.0/(*scalar_mv))){
+            multivector_array_dealloc(out);
+            return NULL;
+        }
+    }
+    
+    return out;
+}
+
+
+// Division of a scalar array
+static PyMvObject* multivector_scalar_divide(PyMvObject *scalar_array, ga_float scalar){
+    PyMvObject *out = NULL;
+    PyMvObject *scalar_mv = NULL;
+    gaprodfunc product = NULL; 
+    gascalarfunc scalar_product = NULL;
+
+    out = new_mvarray_inherit_type(scalar_array->GA, scalar_array->ns, scalar_array->strides, scalar_array->shapes, scalar_array->type);
+    ScalarMultivector *scalar_data = (ScalarMultivector*)scalar_array->data;
+    ScalarMultivector *scalar_out = (ScalarMultivector*)out->data;
+    
+    for(Py_ssize_t i = 0; i < scalar_array->strides[0]; i++)
+        scalar_out[i] = scalar/scalar_data[i];
+    
+    return out;
+}
+
+PyObject *multivector_divide(PyObject *left, PyObject *right){
+    PyMvObject *data0 = NULL;
+    PyMvObject *out = NULL;
+    ga_float value = 0;
+    int scalar_left = -1;
+    int isleft_single = -1;
+    
+    if(get_scalar(right,&value)) // check if right is a scalar
+        data0 = (PyMvObject*)left,scalar_left = 0; // Left is not a scalar
+    else if(get_scalar(left,&value)) {
+        data0 = (PyMvObject*)right,scalar_left = 1;// Left is a scalar
+        // If right is not a scalar
+        if(strcmp("scalar",data0->type->type_name)){ // Then right must be a scalar array
+            PyErr_SetString(PyExc_NotImplementedError,"Division by a multivector is still not implemented!!");
+            return NULL;
+        }
+    }
+
+    if(scalar_left == 0){ // Right is a scalar, Left is a multivector
+        out = multivector_scalar_product(data0,1.0/value,ProductType_geometric,scalar_left);
+        if(!out){
+            PyErr_SetString(PyExc_TypeError,"Something wrong computing the division with a scalar!");
+            return NULL;
+        }
+    }else if(scalar_left == 1){ // Left is a scalar, Right is a scalar array
+        out = multivector_scalar_divide(data0,value);
+        if(!out){
+            PyErr_SetString(PyExc_TypeError,"Something wrong computing the division with a scalar!");
+            return NULL;
+        }
+    }else {
+        PyMvObject *scalar = (PyMvObject*)right;
+        if(!strcmp("scalar",scalar->type->type_name)){  // The right multivector is a scalar array, Left is a multivector
+            data0 = (PyMvObject*)left;
+            out = multivector_scalar_array_divide(data0,scalar);
+        }else{
+            PyErr_SetString(PyExc_NotImplementedError,"Division by a multivector is still not implemented!!");
+            return NULL;
+        }
+        if(!out){
+            PyErr_SetString(PyExc_TypeError,"Something wrong computing the division with a scalar!");
+            return NULL;
+        }
+    }
+    return (PyObject*)out;
+}
+
+
+// Apply an element wise operation to a scalar array
+static PyObject* multivector_scalar_array_operation(PyObject *cls, PyObject *args, scalarop op){
+    Py_ssize_t size = PyTuple_Size(args);
+    if(size > 1 || size == 0) {
+        PyErr_SetString(PyExc_ValueError,"Number of arguments can only be one");
+        return NULL;
+    }
+    PyObject *arg0 = PyTuple_GetItem(args,0);
+    if(!PyObject_IsInstance(arg0,cls)){
+        PyErr_SetString(PyExc_ValueError,"Argument must be a multivector");
+        return NULL;
+    }
+    PyMvObject *scalar_array = (PyMvObject*)PyTuple_GetItem(args,0);
+    if(strcmp(scalar_array->type->type_name,"scalar")){
+        PyErr_SetString(PyExc_ValueError,"Argument must be a scalar multivector");
+        return NULL;
+    }
+
+    PyMvObject *out = NULL;
+    PyMvObject *scalar_mv = NULL;
+    gaprodfunc product = NULL; 
+    gascalarfunc scalar_product = NULL;
+
+    out = new_mvarray_inherit_type(scalar_array->GA, scalar_array->ns, scalar_array->strides, scalar_array->shapes, scalar_array->type);
+    ScalarMultivector *scalar_data = (ScalarMultivector*)scalar_array->data;
+    ScalarMultivector *scalar_out = (ScalarMultivector*)out->data;
+    
+    for(Py_ssize_t i = 0; i < scalar_array->strides[0]; i++)
+        scalar_out[i] = op(scalar_data[i]);
+    
+    return (PyObject*)out;
+}
+
+static PyObject *multivector_sqrt(PyObject *cls, PyObject *args){
+    return multivector_scalar_array_operation(cls,args,sqrt);
+}
+
+static PyObject *multivector_cos(PyObject *cls, PyObject *args){
+    return multivector_scalar_array_operation(cls,args,cos);
+}
+
+static PyObject *multivector_sin(PyObject *cls, PyObject *args){
+    return multivector_scalar_array_operation(cls,args,sin);
+}
+
 /*
 PyObject* multivector_atomic_add(PyObject *cls, PyObject *args){
     Py_ssize_t size = PyTuple_Size(args);
@@ -2085,6 +2231,7 @@ static PyNumberMethods PyMultivectorNumberMethods = {
 		.nb_invert = (unaryfunc)multivector_invert,
 		.nb_negative = (unaryfunc)multivector_negative,
 		.nb_positive = (unaryfunc)multivector_positive,
+        .nb_true_divide = (binaryfunc)multivector_divide,
 
 };
 
@@ -2112,6 +2259,9 @@ PyDoc_STRVAR(regressive_prod_doc, "Regressive multiplies all of the multivectors
                                    the first element on the array is the leftmost element to be geometric multipled.\
                                    Carefull with precedence, the multiplication starts in the first element!!");
 
+PyDoc_STRVAR(cos_doc, "Element wise cosine of scalar multivectors.");
+PyDoc_STRVAR(sin_doc, "Element wise sine of scalar multivectors.");
+PyDoc_STRVAR(sqrt_doc, "Element wise square root of scalar multivectors.");
 
 PyMethodDef multivector_methods[] = {
         {"GA",(PyCFunction)multivector_algebra,METH_NOARGS,algebra_doc},
@@ -2131,6 +2281,9 @@ PyMethodDef multivector_methods[] = {
 		 list_doc},
 		{"cast", (PyCFunction)multivector_cast, METH_VARARGS, cast_doc},
 		{"grade", (PyCFunction)multivector_grade, METH_NOARGS, grade_doc},
+        {"cos",   (PyCFunction)multivector_cos, METH_VARARGS | METH_CLASS, cos_doc},
+        {"sin",   (PyCFunction)multivector_sin, METH_VARARGS | METH_CLASS, sin_doc},
+        {"sqrt",   (PyCFunction)multivector_sqrt, METH_VARARGS | METH_CLASS, sqrt_doc},
 		{NULL},
 };
 

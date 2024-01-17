@@ -96,11 +96,18 @@ a*x # scalar multiplication
 x(g) # projection to grade g
 x([g1,g2]) # projection to grades g1 and g2
 ```
-Note that the division `/` operator is not defined since for general multivectors is not simple to compute. Instead for homogeneous multivectors we consider the operation
+Note that the division `/` operator is defined for divisio by scalars or scalar arrays since for general multivectors it is not simple to compute. 
+The following operation are valid
 ```python
-(1/((x*~x)(0)))*x
+ x/y(0)
+ y(0)/10
+ 10/y(0)
+ x/10
 ```
-(Maybe add the option to be able to divide by scalars...)
+Note that `y(0)` will return a new type of multivector which is a scalar type multivector. Which can be handled as a scalar. Thus division by this quantity is possible. Then we can compute inverse of homogeneous multivectors arrays with 
+```python
+  x_inv = x/(x*~x)(0)
+```
 
 - Get the grade of a multivector
 ```python
@@ -183,6 +190,15 @@ Note how the list function also outputs the basis.
   ```python
   a|b|c|d <=> ((a|b)|c)|d
   a.inner_prod() <=> a[1]|a[2]|a[3]|a[4] <=> ((a[1]|a[2])|a[3])|a[4]
+  ```
+  If the user wants he can create scalar multivector arrays via the keyword `dtype='scalar'`, for example
+  ```python
+  x = ga.multivector([[1.234],[2.345]],grades=0,dtype='scalar')
+  x = ga.multivector([[1.234],[2.345]],basis=['e'],dtype='scalar')
+  ```
+  Note that chosing the scalar type the defining a multivector basis other than the scalar basis, returns an error. For example the following will return an error
+  ```python
+  x = ga.multivector([[1.234],[2.345]],basis=['e1'],dtype='scalar')
   ```
 
 
