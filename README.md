@@ -218,6 +218,8 @@ python3 setup.py build --genalgebras # generates the algebra
 When creating specific function types if we want that the compiler warns incompantible function pointer do not cast a function pointer otherwise if the function is not as specified in the typedef we will have probably segmentation faults
 
 ## TODO
+1. Grade projection should accept the grade bool array instead of the grades 
+
 1. Masking multivector arrays. I want to be able to eliminate some multivectors that do not satisfy some requirements.
 1. Get algebra from a specific element
   ```x.GA()```

@@ -612,10 +612,11 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds) {
 			return -1; // algebra not found error
 		}
 		self->types = (PyMultivectorSubType *)PyMem_RawMalloc(
-				k * sizeof(PyMultivectorSubType));
-		self->tsize = k;
+						(k+1)*sizeof(PyMultivectorSubType));
+		self->tsize = k+1;
 		for (Py_ssize_t i = 0; i < k; i++)
 			self->types[i] = gen_subtypes_array[index[i]];
+		self->types[k] = multivector_subtypes_array[3];
 		// For generated types we cannot use the mixed operation, will cast to the biggest algebra
 		self->mixed = NULL; 
 		// set default type
@@ -631,12 +632,14 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds) {
 		map_sign_init(self->product, self->metric, METRIC_SIZE(self));
 		self->dm = dual_map_sign_init(METRIC_SIZE(self));
 		self->asize = self->product->size;
-		self->tsize = 3;
+		self->tsize = 4;
 
 		self->types = (PyMultivectorSubType *)PyMem_RawMalloc(
 				self->tsize * sizeof(PyMultivectorSubType));
-		for (Py_ssize_t i = 0; i < self->tsize; i++)
+		for (Py_ssize_t i = 0; i < self->tsize-1; i++)
 			self->types[i] = largemultivector_subtypes_array[i];
+		// Include the scalar type element into the types of the algebra
+		self->types[self->tsize-1] = multivector_subtypes_array[3];
 		self->mixed = &largemultivector_mixed_fn;
 		// set default type
 		self->mdefault.type_name = self->types->type_name;
@@ -655,7 +658,7 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds) {
 		outer_map_init(self);
 		regressive_map_init(self);
 
-		self->tsize = 3;
+		self->tsize = 4;
 		self->types = (PyMultivectorSubType *)PyMem_RawMalloc(
 				self->tsize * sizeof(PyMultivectorSubType));
 		for (Py_ssize_t i = 0; i < self->tsize; i++)

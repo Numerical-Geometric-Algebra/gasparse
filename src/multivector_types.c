@@ -208,6 +208,14 @@ void dense_free_(DenseMultivector dense){
     PyMem_RawFree(dense.value);
 }
 
+static int scalar_init(void *out, PyAlgebraObject *GA, int *bitmap, ga_float *value, Py_ssize_t size){
+    
+    ScalarMultivector *scalar = (ScalarMultivector*)out;
+    if(!value) *scalar = 0;
+    else *scalar = *value;
+    return 1;
+}
+
 static int sparse_init(void *out, PyAlgebraObject *GA, int *bitmap, ga_float *value, Py_ssize_t size){
     SparseMultivector *sparse = (SparseMultivector *)out;
     if(!size){
@@ -325,6 +333,16 @@ static int cast_to_blades(PyMultivectorIter *from, void *to,PyAlgebraObject *GA)
     return 1;
 }
 
+static int scalar_iter_next(PyMultivectorIter *iter){
+    if(*iter->index >= 1){
+        *iter->index = 0;
+        return 0;
+    }
+    iter->bitmap = 0;
+    iter->value = *((ScalarMultivector*)iter->data);
+    (*iter->index)++;
+    return 1;
+}
 
 static int sparse_iter_next(PyMultivectorIter *iter){
     SparseMultivector *sparse = (SparseMultivector*)iter->data;
@@ -367,7 +385,20 @@ static int blades_iter_next(PyMultivectorIter *iter){
     return 1;
 }
 
-
+static PyMultivectorIter scalar_iter_init(void *data, PyMultivectorSubType *type){
+    PyMultivectorIter iter;
+    iter.data = data;
+    iter.bitmap = -1;
+    iter.value = 0;
+    iter.type = type->ntype;
+    iter.index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
+    iter.index[0] = 0;
+    iter.size = 1;
+    iter.niters = 1;
+    iter.next = type->data_funcs->iter_next;
+    iter.type_name = type->type_name;
+    return iter;
+}
 
 static PyMultivectorIter sparse_iter_init(void *data, PyMultivectorSubType *type){
     PyMultivectorIter iter;
@@ -474,6 +505,14 @@ SparseMultivector sparse_new_(Py_ssize_t size){
     return sparse;
 }
 
+static int unary_scalar_scalaradd(void *out, void* data0,PyAlgebraObject *GA,ga_float value, int sign){
+    ScalarMultivector *scalar = (ScalarMultivector*)out;
+    ScalarMultivector *scalar0 = (ScalarMultivector *)data0;
+    
+    *scalar = sign*(*scalar0) + value;
+    return 1;
+}
+
 static int unary_sparse_scalaradd(void *out, void *data0, PyAlgebraObject *GA, ga_float value, int sign){
     SparseMultivector *sparse0 = (SparseMultivector *)data0;
     SparseMultivector *sparse = (SparseMultivector *)out;
@@ -533,6 +572,13 @@ static int unary_sparse_scalaradd(void *out, void *data0, PyAlgebraObject *GA, g
     return 1;
 }
 
+static int unary_scalar_scalarproduct(void *out, void* data0,PyAlgebraObject *GA,ga_float value){
+    ScalarMultivector *scalar = (ScalarMultivector*)out;
+    ScalarMultivector *scalar0 = (ScalarMultivector *)data0;
+    
+    *scalar = value*(*scalar0);
+    return 1;
+}
 
 static int unary_sparse_scalarproduct(void* out, void* data0, PyAlgebraObject *ga, ga_float value){
     SparseMultivector *sparse0 = (SparseMultivector*)data0;
@@ -557,6 +603,13 @@ static int unary_sparse_scalarproduct(void* out, void* data0, PyAlgebraObject *g
     return 1;
 }
 
+static int binary_scalar_add(void *out, void* data0, void* data1,PyAlgebraObject *GA, int sign){
+    ScalarMultivector *scalar = (ScalarMultivector*)out;
+    ScalarMultivector *scalar0 = (ScalarMultivector *)data0;
+    ScalarMultivector *scalar1 = (ScalarMultivector *)data1;
+    *scalar = *scalar0 + sign*(*scalar1);
+    return 1;
+}
 
 static int binary_sparse_add(void *out, void *data0, void *data1, PyAlgebraObject *ga, int sign){
     SparseMultivector *sparse0 = (SparseMultivector*)data0; 
@@ -589,6 +642,15 @@ static int binary_sparse_add(void *out, void *data0, void *data1, PyAlgebraObjec
     return 1;
 }
 
+// Use this only for geometric or outer product between scalars
+static int binary_scalar_product(void *out, void* data0, void* data1, PyAlgebraObject *GA, ProductType ptype){
+    ScalarMultivector *scalar = (ScalarMultivector*)out;
+    ScalarMultivector *scalar0 = (ScalarMultivector *)data0;
+    ScalarMultivector *scalar1 = (ScalarMultivector *)data1;
+    *scalar = (*scalar0)*(*scalar1);
+    return 1;
+}
+
 static int binary_sparse_product(void *out, void *data0, void *data1, PyAlgebraObject *ga, ProductType ptype){
     
     SparseMultivector *sparse0 = (SparseMultivector*)data0; 
@@ -616,6 +678,16 @@ static int binary_sparse_product(void *out, void *data0, void *data1, PyAlgebraO
     sparse_remove_small(dense,ga->precision,&size);
     *sparse = sparse_dense_to_sparse_sparse(dense,size);
     sparse_free_(dense);
+    return 1;
+}
+
+// Use this only for geometric or outer product between scalars
+static int ternary_scalar_product(void *out, void* data0, void* data1,void* data2, PyAlgebraObject *GA, ProductType ptype){
+    ScalarMultivector *scalar = (ScalarMultivector*)out;
+    ScalarMultivector *scalar0 = (ScalarMultivector *)data0;
+    ScalarMultivector *scalar1 = (ScalarMultivector *)data1;
+    ScalarMultivector *scalar2 = (ScalarMultivector *)data2;
+    *scalar = (*scalar0)*(*scalar1)*(*scalar2);
     return 1;
 }
 
@@ -687,6 +759,17 @@ static int ternary_sparse_product(void *out, void *data0, void *data1, void *dat
     return 1;
 }
 
+static int unary_scalar_gradeproject(void *out, void *data0, PyAlgebraObject *ga, int *grades, Py_ssize_t grade_size){
+    ScalarMultivector *scalar0 = (ScalarMultivector*)data0;
+    ScalarMultivector *scalar = (ScalarMultivector*)out;
+    GradeMap gm = ga->gm;
+    Py_ssize_t *g = get_grade_bool(grades,grade_size,gm.max_grade + 1);
+    if(!g) return 0;
+    if(*g) *scalar = *scalar0; // Projecting to scalar
+    else *scalar = 0;
+    return 1;
+}
+
 static int unary_sparse_gradeproject(void *out, void *data0, PyAlgebraObject *ga, int *grades, Py_ssize_t grade_size){
     SparseMultivector *sparse0 = (SparseMultivector*)data0;
     SparseMultivector *sparse = (SparseMultivector*)out;
@@ -719,6 +802,13 @@ static int unary_sparse_gradeproject(void *out, void *data0, PyAlgebraObject *ga
     }
 
     PyMem_RawFree(g);
+    return 1;
+}
+
+static int unary_scalar_reverse(void *out, void *data0, PyAlgebraObject *ga){
+    ScalarMultivector *scalar0 = (ScalarMultivector*)data0;
+    ScalarMultivector *scalar = (ScalarMultivector*)out;
+    *scalar = *scalar0;
     return 1;
 }
 
@@ -1358,6 +1448,14 @@ static int unary_dense_undual(void *out, void *data0, PyAlgebraObject *ga){
     return 1;
 }
 
+static int atomic_scalar_add(void *out, void *data0, PyAlgebraObject *ga, Py_ssize_t dsize){
+    ScalarMultivector *data = (ScalarMultivector*)data0;
+    ScalarMultivector *scalar = (ScalarMultivector*)out;
+    *scalar = 0;
+    for(Py_ssize_t j = 0; j < dsize; j++) *scalar += data[j];
+    return 1;
+}
+
 static int atomic_sparse_add(void *out, void *data0, PyAlgebraObject *ga, Py_ssize_t dsize){
     SparseMultivector *data = (SparseMultivector*)data0;
     SparseMultivector *sparse = (SparseMultivector*)out;
@@ -1387,7 +1485,13 @@ static int atomic_sparse_add(void *out, void *data0, PyAlgebraObject *ga, Py_ssi
     return 1;
 }
 
-
+static int atomic_scalar_product(void *out, void *data0, PyAlgebraObject *ga, Py_ssize_t dsize, ProductType ptype){
+    ScalarMultivector *data = (ScalarMultivector*)data0;
+    ScalarMultivector *scalar = (ScalarMultivector*)out;
+    *scalar = 0;
+    for(Py_ssize_t j = 0; j < dsize; j++) *scalar *= data[j];
+    return 1;
+}
 
 static int atomic_sparse_product(void *out, void *data0, PyAlgebraObject *ga,Py_ssize_t dsize, ProductType ptype){
     SparseMultivector *data = (SparseMultivector*)data0;
@@ -1754,6 +1858,10 @@ void dense_free(void *dense){
     dense_free_(*((DenseMultivector*)dense));
 }
 
+void scalar_free(void *scalar){
+    return;
+}
+
 static PyMultivectorData_Funcs multivector_sparse_data_fn = {
     .free = sparse_free,
     .init = sparse_init,
@@ -1778,9 +1886,15 @@ static PyMultivectorData_Funcs multivector_dense_data_fn = {
     .cast = cast_to_dense,
 };
 
+static PyMultivectorData_Funcs multivector_scalar_data_fn = {
+    .free = scalar_free,
+    .init = scalar_init,
+    .iter_init = scalar_iter_init,
+    .iter_next = scalar_iter_next,
+    .cast = NULL,
+};
 
-
- static PyMultivectorMath_Funcs multivector_sparse_math_fn = {
+static PyMultivectorMath_Funcs multivector_sparse_math_fn = {
     .product = binary_sparse_product,
     .atomic_product = atomic_sparse_product,
     .ternary_product = ternary_sparse_product,
@@ -1821,6 +1935,20 @@ static PyMultivectorData_Funcs multivector_dense_data_fn = {
     .undual = unary_dense_undual,
 };
 
+static PyMultivectorMath_Funcs multivector_scalar_math_fn = {
+    .product = binary_scalar_product,
+    .atomic_product = atomic_scalar_product,
+    .ternary_product = ternary_scalar_product,
+    .add = binary_scalar_add,
+    .atomic_add = atomic_scalar_add,
+    .grade_project = unary_scalar_gradeproject,
+    .scalar_product = unary_scalar_scalarproduct,
+    .scalar_add = unary_scalar_scalaradd,
+    .reverse = unary_scalar_reverse,
+    .dual = NULL,
+    .undual = NULL,
+};
+
 static const PyMultivectorSubType sparse_subtype = {
     .math_funcs = &multivector_sparse_math_fn,
     .data_funcs = &multivector_sparse_data_fn,
@@ -1855,13 +1983,25 @@ static const PyMultivectorSubType dense_subtype = {
     .basic_size = sizeof(DenseMultivector),
 };
 
+static const PyMultivectorSubType scalar_subtype = {
+    .math_funcs = &multivector_scalar_math_fn,
+    .data_funcs = &multivector_scalar_data_fn,
+    .name = "",
+    .type_name = "scalar",
+    .generated = 0,
+    .metric = {-2},
+    .msize = -1,
+    .ntype = MultivectorType_scalar,
+    .basic_size = sizeof(ScalarMultivector),
+};
+
 PyMultivectorMixedMath_Funcs multivector_mixed_fn = {
   .add = binary_mixed_add,
   .product = binary_mixed_product,
   .atomic_add = atomic_mixed_add,
   .atomic_product = atomic_mixed_product,
-  .type_names = {"blades","sparse","dense",NULL},
+  .type_names = {"blades","sparse","dense","scalar",NULL},
 };
 
 
-PyMultivectorSubType multivector_subtypes_array[3] = {sparse_subtype,dense_subtype,blades_subtype};
+PyMultivectorSubType multivector_subtypes_array[4] = {sparse_subtype,dense_subtype,blades_subtype,scalar_subtype};

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import gasparse
+import gasparsegen
 import numpy as np
-from gasparse import multivector
+from gasparsegen import multivector
 from sympy import poly, nroots
 from sympy.abc import x
 
-vga = gasparse.GA(3)
-cga = gasparse.GA(4,1) # Use 3D conformal geometric algebra
+vga = gasparsegen.GA(3,compute_mode='generated')
+cga = gasparsegen.GA(4,1,compute_mode='generated') # Use 3D conformal geometric algebra
 basis = cga.basis()
 locals().update(basis) # Update all of the basis blades variables into the environment
 
@@ -18,13 +18,41 @@ eo = (1.0*e5 + 1.0*e4)*(1/np.sqrt(2))
 I = e1*e2*e3
 ii = I*(eo^einf)
 
-def inv(X):
-    scalar = 1/(X*~X)(0)
-    return X*scalar
+def mag(X):
+    return np.array((X*~X).tolist(0)[0])
 
-def normalize(X):
-    scalar = 1/np.sqrt((X*~X)(0))
-    return X*scalar
+def inv(X): # Element wise inversion
+    scalars = X.GA().multivector((1/mag(X)).tolist(),basis=['e'])
+    return X*scalars
+
+def normalize(X): # Element wise normalization
+    scalars = X.GA().multivector((1/np.sqrt(mag(X))).tolist(),basis=['e'])
+    return X*scalars
+
+def rdn_kvector_array(ga,grade,size):
+    mvsize = ga.size(grade)
+    ones = 0.5*np.ones([size,mvsize])
+    Xlst = (np.random.rand(size,mvsize) - ones).tolist()
+    return ga.multivector(Xlst,grades=grade)
+
+def rdn_cga_bivector_array(size):
+    rdn_kvector_array(cga,2,size)
+
+def rdn_vga_vector_array(size):
+    rdn_kvector_array(vga,1,size)
+
+def rdn_cga_mvarray(size):
+    mvsize = cga.size()
+    ones = 0.5*np.ones([size,mvsize])
+    Xlst = (np.random.rand(size,mvsize) - ones).tolist()
+    return cga.multivector(Xlst)
+
+def rdn_vga_mvarray(size):
+    mvsize = vga.size()
+    ones = 0.5*np.ones([size,mvsize])
+    Xlst = (np.random.rand(size,mvsize) - ones).tolist()
+    return vga.multivector(Xlst)
+
 
 def rdn_kvector(ga,grade):
     size = ga.size(grade)
@@ -72,9 +100,6 @@ def sqrt_rotor(e,u):
     scalar = 1/np.sqrt((e|u)(0) + 1)
     return (1/np.sqrt(2))*scalar*(e*u + 1)
 
-
-def mag(X):
-    return (X*~X)(0)
 
 def dist(X,Y):
     A,B,C,D = get_coeffs(X-Y)

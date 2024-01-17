@@ -47,6 +47,7 @@ typedef enum {
   MultivectorType_sparse,
   MultivectorType_dense,
   MultivectorType_blades,
+  MultivectorType_scalar,
   MultivectorTypeMAX} MultivectorType;
 
 typedef enum {
@@ -141,6 +142,8 @@ typedef struct DenseMultivector{
     ga_float *value; // fixed size array for all the algebra
     Py_ssize_t size;
 }DenseMultivector;
+
+typedef ga_float ScalarMultivector;
 
 
 typedef int (*gaiternextfunc)(PyMultivectorIter *iter);
@@ -249,7 +252,7 @@ extern PyMultivectorMixedMath_Funcs largemultivector_mixed_fn;
 
 // same type operation tables
 extern PyMultivectorSubType largemultivector_subtypes_array[3];
-extern PyMultivectorSubType multivector_subtypes_array[3];
+extern PyMultivectorSubType multivector_subtypes_array[4];
 extern PyTypeObject PyMultivectorType;
 void fill_missing_funcs(void);
 

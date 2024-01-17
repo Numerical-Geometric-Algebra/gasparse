@@ -6,6 +6,7 @@
 #include "pyport.h"
 #include "pytypedefs.h"
 #include "types.h"
+#include <string.h>
 
 
 
@@ -237,28 +238,6 @@ static Py_ssize_t *get_strides(Py_ssize_t ndims, Py_ssize_t *shapes){
     return strides;
 }
 
-// static int multivector_array_iter_next(PyMvArrayIter *iter, Py_ssize_t dim){
-//     if(dim < 0) return 1; // Ignore iteration
-//     if(dim >= iter->ns) return 0;
-    
-//     iter->data += iter->strides[dim+1]*iter->basic_size;
-//     iter->index[dim]++;
-//     if(iter->index[dim] >= iter->shapes[dim]){
-//         iter->data -= iter->shapes[dim]*iter->strides[dim+1]*iter->basic_size;
-//         iter->index[dim] = 0;
-//         return 0; // last iteration
-//     }
-//     return 1;
-// }
-
-// static int mtp_arrays_iterate(PyMultipleArrayIter iter, Py_ssize_t dim){
-//     Py_ssize_t **dims = iter.dims[dim];
-//     Py_ssize_t *repeat = iter.repeat[dim];
-//     for(Py_ssize_t j = 0; j < iter.nm; j++)
-//         for(Py_ssize_t i = 0; i < repeat[j]; i++)
-//             iter.array_iter[j].next(&iter.array_iter[j],dims[j][i]);
-//     return 0;
-// }
 
 int multiple_arrays_iter_next(PyMultipleArrayIter *iter){
     iter->index[iter->ns-1]++;
@@ -279,27 +258,6 @@ int multiple_arrays_iter_next(PyMultipleArrayIter *iter){
     }
     return 1;
 }
-
-// static int list_iter_next(ListGraph *child){
-//     child->index++;
-//     if(child->index >= PyList_Size(child->self)){
-//         if(child->parent != NULL)
-//             list_iter_next(child->parent);
-//     } else{
-//         //child->element = PyList_GetItem(child->self, child->index);
-//         do{
-//             child->element = PyList_GetItem(child->self, child->index);
-//             ListGraph child_child;
-//             child_child.parent = child;
-//             child_child.self = child->element;
-//             child_child.index = 0;
-//             child = &child_child;
-//         }
-//         while(PyList_Check(child->element));
-            
-        
-//     }
-// }
 
 static int set_listsoflists_element(PyObject *element, PyObject *list, Py_ssize_t *index, Py_ssize_t *shape, Py_ssize_t size){
     PyObject *sublist = list;
@@ -682,7 +640,7 @@ PyObject *multivector_repr(PyMvObject *self){
     PrintTypeMV ptype = self->GA->print_type_mv;
     PyObject *out = Py_BuildValue("s","");
     char *mv_str;
-    char out_str[10000];
+    char out_str[1000000];
     out_str[0] = '\0';
 
     const char *lbracket = "[";
@@ -721,6 +679,7 @@ PyObject *multivector_repr(PyMvObject *self){
             strcat(out_str,mv_str);
             strcat(out_str,rbracket);
             strcat(out_str,",");
+            strcat(out_str,"\n");
             PyMem_RawFree(mv_str);
             PyMem_RawFree(iter.index);
             
@@ -728,7 +687,8 @@ PyObject *multivector_repr(PyMvObject *self){
         }while(multiple_arrays_iter_next(&arr_iter));
         free_multiple_arrays_iter(arr_iter);
 
-        out_str[strlen(out_str) - 1] = ']';
+        out_str[strlen(out_str) - 2] = ']';
+        out_str[strlen(out_str) - 1] = '\0';
         for(Py_ssize_t i = 0; i < self->ns - 1; i++)
            strcat(out_str,rbracket);
         //strcat(out_str,")");
@@ -1143,6 +1103,41 @@ static PyMvObject* multivector_scalar_product(PyMvObject *data, ga_float scalar,
     return out;
 }
 
+//Element wise multiplication by a scalar array
+static PyMvObject* multivector_scalar_array_product(PyMvObject *left, PyMvObject *right){
+    PyMvObject *out = NULL;
+    PyMvObject *scalar_mv = NULL;
+    gaprodfunc product = NULL; 
+    gascalarfunc scalar_product = NULL;
+    PyMvObject *data = NULL;
+    PyMvObject *scalar = NULL;
+    if(!strcmp("scalar",left->type->type_name)){
+        scalar = left;
+        data = right;
+    }else if(!strcmp("scalar",right->type->type_name)){
+        scalar = right;
+        data = left;
+    }else return NULL;
+
+    out = new_mvarray_inherit_type(data->GA, data->ns, data->strides, data->shapes, data->type);
+    
+    scalar_product = data->type->math_funcs->scalar_product;
+    if(!scalar_product){
+        multivector_array_dealloc(out);
+        return NULL;
+    }
+    for(Py_ssize_t i = 0; i < data->strides[0]; i++){
+        ScalarMultivector *scalar_mv = INDEX_DATA(scalar, i);
+        if(!scalar_product(INDEX_DATA(out, i),INDEX_DATA(data, i),data->GA,*scalar_mv)){
+            multivector_array_dealloc(out);
+            return NULL;
+        }
+    }
+    
+    return out;
+}
+
+
 
 static int compare_shapes(PyObject *data0, PyObject *data1){
     PyMvObject *mv0 = (PyMvObject*)data0;
@@ -1192,6 +1187,14 @@ static PyObject *multivector_product(PyObject *left, PyObject *right, ProductTyp
     }
     PyMvObject *left_mv = (PyMultivectorObject*)left;
     PyMvObject *right_mv = (PyMultivectorObject*)right;
+    if(!strcmp("scalar",left_mv->type->type_name) || !strcmp("scalar",right_mv->type->type_name)){
+        out = multivector_scalar_array_product(left_mv,right_mv);
+        if(!out){
+            PyErr_SetString(PyExc_TypeError,"Error taking the product with a scalar array!");
+            return NULL;
+        }
+        return (PyObject*)out;
+    }
 
     if(left_mv->GA == right_mv->GA || left_mv->type->generated || right_mv->type->generated)
         out = multivector_casttype_product(left_mv, right_mv, ptype,isleft_single);
@@ -1389,15 +1392,56 @@ static PyMvObject* multivector_scalar_add(PyMvObject *data, ga_float scalar, int
     
     return out;
 }
-static PyObject *multivector_add_subtract(PyObject *left, PyObject *right,int sign){
+
+// Element wise addition by a scalar array
+static PyMvObject* multivector_scalar_array_add(PyMvObject *left, PyMvObject *right, int sign){
+    PyMvObject *data = NULL;
+    PyMvObject *scalar = NULL;
+    PyMvObject *out = NULL;
+    gascalaraddfunc scalar_add = NULL;
+    int sign_scalar = 1;
+    int sign_data = 1;
+
+    if(!strcmp("scalar",left->type->type_name)){
+        data = (PyMultivectorObject*)right;
+        scalar = (PyMultivectorObject*)left;
+        sign_data = sign; // Multiply the multivectors by the sign
+        
+    }else if(!strcmp("scalar",right->type->type_name)){
+        data = (PyMultivectorObject*)left;
+        scalar = (PyMultivectorObject*)right;
+        sign_scalar = sign; // Multiply the scalars by the sign
+    }else return NULL;
+    
+    out = new_mvarray_inherit_type(data->GA, data->ns, data->strides, data->shapes, data->type);
+    scalar_add = data->type->math_funcs->scalar_add;
+    if(!scalar_add){
+        multivector_array_dealloc(out);
+        return NULL;
+    }
+    for(Py_ssize_t i = 0; i < data->strides[0]; i++){
+        ScalarMultivector *scalar_mv = INDEX_DATA(scalar, i);
+        if(!scalar_add(INDEX_DATA(out, i),INDEX_DATA(data, i),data->GA,sign_scalar*(*scalar_mv),sign_data)){
+            multivector_array_dealloc(out);
+            return NULL;
+        }
+    }
+    
+    return out;
+}
+
+static PyObject *multivector_add_subtract(PyObject *left, PyObject *right, int sign){
     PyMultivectorObject *data0 = NULL;
     PyMvObject *out = NULL;
     ga_float value = 0;
     int scalar_left = -1;
     int isleft_single = -1;
     
-    if(get_scalar(right,&value)) // check if right is a scalar
+    if(get_scalar(right,&value)){ // check if right is a scalar
         data0 = (PyMultivectorObject*)left,scalar_left = 1;
+        value *= sign; // multiply by sign
+        sign = 1;
+    }
     else if(get_scalar(left,&value)) // check if left is a scalar
         data0 = (PyMultivectorObject*)right,scalar_left = 0;
 
@@ -1426,6 +1470,16 @@ static PyObject *multivector_add_subtract(PyObject *left, PyObject *right,int si
     }
     PyMvObject *left_mv = (PyMultivectorObject*)left;
     PyMvObject *right_mv = (PyMultivectorObject*)right;
+
+    if(!strcmp("scalar",left_mv->type->type_name) || !strcmp("scalar",right_mv->type->type_name)){
+        out = multivector_scalar_array_add(left_mv, right_mv,sign);
+        if(!out){
+           PyErr_SetString(PyExc_TypeError,"Probably Incompatible Algebras!");
+            return NULL;
+        }
+        return (PyObject*)out;
+    }
+
 
     if(left_mv->GA == right_mv->GA || left_mv->type->generated || right_mv->type->generated)
         out = multivector_casttype_addsubtract(left_mv, right_mv, sign,isleft_single);
@@ -1470,7 +1524,31 @@ PyObject *multivector_cast(PyMultivectorObject *self, PyObject *args) {
     return (PyObject*)out;
 }
 
+PyMvObject *multivector_scalar_grade_projection(PyMvObject *self){
+    Py_ssize_t size = self->strides[0];
+    PyMultivectorIter *iters = init_multivector_array_iters(self);
+    PyMvObject *out = new_multivector_array(self->GA, "scalar", self->ns, self->strides, self->shapes);
+    if(!out) return NULL;
+    if(self->type->generated || self->type->ntype == MultivectorType_dense){
+        for(Py_ssize_t i = 0; i < size; i++){
+            ScalarMultivector *scalar = INDEX_DATA(out, i);
+            iters[i].next(&iters[i]);
+            if(iters[i].bitmap != 0) return NULL;
+            *scalar = iters[i].value;
+        }
+    }else{
+        for(Py_ssize_t i = 0; i < size; i++){
+            ScalarMultivector *scalar = INDEX_DATA(out, i);
+            *scalar = 0;
+            while(iters[i].next(&iters[i]))
+                if(iters[i].bitmap == 0)
+                    *scalar += iters[i].value;
+        }
+    }
 
+    free_multivector_iter(iters, size);
+    return out;
+}
 
 PyObject *multivector_grade_project(PyMultivectorObject *self, PyObject *args, PyObject *kwds){
     static char *kwlist[] = {"grades",NULL};
@@ -1501,6 +1579,15 @@ PyObject *multivector_grade_project(PyMultivectorObject *self, PyObject *args, P
         PyMem_RawFree(grades);
         free_multivector_iter(iter,1);
         return (PyObject*)PyFloat_FromDouble((double)0.0);
+
+    }else if(size == 1 && grades[0] == 0){
+        out = multivector_scalar_grade_projection(self);
+        if(!out){
+            PyErr_SetString(PyExc_TypeError, "Probably invalid scalar type!");
+            return NULL;
+        }
+        PyMem_RawFree(grades);
+        return (PyObject*)out;
     }
 
     gaunarygradefunc grade_project = self->type->math_funcs->grade_project;
