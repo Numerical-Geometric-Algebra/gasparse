@@ -1,0 +1,14 @@
+LICENSE.txt
+README.md
+setup.cfg
+setup.py
+gasparse.egg-info/PKG-INFO
+gasparse.egg-info/SOURCES.txt
+gasparse.egg-info/dependency_links.txt
+gasparse.egg-info/top_level.txt
+src/common.c
+src/gasparse.c
+src/multivector_gen.c
+src/multivector_large.c
+src/multivector_object.c
+src/multivector_types.c
