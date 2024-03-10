@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: gasparse
-Version: 0.1
+Version: 0.0.0a1
 Summary: A python library written entirely in C for Geometric Algebras to deal with sparse multivector arrays
 Home-page: UNKNOWN
 Author: Francisco Mendia
@@ -260,6 +260,13 @@ python3 genalgebra.py # Run if added a new algebra or changed multivector_gen.c.
 python3 setup.py build # builds gasparse
 python3 setup.py build --genalgebras # generates the algebra
 ```
+
+Compiling and building the package to install with pip
+```shell
+python3 setup.py build
+python3 setup.py sdist bdist_wheels
+```
+
 
 ### Code Structure
 

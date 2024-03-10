@@ -14,6 +14,11 @@
 #include "multivector_gen.h"
 #endif
 
+#ifdef RELEASE_BUILD
+#include "multivector_gen.h"
+#define INCLUDE_GENCODE
+#endif
+
 // replace this with a builtin
 // returns true if abs(v) == p
 static int comp_abs_eq(int v, int p) {
@@ -1233,10 +1238,14 @@ static PyModuleDef gasparse_module = {
 		.m_size = -1,
 };
 
-#ifdef INCLUDE_GENCODE
-PyMODINIT_FUNC PyInit_gasparsegen(void) {
-#else
+#ifdef RELEASE_BUILD // The name of the released package is gasparse
 PyMODINIT_FUNC PyInit_gasparse(void) {
+#else   // Two different packages
+	#ifdef INCLUDE_GENCODE // Include the generated code
+	PyMODINIT_FUNC PyInit_gasparsegen(void) {
+	#else // Does not include the generated code
+	PyMODINIT_FUNC PyInit_gasparse_dev(void) {
+	#endif
 #endif
 	PyObject *m;
 	if (PyType_Ready(&PyGeometricAlgebraType) < 0)

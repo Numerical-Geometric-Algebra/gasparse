@@ -2,10 +2,9 @@
 from setuptools import Extension, setup
 import sys
 ''' Used for installing the package with pip. For development purposes use the other script setup_dev.py
-
 '''
 name = "gasparse"
-macros = [("INCLUDE_GENCODE",None)]
+macros = [("RELEASE_BUILD",None)]
 setup(  name=name, 
         version="0.0.0a1", # Should have used git tag for the version
         # packages=["gasparse"],

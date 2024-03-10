@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import gasparsegen
-from gasparsegen import multivector
+import gasparse
+from gasparse import multivector
 
 cmodes = ["generated","large","generic"]
 dtypes = ['blades','sparse','dense']

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import gasparsegen
-from gasparsegen import multivector
+import gasparse
+from gasparse import multivector
 p = 3
 # modes = ['generic','large','generated']
 modes = ['generated']

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import gasparsegen as gasparse
-from gasparsegen import multivector
+import gasparse
+from gasparse import multivector
 
 ga = gasparse.GA(3,print_type_mv=1,compute_mode="generated")
 

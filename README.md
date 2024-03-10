@@ -249,6 +249,15 @@ python3 setup.py build # builds gasparse
 python3 setup.py build --genalgebras # generates the algebra
 ```
 
+Compiling and building the package to install with pip
+```shell
+cd sparse-multivectors
+python3 setup.py build
+python3 setup.py sdist bdist_wheels
+pip install . # Installs the contents of the current directory
+```
+
+
 ### Code Structure
 
 `gasparse.c` -> algebra declarations and initializations

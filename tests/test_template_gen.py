@@ -1,8 +1,8 @@
-import gasparsegen
-from gasparsegen import multivector
+import gasparse
+from gasparse import multivector
 
-vga = gasparsegen.GA(3,compute_mode="generated", print_type_mv=1)
-cga = gasparsegen.GA(4,1,compute_mode="generic", print_type_mv=1)
+vga = gasparse.GA(3,compute_mode="generated", print_type_mv=1)
+cga = gasparse.GA(4,1,compute_mode="generic", print_type_mv=1)
 
 
 basis = vga.basis()

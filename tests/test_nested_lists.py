@@ -1,7 +1,7 @@
-import gasparsegen
+import gasparse
 
-ga = gasparsegen.GA(3,compute_mode="generic")
-cga = gasparsegen.GA(4,1,compute_mode="generic")
+ga = gasparse.GA(3,compute_mode="generic")
+cga = gasparse.GA(4,1,compute_mode="generic")
 basis = ga.basis()
 locals().update(basis)
 xlst = [[[[1.1],[4.0]],
