@@ -2,6 +2,10 @@
 
 Creating a python library to do computations using sparse representation of multivectors.
 
+## WARNING
+DO NOT PRINT VERY BIG MULTIVECTOR ARRAYS!!!
+IT WILL SEGFAULT!!!
+
 ## DONE
 
 - Create a geometric algebra via p,q,r, or via a metric
@@ -25,12 +29,25 @@ y = vga.multivector([1,2,3],grades=1)
 z = t + y
 ```
 
+The user can chose between three computation modes `'generic'`, `'large'`, `'generated'`
+To generate an algebra under these computation modes use
+```python
+ga = gasparsegen.GA(p,q,r,compute_mode=mode)
+```
+where `mode` is a string chosen from `'generic'`, `'large'`, `'generated'`.
+
+  - The *generic* type stores the bitmaps in a bitmap array (these are generated when the algebra is initialized). 
+    It uses the bitmaps array and the sign array to compute the different products
+  - The *large* type generates only the signs at the initialization. It has a shorter initialization but computationaly slower (Good for large algebras)
+  - The *generated* type are code generated geometric algebras (As of now the availables GA's are 3DVGA and 3DCGA)
+
+
 - Initialize a basis
 ```python
 basis = cga.basis()
 locals().update(basis) # Update all of the basis blades variables into the environment
 ```
-The basis will be available as `e1`, `e2`,..., `e12`,...,`e12345`. 
+The basis will be available as the variables `e1`, `e2`,..., `e12`,...,`e12345`. 
 
 - Initialize multivector via:
   - A given basis (multivector or string)
@@ -96,6 +113,14 @@ a*x # scalar multiplication
 x(g) # projection to grade g
 x([g1,g2]) # projection to grades g1 and g2
 ```
+
+Grade projection to the zero grade returns a scalar type array.
+```python
+x = ga.multivector([[2,2,3,4],[5,6,7,8]],grades=[0,1])
+print(x(0).Type()) # returns 'scalar'
+```
+Division by the scalar type is defined!
+
 Note that the division `/` operator is defined for divisio by scalars or scalar arrays since for general multivectors it is not simple to compute. 
 The following operation are valid
 ```python
@@ -136,7 +161,7 @@ For the code generated algebras we have two types the `dense` and the `blades`. 
 
  - Grade projection to the grade zero outputs a float, which can be used directly by numpy. That is, the output of 
  ```python
- x = ga.multivector(list)
+ x = ga.multivector(x_list)
  print(type(x(0)))
  ```
 should be `float`.
@@ -212,41 +237,32 @@ Still trying to averiguate the best strategy for error setting...
 - Debug python code with gdb
   `gdb -ex r --args python3 snippets/test_template_gen.py`
 
-- Generate code and compile
+### Generating Code and Compiling
+Before compiling the C code ensure that some packages are installed
+
+`sudo apt-get install python3-dev`
 ```shell
 cd sparse-multivectors
-python3 code_gen.py # Run if a change in multivector.c.src is made
 python3 code_gen_large.py # Run if a change in multivector_large.c.src is made
 python3 genalgebra.py # Run if added a new algebra or changed multivector_gen.c.src
 python3 setup.py build # builds gasparse
 python3 setup.py build --genalgebras # generates the algebra
 ```
 
-
 ### Code Structure
 
 `gasparse.c` -> algebra declarations and initializations
 `multivector_object.c` -> multivector array object calls
-`multivector_types.c, multivector_large.c, multivector_gen.c` -> Different implementations of the different types. 
+`multivector_types.c, multivector_large.c, multivector_gen.c` -> Different implementations of the different computation modes. 
 
 
 ### Note
 When creating specific function types if we want that the compiler warns incompantible function pointer do not cast a function pointer otherwise if the function is not as specified in the typedef we will have probably segmentation faults
 
 ## TODO
+1. Indexing and masking multivector arrays. I want to be able to eliminate some multivectors that do not satisfy some requirements.
 1. Grade projection should accept the grade bool array instead of the grades 
-
-1. Masking multivector arrays. I want to be able to eliminate some multivectors that do not satisfy some requirements.
-1. Get algebra from a specific element
-  ```x.GA()```
-1. Print what is the compute mode of the algbra
-1. Generate lists of lists when
-  - asking for grades
-
-
-
-1. $\checkmark$ Test nested lists approach with single multivector.
-1. $\checkmark$ Create seperate github repository for the rigid body motion estimation algorithm. (Also for the python snippets) 
+ 
 1. Add option to print multivectors with `*` instead of `^` to be able to copy it's value and declare it as variable in python, otherwise because of the operator precedence the output would not result in what is expected, that is these are not equivalent
     ```python
     x = 1.234*e1 + 5.342*e4 + 5.678*e12
@@ -257,82 +273,27 @@ When creating specific function types if we want that the compiler warns incompa
     x = (1.234^e1) + (5.342^e4) + (5.678^e12)
     ```
 
-1. Deprecate `type_iter_repr` function and replace by `type_iter_repr_1`
-1. For operations involving `PyMultivectorObject` that are transparent to the subtypes, it might make sense to create a new empty multivector and then pass that as reference to function that operates directly on the type.
-1. Test mixed type operations involving the generated code
-1. Test the cast function
-1. $\checkmark$ Scalars should output as floats and not as gasparse.multivector objects
-1. $\checkmark$ Function to check grade (return `-1` or `None` if it isnt of unique grade)
-1. Write a script to test all of the functionalities of the package (Also include valgrind to check for memory leaks) The common cases where we usually have leaks is when there is some error, check for leaks in such cases. Use
-```python
-try:
-   # lines of code
-except Exception:
-   pass
-```
-to ignore exception errors.
-1. Ignore multivector elements via relative difference, instead of just small absolute value (make that an option for the user, consider elements of the same grade)
-1. $\checkmark$ Read and Write Multivectors by grade
-   
-   - [ ] Read/write without defining basis (just defining grade)
-   - [ ] Read/write in some basis (can be given as string or as an arbitrary basis in some algebra)
-     - [ ] Might need to compute the reciprocal basis (or give that basis as input)
-   - [ ] Option to also output the basis as bitmap or as the basis of those grades of that algebra
-     - [ ] The basis can be multivectors, or positive integers (bitmaps)
-3. Return multivectors in a list by a specified grade
+  1. Write a script to test all of the functionalities of the package (Also include valgrind to check for memory leaks) The common cases where we usually have leaks is when there is some error, check for leaks in such cases. Use
+  ```python
+  try:
+    # lines of code
+  except Exception:
+    pass
+  ```
+  to ignore exception errors.
+1. Ignore multivector elements via relative difference, instead of just small absolute value (make that as an option for the user, consider elements of the same grade)
 4. Change the value for which multivectors get converted to zero. Should be an option when generating the algebra (epsilon)
+8. Give the option to compile the code without the zero value checking (checking if it is close to zero)
 1. Change code for `x.list()` and `ga.size()` making it accept variable number of arguments like `x.list(1,2)` instead of a list like `x.list([1,2])`
 1. Implement cast to some algebra (Add the option to project to that algebra)
-6. Numpy integration
-   
-   - [ ] Read numpy arrays
-   - [ ] Generate random multivectors by grade or by given basis
-   - [ ] Numpy Array to array of multivectors (by a given basis, by grade or by all elements of the algebra)
-   - [ ] Output multivectors as a numpy array by grade (also output basis, consider a basis as input)
-7. Do the same but also with lists of lists
-8. Give the option to compile the code without the zero value checking (checking if it is close to zero)
-9. Write code to retrieve multivectors as lists
-   
-   - [ ] Multivectors by grade
-   - [ ] Also output bitmap
-   - [ ] Convert data to and from numpy
-   - [ ] Convert multilinear and linear transformations into matrices
 10. Implement grade involution (Important for reflection)
 11. Implement integer powers of multivectors
 12. Print multivectors by grade
-13. Generate multivector
-    
-    - [ ] Random by grade
-    - [ ] From any list
-    - [ ] Multiple grade selection from multivectors
-14. Multivector arrays!!!!!!
-15. Implement the geometric product in all data representations in **C**
-    
-    - [ ] Data type conversions
-      + [x] sparse to grade sparse
-      + [x] sparse to dense
-    - [x] geometric product sparse
-    - [x] geometric product grade-sparse
-    - [x] geometric product dense
-      + [x] Direct mapping
-      + [x] Inverse mapping
-16. Implement grades selection for each data type $\langle y\rangle_{j_1,j_2,\dots}$
-    
-    + [x] dense
-    + [x] sparse
-    + [x] grade-sparse
-17. $\checkmark$ Implement the general product
-18. $\checkmark$ Implement sum for each type (still need to test):
-    
-    + [x] append
-    + [x] add
-19. $\checkmark$ Generate tables for the outer and inner products
+13. Generate random multivector arrays
 20. Implement einsum where the product is some specified product (see [general product]("general product"))
-21. Use jinja to generate code for different types of values
 22. Implement the above in **CUDA**
 23. Create a python extension from the **C** and **CUDA** code
-24. Integrate this library into pytorch
-25. Compilar para diferentes versoes de python
+25. Compile for diferent versions of python
 
 ### Other operations:
 
@@ -353,13 +314,7 @@ Except logarithm and exponential these operation can be computed using the gener
 + **Meet** - $m = x\cap y\equiv (x\cdot m^{-1})\wedge y$
 + **Join** - $j = x\cup y\equiv (x\cdot j^{-1})\cdot y$
 
-Before compiling the C code ensure that some packages are installed
 
-`sudo apt-get install python3-dev`
-
-### Code
-
-- [ ] change all `unsigned int size` to `size_t size`
 
 ## 1. General Product
 

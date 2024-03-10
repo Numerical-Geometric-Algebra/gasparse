@@ -36,6 +36,7 @@ typedef struct ListGraph{
     Py_ssize_t index;
 }ListGraph;
 typedef ScalarMultivector (*scalarop)(ScalarMultivector);
+typedef ScalarMultivector (*scalarcomp)(ScalarMultivector,ScalarMultivector);
 
 typedef int (*mixedoperation)(void*, PyMultivectorIter *, PyMultivectorIter * , PyAlgebraObject *,void *);
 

@@ -1,7 +1,10 @@
 import gasparsegen
 from gasparsegen import multivector as mv
+''' Grade projection to zero creates a new type of multivector: A scalar type multivector. Operations with this elements are optimized.
+'''
 
-ga = gasparsegen.GA(3,compute_mode="generated")
+
+ga = gasparsegen.GA(3)
 x = ga.multivector([[2,2,3,4],[5,6,7,8]],grades=[0,1])
 y = ga.multivector([[2,2,3,4],[6,6,7,8]],grades=[0,1])
 print(x(0))

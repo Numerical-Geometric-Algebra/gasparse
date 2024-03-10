@@ -1,7 +1,9 @@
 #include "multivector_object.h"
+#include "longobject.h"
 #include "multivector_types.h"
 #include "common.h"
 #include "listobject.h"
+#include "object.h"
 #include "pyerrors.h"
 #include "pyport.h"
 #include "pytypedefs.h"
@@ -240,6 +242,8 @@ static Py_ssize_t *get_strides(Py_ssize_t ndims, Py_ssize_t *shapes){
 
 
 int multiple_arrays_iter_next(PyMultipleArrayIter *iter){
+    // Get out of the iterator imediatly. If index is null only need one iteration.
+    if(!iter->index) return 1; 
     iter->index[iter->ns-1]++;
     for(Py_ssize_t i = iter->ns-1; i >= 0 && iter->index[i] >= iter->shapes[i]; i--){
         if(i == 0)
@@ -662,7 +666,8 @@ PyObject *multivector_repr(PyMvObject *self){
 
     for(Py_ssize_t i = 0; i < self->ns; i++)
         strcat(out_str,lbracket);
-
+    
+    
     gaiterinitfunc iter_init = self->type->data_funcs->iter_init;
 
     if(self->ns > 0){
@@ -704,11 +709,25 @@ PyObject *multivector_repr(PyMvObject *self){
            strcat(out_str,rbracket);
         //strcat(out_str,")");
     }else{
-        PyMultivectorIter iter = iter_init(self->data,self->type);
-        mv_str = type_iter_repr(&iter,ptype,iter.niters);
-        strcpy(out_str,mv_str);
-        PyMem_RawFree(mv_str);
-        PyMem_RawFree(iter.index);
+        if(self->strides[0] == 1){
+            PyMultivectorIter iter = iter_init(self->data,self->type);
+            mv_str = type_iter_repr(&iter,ptype,iter.niters);
+            strcpy(out_str,mv_str);
+            PyMem_RawFree(mv_str);
+            PyMem_RawFree(iter.index);
+        }
+        // else{
+        //     strcat(out_str,lbracket);
+        //     for(Py_ssize_t i = 0; i < self->strides[0]; i++){
+        //         PyMultivectorIter iter = iter_init(INDEX_DATA(self,i),self->type);
+        //         mv_str = type_iter_repr(&iter,ptype,iter.niters);
+        //         strcat(out_str,mv_str);
+        //         strcat(out_str,",");
+        //         PyMem_RawFree(mv_str);
+        //         PyMem_RawFree(iter.index);
+        //     }
+        //     strcat(out_str,rbracket);
+        // }
     }
 
     out = Py_BuildValue("s",out_str);
@@ -1010,8 +1029,9 @@ static PyMvObject *multivector_casttype_product(PyMvObject *left, PyMvObject *ri
         ns = left->ns;
         size = left->strides[0];
     }
-
-    if(left->type->generated || right->type->generated){
+    
+    // If the algebras are different and at least one is a generated type 
+    if(left->GA != right->GA && (left->type->generated || right->type->generated)){
         int isleft_bigger = is_bigger_metric(left->GA,right->GA);
         if(isleft_bigger == -1)
            return NULL;
@@ -1122,6 +1142,7 @@ static PyMvObject* multivector_scalar_array_product(PyMvObject *left, PyMvObject
     gascalarfunc scalar_product = NULL;
     PyMvObject *data = NULL;
     PyMvObject *scalar = NULL;
+
     if(!strcmp("scalar",left->type->type_name)){
         scalar = left;
         data = right;
@@ -1130,16 +1151,37 @@ static PyMvObject* multivector_scalar_array_product(PyMvObject *left, PyMvObject
         data = left;
     }else return NULL;
 
-    out = new_mvarray_inherit_type(data->GA, data->ns, data->strides, data->shapes, data->type);
+    Py_ssize_t *strides, *shapes, ns,size;
+    int scalar_inc = 1, data_inc = 1;
+    if(scalar->strides[0] == 1){ // The scalar mvarray is only one mv
+        strides = data->strides;
+        shapes = data->shapes;
+        ns = data->ns;
+        size = data->strides[0];
+        scalar_inc = 0; // Do not increment the scalar array indices
+    }else if(data->strides[0] == 1){ // The non scalar mvarray is only one mv
+        strides = scalar->strides;
+        shapes = scalar->shapes;
+        ns = scalar->ns;
+        size = scalar->strides[0];
+        data_inc = 0; // Do not increment the non-scalar array indices
+    }else{ // Same shape mvarrays
+        strides = data->strides;
+        shapes = data->shapes;
+        ns = data->ns;
+        size = data->strides[0];
+    }
+
+    out = new_mvarray_inherit_type(data->GA, ns, strides, shapes, data->type);
     
     scalar_product = data->type->math_funcs->scalar_product;
     if(!scalar_product){
         multivector_array_dealloc(out);
         return NULL;
     }
-    for(Py_ssize_t i = 0; i < data->strides[0]; i++){
-        ScalarMultivector *scalar_mv = INDEX_DATA(scalar, i);
-        if(!scalar_product(INDEX_DATA(out, i),INDEX_DATA(data, i),data->GA,*scalar_mv)){
+    for(Py_ssize_t i = 0; i < size; i++){
+        ScalarMultivector *scalar_mv = INDEX_DATA(scalar, i*scalar_inc);
+        if(!scalar_product(INDEX_DATA(out, i),INDEX_DATA(data, i*data_inc),data->GA,*scalar_mv)){
             multivector_array_dealloc(out);
             return NULL;
         }
@@ -1835,6 +1877,63 @@ PyObject *multivector_atomic_regressive_product(PyMvObject *self, PyObject *Py_U
     return multivector_atomic_product(self,ProductType_regressive);
 }
 
+PyObject *multivector_concat(PyObject *cls, PyObject *args){
+    Py_ssize_t size = PyTuple_Size(args);
+    PyMultivectorSubType *type = NULL;
+    PyMvObject *mv, *out;
+     
+    if(size != 1){
+        PyErr_SetString(PyExc_ValueError,"Number of arguments has to be one!");
+        return 0;
+    }
+    
+    // Consider only the first argument
+    PyObject *list = PyTuple_GetItem(args,0);
+    if(!PyList_Check(list)){
+        PyErr_SetString(PyExc_ValueError,"First argument must be a list!");
+        return 0;
+    }
+    size = PyList_Size(list);
+    for(Py_ssize_t i = 0; i < size; i++){
+        PyObject *argi = PyList_GetItem(list,i);
+        if(!PyObject_IsInstance(argi,cls)){
+            PyErr_SetString(PyExc_ValueError,"Arguments must be multivectors!");
+            return 0;
+        }
+        mv = (PyMvObject*)argi;
+        if(!type) type = mv->type;
+        if(type != mv->type){
+            // Cast to the type of the biggest algbra
+            PyErr_SetString(PyExc_NotImplementedError,"Mixed type concatenation is still not implemented!");
+            return 0;
+        }
+        if(mv->strides[0] != 1){
+            // Need to deal with shapes but it is essentially the same
+            PyErr_SetString(PyExc_NotImplementedError,"Concatenation of arrays is not implemented!");
+            return 0;
+        }
+    }
+    Py_ssize_t strides[2] = {size,1};
+    Py_ssize_t shape = size;
+    
+    out = new_mvarray_inherit_type(mv->GA,1,strides,&shape,mv->type);
+
+    for(Py_ssize_t i = 0; i < size; i++){
+        mv = (PyMvObject*)PyList_GetItem(list,i);
+        gaiterinitfunc iter_init = mv->type->data_funcs->iter_init;
+        PyMultivectorIter iter = iter_init(mv->data, mv->type);
+        gacastfunc cast = out->type->data_funcs->cast;
+        if(!cast(&iter,INDEX_DATA(out,i),out->GA)){
+            PyErr_SetString(PyExc_MemoryError,"Error copying data!");
+            multivector_array_dealloc(out);
+            return 0;
+        }
+        PyMem_RawFree(iter.index);
+    }
+    return (PyObject*)out;
+}
+
+
 // Element wise division by a scalar array
 static PyMvObject* multivector_scalar_array_divide(PyMvObject *data, PyMvObject *scalar){
     PyMvObject *out = NULL;
@@ -1926,19 +2025,24 @@ PyObject *multivector_divide(PyObject *left, PyObject *right){
 }
 
 
-// Apply an element wise operation to a scalar array
-static PyObject* multivector_scalar_array_operation(PyObject *cls, PyObject *args, scalarop op){
+static int check_arguments(PyObject *cls, PyObject *args){
     Py_ssize_t size = PyTuple_Size(args);
     if(size > 1 || size == 0) {
         PyErr_SetString(PyExc_ValueError,"Number of arguments can only be one");
-        return NULL;
+        return 0;
     }
     PyObject *arg0 = PyTuple_GetItem(args,0);
     if(!PyObject_IsInstance(arg0,cls)){
         PyErr_SetString(PyExc_ValueError,"Argument must be a multivector");
-        return NULL;
+        return 0;
     }
-    PyMvObject *scalar_array = (PyMvObject*)PyTuple_GetItem(args,0);
+
+    return 1;
+}
+
+// Apply an element wise operation to a scalar array
+static PyMvObject* multivector_scalar_array_operation(PyMvObject *scalar_array, scalarop op){
+    
     if(strcmp(scalar_array->type->type_name,"scalar")){
         PyErr_SetString(PyExc_ValueError,"Argument must be a scalar multivector");
         return NULL;
@@ -1956,21 +2060,232 @@ static PyObject* multivector_scalar_array_operation(PyObject *cls, PyObject *arg
     for(Py_ssize_t i = 0; i < scalar_array->strides[0]; i++)
         scalar_out[i] = op(scalar_data[i]);
     
-    return (PyObject*)out;
+    return out;
 }
 
 static PyObject *multivector_sqrt(PyObject *cls, PyObject *args){
-    return multivector_scalar_array_operation(cls,args,sqrt);
+    if(!check_arguments(cls,args))
+        return NULL;
+    PyMvObject *scalar_array = (PyMvObject*)PyTuple_GetItem(args,0);
+    return (PyObject*)multivector_scalar_array_operation(scalar_array,sqrt);
 }
 
 static PyObject *multivector_cos(PyObject *cls, PyObject *args){
-    return multivector_scalar_array_operation(cls,args,cos);
+    if(!check_arguments(cls,args))
+        return NULL;
+    PyMvObject *scalar_array = (PyMvObject*)PyTuple_GetItem(args,0);
+    return (PyObject*)multivector_scalar_array_operation(scalar_array,cos);
 }
 
 static PyObject *multivector_sin(PyObject *cls, PyObject *args){
-    return multivector_scalar_array_operation(cls,args,sin);
+    if(!check_arguments(cls,args))
+        return NULL;
+    PyMvObject *scalar_array = (PyMvObject*)PyTuple_GetItem(args,0);
+    return (PyObject*)multivector_scalar_array_operation(scalar_array,sin);
 }
 
+static ScalarMultivector sign(ScalarMultivector scalar){
+  return (scalar > 0) - (scalar < 0);
+}
+
+static PyObject *multivector_signum(PyObject *cls, PyObject *args){
+    if(!check_arguments(cls,args))
+        return NULL;
+    PyMvObject *scalar_array = (PyMvObject*)PyTuple_GetItem(args,0);
+    return (PyObject*)multivector_scalar_array_operation(scalar_array,sign);
+}
+
+static PyObject *multivector_absolute(PyMvObject *self){
+    return (PyObject*)multivector_scalar_array_operation(self,fabs);
+}
+
+static PyObject *multivector_exp(PyObject *cls, PyObject *args){
+    
+    if(!check_arguments(cls,args))
+        return NULL;
+    PyMvObject *scalar_array = (PyMvObject*)PyTuple_GetItem(args,0);
+    return (PyObject*)multivector_scalar_array_operation(scalar_array,exp);
+}
+
+static PyObject *multivector_cosh(PyObject *cls, PyObject *args){
+    if(!check_arguments(cls,args))
+        return NULL;
+    PyMvObject *scalar_array = (PyMvObject*)PyTuple_GetItem(args,0);
+    return (PyObject*)multivector_scalar_array_operation(scalar_array,cosh);
+}
+
+static PyObject *multivector_sinh(PyObject *cls, PyObject *args){
+    if(!check_arguments(cls,args))
+        return NULL;
+    PyMvObject *scalar_array = (PyMvObject*)PyTuple_GetItem(args,0);
+    return (PyObject*)multivector_scalar_array_operation(scalar_array,sinh);
+}
+/*
+// This code is for comparing multivectors (concretely scalar multivectors)
+
+ #define LESS_THAN(left,right) left < right
+
+static ScalarMultivector less_than(ScalarMultivector left, ScalarMultivector right){
+    return left < right;
+}
+
+static ScalarMultivector less_than_equal(ScalarMultivector left, ScalarMultivector right){
+    return left <= right;
+}
+
+static ScalarMultivector equal(ScalarMultivector left, ScalarMultivector right){
+    return left == right;
+}
+
+static ScalarMultivector not_equal(ScalarMultivector left, ScalarMultivector right){
+    return left != right;
+}
+
+static ScalarMultivector greater_than(ScalarMultivector left, ScalarMultivector right){
+    return left > right;
+}
+
+static ScalarMultivector greater_than_equal(ScalarMultivector left, ScalarMultivector right){
+    return left >= right;
+}
+
+
+PyObject *multivector_richcompare(PyMvObject *self, PyObject *other, int op){
+    ga_float value = 0;
+    int other_isscalar = 1;
+    scalarcomp comp = NULL;
+    PyMvObject *out = NULL;
+
+    // Not a scalar array
+    if(strcmp(self->type->type_name,"scalar")){
+        PyErr_SetString(PyExc_ValueError,"Argument must be a scalar multivector array");
+        return NULL;
+    }
+
+    // Not a float and not an int
+    if(!get_scalar(other,&value)){
+        other_isscalar = 0;
+        if(!PyObject_IsInstance(other,(PyObject*)self)){
+            PyErr_SetString(PyExc_ValueError,"Other must be a multivector or a scalar");
+            return 0;
+        }
+    }
+    switch(op){
+        case Py_LT: // Less than
+            comp = less_than;
+            break;
+        case Py_LE: // Less than or equal
+            comp = less_than_equal;
+            break;
+        case Py_EQ: // Equal
+            comp = equal;
+            break;
+        case Py_NE:
+            comp = not_equal;
+            break;
+        case Py_GT:
+            comp = greater_than;
+            break;
+        case Py_GE:
+            comp = greater_than_equal;
+            break;
+        default:
+            return NULL;
+    }
+    if(other_isscalar){
+        out = new_mvarray_inherit_type(self->GA, self->ns, self->strides, self->shapes, self->type);
+        ScalarMultivector *scalar_data = (ScalarMultivector*)self->data;
+        ScalarMultivector *scalar_out = (ScalarMultivector*)out->data;
+
+        for(Py_ssize_t i = 0; i < self->strides[0]; i++){
+            scalar_out[i] = comp(scalar_data[i],value);
+        }
+        return (PyObject*)out;
+    } else{
+        PyMvObject *other_mv = (PyMvObject*)other;
+        if(!compare_shapes((PyObject*)self,(PyObject*)other_mv)){    
+            PyErr_SetString(PyExc_TypeError,"Multivector arrays must be of the same shape");
+            return NULL;
+        }
+    
+        if(strcmp(other_mv->type->type_name,"scalar")){
+            PyErr_SetString(PyExc_ValueError,"Argument must be a scalar multivector array");
+            return NULL;
+        }
+
+        out = new_mvarray_inherit_type(self->GA, self->ns, self->strides, self->shapes, self->type);
+        ScalarMultivector *scalar_left = (ScalarMultivector*)self->data;
+        ScalarMultivector *scalar_right = (ScalarMultivector*)other_mv->data;
+        ScalarMultivector *scalar_out = (ScalarMultivector*)out->data;
+        for(Py_ssize_t i = 0; i < self->strides[0]; i++){
+            scalar_out[i] = comp(scalar_left[i],scalar_right[i]);
+        }
+        return (PyObject*)out;
+    }
+}
+
+// This code is to implement the mapping protocol
+
+// Given an array of indices computes an iterator that iterates for that constant indices
+static PyMultipleArrayIter init_single_array_iter_sequence(PyMvObject *self, Py_ssize_t *index, Py_ssize_t idx_size){
+    PyMultipleArrayIter iter;
+    Py_ssize_t size = self->ns - idx_size;
+    iter.arrays = (PyMvBasicArray*)PyMem_RawMalloc(sizeof(PyMvBasicArray));
+    iter.arrays->data = self->data;
+    iter.arrays->data0 = self->data;
+    // Get the item
+    for(Py_ssize_t i = 0; i < idx_size; i++)
+        iter.arrays->data0 += index[i]*self->strides[i+1]*self->type->basic_size;
+    
+    if(size >= 1){
+        iter.arrays->strides = (Py_ssize_t*)PyMem_RawMalloc((self->ns + 1 - idx_size)*sizeof(Py_ssize_t));
+        for(Py_ssize_t i = idx_size; i < self->ns + 1; i++)
+            iter.arrays->strides[i-idx_size] = self->strides[i];
+        
+        iter.shapes = (Py_ssize_t*)PyMem_RawMalloc((self->ns - idx_size)*sizeof(Py_ssize_t));
+        iter.index = (Py_ssize_t*)PyMem_RawMalloc((self->ns-idx_size)*sizeof(Py_ssize_t));
+        for(Py_ssize_t i = 0; i < self->ns-idx_size; i++){
+            iter.index[i] = 0;
+            iter.shapes[i] = self->shapes[i+idx_size];
+        }
+    }else{
+        // Do not iterate
+        iter.arrays->strides = NULL;
+        iter.shapes = NULL;
+        iter.index = NULL;
+    }
+    iter.arrays->ns = self->ns - idx_size;
+    iter.arrays->basic_size = self->type->basic_size;
+    iter.nm = 1; // The number of arrays
+    
+    iter.dim = -1;
+    iter.ns = self->ns - idx_size;
+    
+    return iter;
+}
+
+# Get item/items from index/indices x[5] or x[1,2,3]
+static PyObject* multivector_get_item(PyMvObject *self, PyObject *key){
+    Py_ssize_t *index = NULL;
+    Py_ssize_t idx_size = 0;
+    PyMvObject *out = NULL;
+
+
+    if(PyLong_Check(key)){
+        index = (Py_ssize_t*)PyMem_RawMalloc(sizeof(Py_ssize_t));
+        *index = (int)PyLong_AsLong(key);
+    }else if(PyList_Check(key)){
+        idx_size = PyTuple_GET_SIZE(key);
+        index = (Py_ssize_t*)PyMem_RawMalloc(idx_size*sizeof(Py_ssize_t));
+        for(Py_ssize_t i = 0; i < idx_size; i++){
+            PyObject *idx = PyTuple_GET_ITEM(key, i);
+            index[i] = (int)PyLong_AsLong(idx);
+        }
+    }
+
+    PyMultipleArrayIter iter = init_single_array_iter_sequence(self,index,idx_size);
+}
+*/
 /*
 PyObject* multivector_atomic_add(PyObject *cls, PyObject *args){
     Py_ssize_t size = PyTuple_Size(args);
@@ -2232,7 +2547,7 @@ static PyNumberMethods PyMultivectorNumberMethods = {
 		.nb_negative = (unaryfunc)multivector_negative,
 		.nb_positive = (unaryfunc)multivector_positive,
         .nb_true_divide = (binaryfunc)multivector_divide,
-
+        .nb_absolute = (unaryfunc)multivector_absolute,
 };
 
 
@@ -2259,9 +2574,17 @@ PyDoc_STRVAR(regressive_prod_doc, "Regressive multiplies all of the multivectors
                                    the first element on the array is the leftmost element to be geometric multipled.\
                                    Carefull with precedence, the multiplication starts in the first element!!");
 
+
+
+PyDoc_STRVAR(cosh_doc, "Hyperbolic Cosine of multivectors.");
+PyDoc_STRVAR(sinh_doc, "Hyberbolic Sine of multivectors.");
+PyDoc_STRVAR(exp_doc, "Exponential of multivectors.");
+
 PyDoc_STRVAR(cos_doc, "Element wise cosine of scalar multivectors.");
 PyDoc_STRVAR(sin_doc, "Element wise sine of scalar multivectors.");
 PyDoc_STRVAR(sqrt_doc, "Element wise square root of scalar multivectors.");
+PyDoc_STRVAR(sign_doc, "Element wise sign of scalar multivectors.");
+PyDoc_STRVAR(concat_doc, "Concatenates a list of multivectors.");
 
 PyMethodDef multivector_methods[] = {
         {"GA",(PyCFunction)multivector_algebra,METH_NOARGS,algebra_doc},
@@ -2283,7 +2606,12 @@ PyMethodDef multivector_methods[] = {
 		{"grade", (PyCFunction)multivector_grade, METH_NOARGS, grade_doc},
         {"cos",   (PyCFunction)multivector_cos, METH_VARARGS | METH_CLASS, cos_doc},
         {"sin",   (PyCFunction)multivector_sin, METH_VARARGS | METH_CLASS, sin_doc},
+        {"cosh",   (PyCFunction)multivector_cosh, METH_VARARGS | METH_CLASS, cosh_doc},
+        {"sinh",   (PyCFunction)multivector_sinh, METH_VARARGS | METH_CLASS, sinh_doc},
+        {"exp",   (PyCFunction)multivector_exp, METH_VARARGS | METH_CLASS, exp_doc},
         {"sqrt",   (PyCFunction)multivector_sqrt, METH_VARARGS | METH_CLASS, sqrt_doc},
+        {"sign",   (PyCFunction)multivector_signum, METH_VARARGS | METH_CLASS, sign_doc},
+        {"concat", (PyCFunction)multivector_concat, METH_VARARGS | METH_CLASS, concat_doc},
 		{NULL},
 };
 
@@ -2293,6 +2621,7 @@ PyTypeObject PyMultivectorType = {
 				"Builds a multivector in different types (sparse,dense,blades)"),
 		.tp_basicsize = sizeof(PyMultivectorObject),
 		.tp_itemsize = 0,
+        // .tp_richcompare = (richcmpfunc)multivector_richcompare,
 		.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
 		.tp_dealloc = (destructor)multivector_array_dealloc,
 		.tp_repr = (reprfunc)multivector_repr,
@@ -2300,5 +2629,6 @@ PyTypeObject PyMultivectorType = {
 		.tp_call = (ternaryfunc)multivector_grade_project,
 		.tp_new = NULL,
 		.tp_as_number = &PyMultivectorNumberMethods,
-		.tp_methods = multivector_methods};
+		.tp_methods = multivector_methods
+};
 
