@@ -274,6 +274,7 @@ When creating specific function types if we want that the compiler warns incompa
 1. Change code for `x.list()` and `ga.size()` making it accept variable number of arguments like `x.list(1,2)` instead of a list like `x.list([1,2])`
 1. Indexing and masking multivector arrays. I want to be able to eliminate some multivectors that do not satisfy some requirements.
 1. Grade Einsum
+1. The size of dense type arrays do not need to be inside of the struct object (Extract it from the algebra).
 1. Grade projection should accept the grade bool array instead of the grades 
 
  
@@ -422,11 +423,11 @@ Let $f:\mathcal{A}_{p,q}\mapsto \mathcal{A}_{p,q}$ and let $x\in\mathcal{A}_{p,q
 
 - Matrix representation $f(x) = \sum_{ij}f_{ij} x\cdot e^ie_j $
 - Multivector representation: $f(x) = \langle F(x)\rangle_1$
-  1. Geometric Product: $F(x) = \sum_{ij} A_kxB_k$
-  1. Inner Product: $F(x) = \sum_{ij} x\cdot A_kB_k$
-  1. Outer Product: $F(x) = \sum_{ij} x\wedge A_kB_k$
+  1. Geometric Product: $F(x) = \sum_{k} A_kxB_k$
+  1. Inner Product: $F(x) = \sum_{k} x\cdot A_kB_k$
+  1. Outer Product: $F(x) = \sum_{k} x\wedge A_kB_k$
 
-When $B_k = \alpha_k A_k^\dagger$ simplifications arise: Specifically When the multivectors $A_k$ are certain types of multivectors then we can drop the grade projection, particularly if $A_k$ is a blade in 1.,  2. or 3. or when the $A_k$ are Pseudo Versors in 1. we have $F(x) =  \langle F(x)\rangle_1$. Note that representations 2. and 3. can be expressed with 1. by relating inner and outer products with geometric products.
+When $B_k = \alpha_k A_k^\dagger$ simplifications arise: Specifically When the multivectors $A_k$ are certain types of multivectors then we can drop the grade projection, particularly if $A_k$ is a blade in 1.,  2. or 3. or when the $A_k$ are Pseudo Versors in 1. we have $F(x) =  \langle F(x)\rangle_1$. Note that representations 2. and 3. can be expressed with 1. by relating inner and outer products with geometric products. Note that for 2. when $A_k$ and $B_k$ are vectors this is the usual vector representation of a transformation $f(x) = \sum_{k} x\cdot a_kb_k$.
 
 ### Computing Transposes of Linear and Multilinear Transformations
 
@@ -449,10 +450,12 @@ Operations on vectors can be simplified greatly. Specifically the product $\lang
 ## Linear and Multilinear Functions/Operators
 Defining functions(MultiLinear Operators):
 ```python
-F = gasparse.multilinear.operator(A,B,grade_preserving=True,grade=3) # Create a grade preserving multilinear operator. F(X) = sum_i (A[i]*X(3)*B[i])(3)
+F = gasparse.multilinear.operator(A,B,grades=3) # Create a grade preserving multilinear operator. F(X) = sum_i (A[i]*X(3)*B[i])(3)
 F = gasparse.multilinear.operator(F_array,grades=(1,2)) # Create a multilinear operator for grades 1 and 2 from an array F(X) = sum_ij F_ij (X|fi)*fj
 F = gasparse.multilinear.operator(A,B) # Create a general multilinear operator F(X) = sum_i A[i]*X*B[i]
 F = gasparse.multilinear.operator(A,B,linear=True) # An operator from vectors to vectors: F(X) = sum_i (A[i]*X(1)*B[i])(1)
+F = gasparse.multilinear.operator(A,right=True) # An operator that applies a binary operation
+F =  gasparse.multilinear.operator(A,right=True,grades=1) # F(X) = (X(1)*A)(1) usefull to define skew transformations
 ```
 
 
@@ -480,7 +483,7 @@ All the operations done inside of the operator must be hidden from the end user.
 - I want to be able to define multiple operators simultaneously from a multidimensional array of multivectors.
 - The multilinear operator can have a decomposition `gasparse.multilinear.eig(F)` (the eigendecomposition of the operator F, returns eigenvalues and eigenblades) 
 - Decompositions for normal and orthogonal transformations
-
+- Linear Operators as a binary operation `F = gasparse.multilinear.operator(A,right=True)` $F(X) = XA$. This is usefull to define skew transformations $F(x) = x\cdot B$ where $B$ is a bivector.
 1. Linear Operators -- grade one preserving Operators: Generate the ternary operator table for $axa$, $AxA^\dagger$ and $\langle AxA^\dagger \rangle_1$
 1. Overload calls to the operator Object `F(X)` applies the linear operator `F` to the multivector `X`.
 
@@ -488,3 +491,18 @@ All the operations done inside of the operator must be hidden from the end user.
 
 ## Questions
 What is the outermorphism of $f(x) = UxU^\dagger$ when $UU^\dagger=0$. Is it zero? $f(x)\wedge f(y) = (UxU^\dagger)\wedge(UyU^\dagger) = \tfrac{1}{2} \left( UxU^\dagger UyU^\dagger -  UyU^\dagger UxU^\dagger \right) = 0 $
+
+**Cleaning Sparse Multivectors**
+For the sparse representation of multivectors should I have code that the user (python code) executes to clean sparse multivectors??
+How should I 'clean' the sparse multivectors. Should I compare the greatest value with the all the other values. distance between values `abs(a[i]-a_max) < eps` or `abs(a[i]/a_max) < eps` or compare with some percentage of max `abs(a[i]) < abs(a_max)*eps`. `eps` is a value smaller then one.
+
+
+### Ternary Unique Grade Operations
+ - Create a new field for the structs holding the operations for the different types
+ - Store each multivector with its own grade.
+ - Specialized products: 
+    - (Unique,Unique,Unique) -> Unique
+    - (General,Unique,General) -> Unique
+    - (General,General,General) -> General
+ - (There is a cost associated with this type of operation) I need to convert bitmaps to position and grade
+ - In the future create a new type of multivector which is indexed by grades and positions, find a efficient method to compute positions when multiplying mvs in that data format.

@@ -47,6 +47,8 @@ typedef enum {
   MultivectorType_sparse,
   MultivectorType_dense,
   MultivectorType_blades,
+  MultivectorType_sparsevector,
+  MultivectorType_densevector,
   MultivectorType_scalar,
   MultivectorTypeMAX} MultivectorType;
 
@@ -85,6 +87,28 @@ typedef struct DualMap{
     Py_ssize_t size;
 }DualMap;
 
+typedef struct SparseMapBase{
+    Py_ssize_t position[4];
+    char sign;
+}SparseMapBase;
+
+typedef struct SparseMap{// Map for the graded ternary products
+    SparseMapBase *base;
+    Py_ssize_t size;
+}SparseMap;
+
+typedef SparseMap ****SparseTernaryMap;
+
+// Structure for the base of the ternary map
+typedef struct MapBase{
+    Py_ssize_t position; // integer value representing the basis element
+    Py_ssize_t grade; // The resulting grade
+    char sign; // Sign of the resulting product (-1,0,1)
+}MapBase;
+
+typedef MapBase ******TernaryMap;
+typedef MapBase ***PositionMap;
+
 typedef struct PyMultivectorSubType PyMultivectorSubType;
 typedef struct PyAlgebraObject PyAlgebraObject;
 typedef struct PyMultivectorIter PyMultivectorIter;
@@ -103,6 +127,8 @@ typedef struct PyAlgebraObject{
     GradeTable gt;
     DualMap dm;
     CliffordMap product[ProductTypeMAX];
+    TernaryMap ternary_product[ProductTypeMAX][ProductTypeMAX];
+    SparseTernaryMap sparse_ternary_product[ProductTypeMAX][ProductTypeMAX];
     Py_ssize_t p,q,r;
     char *metric;
     PrintType print_type;
@@ -143,8 +169,25 @@ typedef struct DenseMultivector{
     Py_ssize_t size;
 }DenseMultivector;
 
+typedef struct GradedDenseMultivector{// Use GradeMap to determine the size for each grade
+    ga_float **values;
+    Py_ssize_t *grades;
+    Py_ssize_t size; // The number of different grades
+}GradedDenseMultivector;
+
 typedef ga_float ScalarMultivector;
 
+typedef struct SparseVector{
+    ga_float *value;
+    int *basis; // The basis of the vectors e1,e2,e3,... as integers 1,2,3,...
+    Py_ssize_t size;
+}SparseVector;
+
+typedef struct DenseVector{ // Fized size for a given geometric algebra 
+    ga_float *value;
+}DenseVector;
+
+typedef GradedDenseMultivector GrdDenseMv;
 
 typedef int (*gaiternextfunc)(PyMultivectorIter *iter);
 //typedef PyMultivectorIter (*gaiterinitfunc)(PyMultivectorObject *data);
@@ -182,6 +225,7 @@ typedef int (*gaunarygradefunc)(void *out, void *self, PyAlgebraObject *GA, int 
 typedef int (*gaprodfunc)(void *out, void *left, void *right, PyAlgebraObject *GA, ProductType ptype);
 typedef int (*gascalaraddfunc)(void* out, void *self, PyAlgebraObject *GA, ga_float value, int sign);
 typedef int (*gaternaryprodfunc)(void *out, void *data0, void *data1, void *data2, PyAlgebraObject *GA, ProductType ptype);
+typedef int (*gaspecialprodfunc)(void *out, void *data0, void *data1, void *data2, int *grades_out, Py_ssize_t gsize, PyAlgebraObject *ga, ProductType ptype1, ProductType ptype2);
 typedef int (*gaunaryfunc)(void *out, void *self, PyAlgebraObject *GA);
 typedef int (*gaatomicfunc)(void *out,void *data, PyAlgebraObject *GA, Py_ssize_t size);
 typedef int (*gaatomicprodfunc)(void *out, void *data, PyAlgebraObject *GA, Py_ssize_t size, ProductType ptype);
@@ -212,6 +256,7 @@ typedef struct PyMultivectorMath_Funcs{
     gaunaryfunc undual;
     gaunaryfunc exp;
     gaternaryprodfunc ternary_product;
+    gaspecialprodfunc special_products[3]; // Specialized ternary products for multilinear functions
 }PyMultivectorMath_Funcs;
 
 typedef struct PyMultivectorMixedMath_Funcs{
