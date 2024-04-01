@@ -127,8 +127,6 @@ typedef struct PyAlgebraObject{
     GradeTable gt;
     DualMap dm;
     CliffordMap product[ProductTypeMAX];
-    TernaryMap ternary_product[ProductTypeMAX][ProductTypeMAX];
-    SparseTernaryMap sparse_ternary_product[ProductTypeMAX][ProductTypeMAX];
     Py_ssize_t p,q,r;
     char *metric;
     PrintType print_type;
@@ -225,7 +223,6 @@ typedef int (*gaunarygradefunc)(void *out, void *self, PyAlgebraObject *GA, int 
 typedef int (*gaprodfunc)(void *out, void *left, void *right, PyAlgebraObject *GA, ProductType ptype);
 typedef int (*gascalaraddfunc)(void* out, void *self, PyAlgebraObject *GA, ga_float value, int sign);
 typedef int (*gaternaryprodfunc)(void *out, void *data0, void *data1, void *data2, PyAlgebraObject *GA, ProductType ptype);
-typedef int (*gaspecialprodfunc)(void *out, void *data0, void *data1, void *data2, int *grades_out, Py_ssize_t gsize, PyAlgebraObject *ga, ProductType ptype1, ProductType ptype2);
 typedef int (*gaunaryfunc)(void *out, void *self, PyAlgebraObject *GA);
 typedef int (*gaatomicfunc)(void *out,void *data, PyAlgebraObject *GA, Py_ssize_t size);
 typedef int (*gaatomicprodfunc)(void *out, void *data, PyAlgebraObject *GA, Py_ssize_t size, ProductType ptype);
@@ -256,7 +253,6 @@ typedef struct PyMultivectorMath_Funcs{
     gaunaryfunc undual;
     gaunaryfunc exp;
     gaternaryprodfunc ternary_product;
-    gaspecialprodfunc special_products[3]; // Specialized ternary products for multilinear functions
 }PyMultivectorMath_Funcs;
 
 typedef struct PyMultivectorMixedMath_Funcs{

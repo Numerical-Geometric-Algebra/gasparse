@@ -496,6 +496,7 @@ What is the outermorphism of $f(x) = UxU^\dagger$ when $UU^\dagger=0$. Is it zer
 For the sparse representation of multivectors should I have code that the user (python code) executes to clean sparse multivectors??
 How should I 'clean' the sparse multivectors. Should I compare the greatest value with the all the other values. distance between values `abs(a[i]-a_max) < eps` or `abs(a[i]/a_max) < eps` or compare with some percentage of max `abs(a[i]) < abs(a_max)*eps`. `eps` is a value smaller then one.
 
+What is the computation complexity difference between computing $UXU^\dagger$ and $u_1u_2\cdots u_m X u_m u_{m-1}\cdots u_1$?? 
 
 ### Ternary Unique Grade Operations
  - Create a new field for the structs holding the operations for the different types
@@ -506,3 +507,46 @@ How should I 'clean' the sparse multivectors. Should I compare the greatest valu
     - (General,General,General) -> General
  - (There is a cost associated with this type of operation) I need to convert bitmaps to position and grade
  - In the future create a new type of multivector which is indexed by grades and positions, find a efficient method to compute positions when multiplying mvs in that data format.
+ - For generated types create an array of functions for each grade: `func[grade0][grade1][grade2][grade_out]` then iterate over all the grades of the multivector (generated types are already indexed by grade and position) Note that for 3D CGA this amounts to $6^4 = 1296$ functions for the ternary product. Also a lot of this functions are going to be empty. Need a way to indicate that a grade is to be ignored...
+
+A specialized function for the sandwich products $\alpha AXA^\dagger$, $\alpha X\wedge AA^\dagger$, $\alpha X\cdot AA^\dagger$.
+
+The function `specialized_ternary_blades_product0` is a specialized ternary function that computes the products $\alpha A\odot B\odot C$ or $\alpha A\odot B\odot C^\dagger$ where $\odot$ means any of the different products geometric, inner, outer, regressive, etc..
+
+Creating a subpackage for multilinear operations:
+ - Ternary operations.
+ - Creating functions from arrays of multivectors.
+ - Functions applied to multivectors execute the ternary operations.
+ - Need to have:
+    1. Ternary maps for the different products.
+
+
+How do I add it as an optional subpackage?? 
+Since ternary maps occupy a lot of space can I make them be only computed when necessary?
+Creating the first in code multilinear function should automatically compute the ternary table. 
+Or after executing the ternary product checks if the table is already built.
+
+**Only generate tables that are needed for that operation!!**
+
+How to generate tables at execution time for a specific product?
+How expensive is that operation?
+
+Note that memory for the ternary product is quite expensive since `map[ptype0][ptype1][grade0][grade1][grade2][gradeout]` in 3D CGA has $4^2*6^4=20736$ entries, which by itself is quite expensive.
+
+### Code generating ternary products
+The type of multivector that will benifit the ternary products are the code generated types. While generating a lot of ternary functions might create a very long `c` file the execution time might drop dramatically.
+
+### A less memory expensive way to deal with ternary products
+- Use the binary sign maps.
+- Use the bitmaps to compute the resulting basis blades.
+
+
+## Multilinear Functions
+### TODO
+  1. Implement a fast matrix computation algorithm using binary products.
+      1. Generated types (indexed by grade,position)
+      1. Dynamically allocated types (indexed by bitmap)
+  1. Implement new type indexed by grade and position 
+      1. Implement the graded products (binary and ternary)
+      1. Generate code for ternary and binary graded products   
+  1. Implement the eigendecomposition for multiplicity greater then one.
