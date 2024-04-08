@@ -2,6 +2,7 @@
 
 Creating a python library to do computations using sparse representation of multivectors.
 
+
 One of the motivating things about writting a python `C API` is that I can dispatch python operations to `C` implemented code. Overriding python operators to dispatch `C` code is such a complicated and generalized approach to implement a GA that I do not know why have I ever started... Is it because I am an optimization freak that really likes programming in c or because I wanted to have my own approach to a GA software? 
 
 Anyway I kinda wanted to copy numpy's approach, but instead of having just arrays of scalars could also have arrays of multivectors. The big difficulty in geometric algebra, in my opinion, is the computation of the sign wich results from the product of two basis blades. The computation of this quantity for big algebras can add a huge overhead. When signs are availaible through a table the cost of fetching that sign gives performance hits to the code. If there where a very performant way to compute the signs, it would make GA leap to a whole new level. The problem with the signs is that they take up space. The smallest scalar type we can use is a char which is `1` byte, and using `1` byte for a number which is either `-1`, `0` or `1` is rather memory ineffecient.
