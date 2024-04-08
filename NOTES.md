@@ -666,3 +666,4 @@ The type of multivector that will benifit the ternary products are the code gene
 ### Future Optimizations
 
 - The scalar product (Run through the diagonal elements of the cayley table) efficient for dense and generated multivectors
+- `C` compiler arguments.
