@@ -345,198 +345,6 @@ static void regressive_map_init(PyAlgebraObject *self) {
 	}
 }
 
-
-static TernaryMap ternary_map_new(GradeMap gm){
-	TernaryMap map;
-	MapBase *base;
-	Py_ssize_t size = gm.max_grade + 1;
-	// Alloc memory for the six dimensional array
-	map = (MapBase ******)PyMem_RawMalloc(size*sizeof(MapBase *****));
-	for(Py_ssize_t i1 = 0; i1 < size; i1++){
-		map[i1] = (MapBase *****)PyMem_RawMalloc(size*sizeof(MapBase ****));
-		for(Py_ssize_t i2 = 0; i2 < size; i2++){
-			map[i1][i2] = (MapBase ****)PyMem_RawMalloc(size*sizeof(MapBase ***));
-			for(Py_ssize_t i3 = 0; i3 < size; i3++){
-				map[i1][i2][i3] = (MapBase ***)PyMem_RawMalloc(gm.grade_size[i1]*sizeof(MapBase **));
-				for(Py_ssize_t j1 = 0; j1 < gm.grade_size[i1]; j1++){
-					map[i1][i2][i3][j1] = (MapBase **)PyMem_RawMalloc(gm.grade_size[i2]*sizeof(MapBase *));
-					for(Py_ssize_t j2 = 0; j2 < gm.grade_size[i2]; j2++){
-						map[i1][i2][i3][j1][j2] = (MapBase *)PyMem_RawMalloc(gm.grade_size[i3]*sizeof(MapBase));
-						for(Py_ssize_t j3 = 0; j3 < gm.grade_size[i3]; j3++){
-							base = &map[i1][i2][i3][j1][j2][j3];
-							base->grade = -1;
-							base->position = -1;
-							base->sign = 0; // set the signs to zero
-						}
-					}
-				}
-			}
-		}
-	}
-	return map;
-}
-
-
-/*  For the large type multivector position and grade has to be computed online.
-	Need a way to map grade,position to grade,position online.
-
-*/
-
-static SparseTernaryMap sparse_ternary_map_new(GradeMap gm, Py_ssize_t ****sizes){
-	SparseTernaryMap map;
-	SparseMapBase *base;
-	Py_ssize_t j = 0;
-	Py_ssize_t size = gm.max_grade + 1;
-
-	// Alloc memory for the six dimensional array
-	map = (SparseTernaryMap)PyMem_RawMalloc(size*sizeof(SparseMap ***));
-	for(Py_ssize_t i1 = 0; i1 < size; i1++){
-		map[i1] = (SparseMap ***)PyMem_RawMalloc(size*sizeof(SparseMap **));
-		for(Py_ssize_t i2 = 0; i2 < size; i2++){
-			map[i1][i2] = (SparseMap **)PyMem_RawMalloc(size*sizeof(SparseMap *));
-			for(Py_ssize_t i3 = 0; i3 < size; i3++){
-				map[i1][i2][i3] = (SparseMap *)PyMem_RawMalloc(size*sizeof(SparseMap));
-				for(Py_ssize_t i4 = 0; i4 < size; i4++){
-					map[i1][i2][i3][i4].base = (SparseMapBase*)PyMem_RawMalloc(sizes[i1][i2][i3][i4]*sizeof(SparseMapBase));
-					map[i1][i2][i3][i4].size = sizes[i1][i2][i3][i4];
-				}
-			}
-		}
-	}
-	return map;
-}
-
-
-// I can use this map to generate code for ternary products
-static void sparse_ternary_map_init(PyAlgebraObject *self,ProductType ptype_left, ProductType ptype_right, ComputationMode mode){
-	GradeMap gm = self->gm;
-	CliffordMap m1 = self->product[ptype_left];
-	CliffordMap m2 = self->product[ptype_right];
-	Py_ssize_t bitmap0,bitmap1;
-
-	SparseTernaryMap tmap;
-	Py_ssize_t size = gm.max_grade + 1;
-	Py_ssize_t ****tsizes; // four dimensional array for sizes of the table
-
-	tsizes = (Py_ssize_t ****)PyMem_RawMalloc(size*sizeof(Py_ssize_t  ***));
-	for(Py_ssize_t i1 = 0; i1 < size; i1++){
-		tsizes[i1] = (Py_ssize_t ***)PyMem_RawMalloc(size*sizeof(Py_ssize_t **));
-		for(Py_ssize_t i2 = 0; i2 < size; i2++){
-			tsizes[i1][i2] = (Py_ssize_t **)PyMem_RawMalloc(size*sizeof(Py_ssize_t *));
-			for(Py_ssize_t i3 = 0; i3 < size; i3++){
-				tsizes[i1][i2][i3] = (Py_ssize_t *)PyMem_RawMalloc(size*sizeof(Py_ssize_t));
-				for(Py_ssize_t i4 = 0; i4 < size; i4++){
-					tsizes[i1][i2][i3][i4] = 0;
-				}
-			}
-			
-		}	
-	}
-
-	for(Py_ssize_t i1 = 0; i1 < m1.size; i1++){
-		for(Py_ssize_t i2 = 0; i2 < m1.size; i2++){
-			for(Py_ssize_t i3 = 0; i3 < m1.size; i3++){
-				
-				bitmap0 = m1.bitmap[i1][i2];
-				bitmap1 = m2.bitmap[bitmap0][i3]; // The resulting bitmap after the ternary operation
-				
-				char sign = m1.sign[i1][i2]*m2.sign[bitmap0][i3];
-				
-				if(sign != 0){
-					Py_ssize_t grade1 = gm.grade[i1];
-					Py_ssize_t grade2 = gm.grade[i2];
-					Py_ssize_t grade3 = gm.grade[i3];
-					Py_ssize_t grade_out = GRADE(bitmap1);
-					
-					tsizes[grade1][grade2][grade3][grade_out] += 1;
-				}
-			}
-		}
-	}
-
-	tmap = sparse_ternary_map_new(gm,tsizes);
-	SparseMapBase *base;
-	for(Py_ssize_t i1 = 0; i1 < m1.size; i1++){
-		for(Py_ssize_t i2 = 0; i2 < m1.size; i2++){
-			for(Py_ssize_t i3 = 0; i3 < m1.size; i3++){
-				
-				bitmap0 = m1.bitmap[i1][i2];
-				bitmap1 = m2.bitmap[bitmap0][i3]; // The resulting bitmap after the ternary operation
-				
-				char sign = m1.sign[i1][i2]*m2.sign[bitmap0][i3];
-				
-				if(sign != 0){
-					Py_ssize_t grade1 = gm.grade[i1];
-					Py_ssize_t grade2 = gm.grade[i2];
-					Py_ssize_t grade3 = gm.grade[i3];
-
-					Py_ssize_t position1 = gm.position[i1];
-					Py_ssize_t position2 = gm.position[i2];
-					Py_ssize_t position3 = gm.position[i3];
-
-					Py_ssize_t grade_out = GRADE(bitmap1);
-					Py_ssize_t position_out = gm.position[bitmap1];
-
-					Py_ssize_t index = tsizes[grade1][grade2][grade3][grade_out];
-					base = &tmap[grade1][grade2][grade3][grade_out].base[index];
-					base->position[0] = position1;
-					base->position[1] = position2;
-					base->position[2] = position3;
-					base->position[3] = position_out;
-					base->sign = sign;
-
-					tsizes[grade1][grade2][grade3][grade_out] -= 1;
-				}
-			}
-		}
-	}
-}
-
-// Initialize the ternary grade based geometric product table
-static void ternary_grade_map_init(PyAlgebraObject *self,ProductType ptype_left, ProductType ptype_right, ComputationMode mode){
-
-	/*  ptype_left is the left product type. ptype_right is the right product type.
-		The left multiplication has precedence over the right.
-	*/
-
-	GradeMap gm = self->gm;
-	CliffordMap m1 = self->product[ptype_left];
-	CliffordMap m2 = self->product[ptype_right];
-	TernaryMap map;
-	MapBase *base;
-	Py_ssize_t bitmap0,bitmap1;
-
-	map = ternary_map_new(gm);
-	
-	// Atribute values to the 6 dimensional array
-	for(Py_ssize_t i1 = 0; i1 < m1.size; i1++){
-		for(Py_ssize_t i2 = 0; i2 < m1.size; i2++){
-			for(Py_ssize_t i3 = 0; i3 < m1.size; i3++){
-				Py_ssize_t grade1 = gm.grade[i1];
-				Py_ssize_t grade2 = gm.grade[i2];
-				Py_ssize_t grade3 = gm.grade[i3];
-
-				Py_ssize_t position1 = gm.position[i1];
-				Py_ssize_t position2 = gm.position[i2];
-				Py_ssize_t position3 = gm.position[i3];
-
-				
-				bitmap0 = m1.bitmap[i1][i2];
-				bitmap1 = m2.bitmap[bitmap0][i3]; // The resulting bitmap after the ternary operation
-				
-				char sign = m1.sign[i1][i2]*m2.sign[bitmap0][i3];
-				Py_ssize_t grade = GRADE(bitmap1);
-				base = &map[grade1][grade2][grade3][position1][position2][position3];
-				base->grade = grade;
-				base->sign = sign;
-				base->position = gm.position[bitmap1];
-			}
-		}
-	}
-
-	self->ternary_product[ptype_left][ptype_right] = map; // saves the map for the specified products
-}
-
 static void inverted_map_init(CliffordMap *inv, CliffordMap *self) {
 	Py_ssize_t size = self->size;
 	map_alloc(inv, size);
@@ -897,7 +705,7 @@ static int algebra_init(PyAlgebraObject *self, PyObject *args, PyObject *kwds) {
 	}
 
 	// set ga print type
-	self->print_type = PrintType_metric_array;
+	self->print_type = PrintType_metric;
 	if (print_type < PrintTypeMAX && print_type > PrintTypeMIN)
 		self->print_type = print_type;
 
@@ -1023,7 +831,13 @@ static PyObject *algebra_add_basis(PyAlgebraObject *self, PyObject *args,
 static PyObject *algebra_repr(PyAlgebraObject *self) {
 	char str[100];
 	if (self->print_type == PrintType_metric) {
-		PyOS_snprintf(str, 100, "GA(p=%lu,q=%lu,r=%lu)", self->p, self->q, self->r);
+		if(self->q == 0 && self->r == 0){
+			PyOS_snprintf(str, 100, "GA(%lu)", self->p);
+		} else if(self->r == 0){
+            PyOS_snprintf(str,100,"GA(%zd,%zd)", self->p,self->q);
+		} else {
+            PyOS_snprintf(str,100,"GA(%zd,%zd,%zd)", self->p,self->q,self->r);
+		}
 		return Py_BuildValue("s", str);
 	} else if (self->print_type == PrintType_metric_array) {
 		PyObject *out;
@@ -1225,17 +1039,37 @@ static PyObject *algebra_cayley_table(PyAlgebraObject *self, PyObject *args) {
 	return tuple;
 }
 
+static PyObject *algebra_set_precision(PyAlgebraObject *self, PyObject *args) {
+	// static char *kwlist[] = {"dtype", "precision", NULL};
+	char *dtype = NULL;
+	double precision = 1e-12;
+	Py_ssize_t size = PyTuple_GET_SIZE(args);
+	if(size == 1){
+		PyObject *item = PyTuple_GetItem(args, 0);
+		if(PyLong_Check(item)){
+			self->precision = PyLong_AsDouble(item);
+			Py_RETURN_NONE;
+		}
+		if(PyFloat_Check(item)){
+			self->precision = PyFloat_AsDouble(item);
+			Py_RETURN_NONE;
+		}
+	}
+	
+	PyErr_SetString(PyExc_TypeError, "Error setting precision, invalid value or too many arguments!");
+	return NULL; // raise error couldn't set precision
+}
 
-static PyObject *algebra_set_multivector_defaults(PyAlgebraObject *self,
-																									PyObject *args,
-																									PyObject *kwds) {
+
+static PyObject *algebra_set_multivector_defaults(PyAlgebraObject *self, PyObject *args, PyObject *kwds) {
 	static char *kwlist[] = {"dtype", "precision", NULL};
 	char *dtype = NULL;
 	double precision = 1e-12;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|f", kwlist, &dtype,&precision))
 		return NULL;
-    // Dont know how to set precision
+    
+	self->precision = precision;
 	if (!dtype)
 		return NULL;
 	
@@ -1256,35 +1090,33 @@ static PyObject *algebra_set_multivector_defaults(PyAlgebraObject *self,
 }
 
 static PyObject *algebra_size(PyAlgebraObject *self, PyObject *args) {
-	PyObject *grades = NULL;
 	int *grade_array = NULL;
-
-	PyArg_ParseTuple(args, "|O", &grades);
-	if (!grades)
-		return (PyObject *)PyLong_FromLong(self->asize);
-	else {
-		Py_ssize_t size;
-		size = parse_list_as_grades(self, grades, &grade_array);
-		if (size <= 0) {
-			PyErr_SetString(PyExc_ValueError, "Error parsing grades");
-			return NULL;
-		}
-		Py_ssize_t *grade_bool = get_grade_bool(grade_array, size, MAX_GRADE(self) + 1);
-
+	Py_ssize_t size;
+		
+	if((size = parse_arguments_as_grades(self, args, &grade_array)) > 0){ 
 		Py_ssize_t grades_size = 0;
-		for(Py_ssize_t i = 0; i < self->asize; i++) {
-			if(grade_bool[GRADE(i)])
-				grades_size++;
+		if(self->gm.size == 0){
+			Py_ssize_t *grade_bool = get_grade_bool(grade_array, size, MAX_GRADE(self) + 1);
+			
+			for(Py_ssize_t i = 0; i < self->asize; i++) {
+				if(grade_bool[GRADE(i)])
+					grades_size++;
+			}
+			PyMem_RawFree(grade_bool);
+		}else{// The grade map already has the computation of the grades builtin
+			for(Py_ssize_t i = 0; i < size; i++){
+				grades_size += self->gm.grade_size[grade_array[i]];
+			}
 		}
 		PyMem_RawFree(grade_array);
-		PyMem_RawFree(grade_bool);
 		return (PyObject *)PyLong_FromLong(grades_size);
+    }else{
+		return (PyObject *)PyLong_FromLong(self->asize); // If no arguments are given return the size of the whole algebra
 	}
 }
 
 
-static PyObject *algebra_basis(PyAlgebraObject *self, PyObject *args,
-																PyObject *kwds) {
+static PyObject *algebra_basis(PyAlgebraObject *self, PyObject *args, PyObject *kwds) {
 	static char *kwlist[] = {"basis", "grades", NULL};
 	PyObject *grades = NULL, *basis = NULL;
 	int *bitmap = NULL;
@@ -1380,7 +1212,7 @@ fail:
 
 static PyMethodDef algebra_methods[] = {
 		{"metric", (PyCFunction)algebra_metric, METH_NOARGS,
-		 "returns the metric array of the algebra"},
+		 "returns the metric array of the algebra."},
 		{"dualmap", (PyCFunction)algebra_dualmap, METH_NOARGS,
 		 "returns the signs, and bitmaps of the dual algebra"},
 		{"grademap", (PyCFunction)algebra_grademap, METH_NOARGS,
@@ -1392,12 +1224,14 @@ static PyMethodDef algebra_methods[] = {
 		 "arguments"},
 		{"add_basis", (PyCFunction)algebra_add_basis, METH_VARARGS | METH_KEYWORDS,
 		 "adds basis vectors to the algebra"},
-		{"multivector", (PyCFunction)algebra_multivector,
+		{"mvarray", (PyCFunction)algebra_multivector,
 		 METH_VARARGS | METH_KEYWORDS, "Generate a multivector"},
 		{"basis", (PyCFunction)algebra_basis, METH_VARARGS | METH_KEYWORDS,
-		 "generate blades for the algebra"},
+		 "Returns the basis blades for the algebra"},
 		{"default", (PyCFunction)algebra_set_multivector_defaults,
 		 METH_VARARGS | METH_KEYWORDS, "set the default types of the multivector"},
+		{"set_precision", (PyCFunction)algebra_set_precision,
+		 METH_VARARGS, "set the precision for the sparse multivectors."},
 		{NULL} /* Sentinel */
 };
 
@@ -1456,7 +1290,7 @@ PyMODINIT_FUNC PyInit_gasparse(void) {
 	}
 
 	Py_INCREF(&PyMultivectorType);
-	if (PyModule_AddObject(m, "multivector", (PyObject *)&PyMultivectorType) < 0) {
+	if (PyModule_AddObject(m, "mvarray", (PyObject *)&PyMultivectorType) < 0) {
 		Py_DECREF(&PyMultivectorType);
 		Py_DECREF(m);
 		return NULL;

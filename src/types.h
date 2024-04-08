@@ -69,7 +69,7 @@ typedef struct CliffordMap{
 typedef struct GradeMap{ // used to map bitmap to position and grade
     Py_ssize_t *grade;
     Py_ssize_t *position;
-    Py_ssize_t *grade_size; // number of basis vectors by grade
+    Py_ssize_t *grade_size; // number of basis multivectors by grade
     Py_ssize_t max_grade;
     Py_ssize_t size;
 }GradeMap;

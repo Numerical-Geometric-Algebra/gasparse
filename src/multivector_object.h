@@ -25,6 +25,7 @@ typedef struct PyMultipleArrayIter{
     Py_ssize_t *index; // An index for symbol
     Py_ssize_t *shapes; // A shape for symbol
     Py_ssize_t dim; // The last iterated dimension
+    char dflag; // flag for when dimensions are skipped 
 }PyMultipleArrayIter;
 
 struct ListGraph;

@@ -6,7 +6,8 @@
 typedef double ga_float;
 
 Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades);
+Py_ssize_t parse_arguments_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades);
 Py_ssize_t* get_grade_bool(int *grades, Py_ssize_t size, Py_ssize_t n_grades);
-
+Py_ssize_t parse_list_tuple_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades);
 
 #endif // COMMON_H_

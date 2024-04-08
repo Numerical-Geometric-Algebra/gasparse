@@ -302,3 +302,197 @@ static int apply_multilinear_operator(void *out, void *data0, PyOperatorObject *
     }
     return 1;
 }
+
+
+
+
+static TernaryMap ternary_map_new(GradeMap gm){
+	TernaryMap map;
+	MapBase *base;
+	Py_ssize_t size = gm.max_grade + 1;
+	// Alloc memory for the six dimensional array
+	map = (MapBase ******)PyMem_RawMalloc(size*sizeof(MapBase *****));
+	for(Py_ssize_t i1 = 0; i1 < size; i1++){
+		map[i1] = (MapBase *****)PyMem_RawMalloc(size*sizeof(MapBase ****));
+		for(Py_ssize_t i2 = 0; i2 < size; i2++){
+			map[i1][i2] = (MapBase ****)PyMem_RawMalloc(size*sizeof(MapBase ***));
+			for(Py_ssize_t i3 = 0; i3 < size; i3++){
+				map[i1][i2][i3] = (MapBase ***)PyMem_RawMalloc(gm.grade_size[i1]*sizeof(MapBase **));
+				for(Py_ssize_t j1 = 0; j1 < gm.grade_size[i1]; j1++){
+					map[i1][i2][i3][j1] = (MapBase **)PyMem_RawMalloc(gm.grade_size[i2]*sizeof(MapBase *));
+					for(Py_ssize_t j2 = 0; j2 < gm.grade_size[i2]; j2++){
+						map[i1][i2][i3][j1][j2] = (MapBase *)PyMem_RawMalloc(gm.grade_size[i3]*sizeof(MapBase));
+						for(Py_ssize_t j3 = 0; j3 < gm.grade_size[i3]; j3++){
+							base = &map[i1][i2][i3][j1][j2][j3];
+							base->grade = -1;
+							base->position = -1;
+							base->sign = 0; // set the signs to zero
+						}
+					}
+				}
+			}
+		}
+	}
+	return map;
+}
+
+
+/*  For the large type multivector position and grade has to be computed online.
+	Need a way to map grade,position to grade,position online.
+
+*/
+
+static SparseTernaryMap sparse_ternary_map_new(GradeMap gm, Py_ssize_t ****sizes){
+	SparseTernaryMap map;
+	SparseMapBase *base;
+	Py_ssize_t j = 0;
+	Py_ssize_t size = gm.max_grade + 1;
+
+	// Alloc memory for the six dimensional array
+	map = (SparseTernaryMap)PyMem_RawMalloc(size*sizeof(SparseMap ***));
+	for(Py_ssize_t i1 = 0; i1 < size; i1++){
+		map[i1] = (SparseMap ***)PyMem_RawMalloc(size*sizeof(SparseMap **));
+		for(Py_ssize_t i2 = 0; i2 < size; i2++){
+			map[i1][i2] = (SparseMap **)PyMem_RawMalloc(size*sizeof(SparseMap *));
+			for(Py_ssize_t i3 = 0; i3 < size; i3++){
+				map[i1][i2][i3] = (SparseMap *)PyMem_RawMalloc(size*sizeof(SparseMap));
+				for(Py_ssize_t i4 = 0; i4 < size; i4++){
+					map[i1][i2][i3][i4].base = (SparseMapBase*)PyMem_RawMalloc(sizes[i1][i2][i3][i4]*sizeof(SparseMapBase));
+					map[i1][i2][i3][i4].size = sizes[i1][i2][i3][i4];
+				}
+			}
+		}
+	}
+	return map;
+}
+
+
+// I can use this map to generate code for ternary products
+static void sparse_ternary_map_init(PyAlgebraObject *self,ProductType ptype_left, ProductType ptype_right, ComputationMode mode){
+	GradeMap gm = self->gm;
+	CliffordMap m1 = self->product[ptype_left];
+	CliffordMap m2 = self->product[ptype_right];
+	Py_ssize_t bitmap0,bitmap1;
+
+	SparseTernaryMap tmap;
+	Py_ssize_t size = gm.max_grade + 1;
+	Py_ssize_t ****tsizes; // four dimensional array for sizes of the table
+
+	tsizes = (Py_ssize_t ****)PyMem_RawMalloc(size*sizeof(Py_ssize_t  ***));
+	for(Py_ssize_t i1 = 0; i1 < size; i1++){
+		tsizes[i1] = (Py_ssize_t ***)PyMem_RawMalloc(size*sizeof(Py_ssize_t **));
+		for(Py_ssize_t i2 = 0; i2 < size; i2++){
+			tsizes[i1][i2] = (Py_ssize_t **)PyMem_RawMalloc(size*sizeof(Py_ssize_t *));
+			for(Py_ssize_t i3 = 0; i3 < size; i3++){
+				tsizes[i1][i2][i3] = (Py_ssize_t *)PyMem_RawMalloc(size*sizeof(Py_ssize_t));
+				for(Py_ssize_t i4 = 0; i4 < size; i4++){
+					tsizes[i1][i2][i3][i4] = 0;
+				}
+			}
+			
+		}	
+	}
+
+	for(Py_ssize_t i1 = 0; i1 < m1.size; i1++){
+		for(Py_ssize_t i2 = 0; i2 < m1.size; i2++){
+			for(Py_ssize_t i3 = 0; i3 < m1.size; i3++){
+				
+				bitmap0 = m1.bitmap[i1][i2];
+				bitmap1 = m2.bitmap[bitmap0][i3]; // The resulting bitmap after the ternary operation
+				
+				char sign = m1.sign[i1][i2]*m2.sign[bitmap0][i3];
+				
+				if(sign != 0){
+					Py_ssize_t grade1 = gm.grade[i1];
+					Py_ssize_t grade2 = gm.grade[i2];
+					Py_ssize_t grade3 = gm.grade[i3];
+					Py_ssize_t grade_out = GRADE(bitmap1);
+					
+					tsizes[grade1][grade2][grade3][grade_out] += 1;
+				}
+			}
+		}
+	}
+
+	tmap = sparse_ternary_map_new(gm,tsizes);
+	SparseMapBase *base;
+	for(Py_ssize_t i1 = 0; i1 < m1.size; i1++){
+		for(Py_ssize_t i2 = 0; i2 < m1.size; i2++){
+			for(Py_ssize_t i3 = 0; i3 < m1.size; i3++){
+				
+				bitmap0 = m1.bitmap[i1][i2];
+				bitmap1 = m2.bitmap[bitmap0][i3]; // The resulting bitmap after the ternary operation
+				
+				char sign = m1.sign[i1][i2]*m2.sign[bitmap0][i3];
+				
+				if(sign != 0){
+					Py_ssize_t grade1 = gm.grade[i1];
+					Py_ssize_t grade2 = gm.grade[i2];
+					Py_ssize_t grade3 = gm.grade[i3];
+
+					Py_ssize_t position1 = gm.position[i1];
+					Py_ssize_t position2 = gm.position[i2];
+					Py_ssize_t position3 = gm.position[i3];
+
+					Py_ssize_t grade_out = GRADE(bitmap1);
+					Py_ssize_t position_out = gm.position[bitmap1];
+
+					Py_ssize_t index = tsizes[grade1][grade2][grade3][grade_out];
+					base = &tmap[grade1][grade2][grade3][grade_out].base[index];
+					base->position[0] = position1;
+					base->position[1] = position2;
+					base->position[2] = position3;
+					base->position[3] = position_out;
+					base->sign = sign;
+
+					tsizes[grade1][grade2][grade3][grade_out] -= 1;
+				}
+			}
+		}
+	}
+}
+
+// Initialize the ternary grade based geometric product table
+static void ternary_grade_map_init(PyAlgebraObject *self,ProductType ptype_left, ProductType ptype_right, ComputationMode mode){
+
+	/*  ptype_left is the left product type. ptype_right is the right product type.
+		The left multiplication has precedence over the right.
+	*/
+
+	GradeMap gm = self->gm;
+	CliffordMap m1 = self->product[ptype_left];
+	CliffordMap m2 = self->product[ptype_right];
+	TernaryMap map;
+	MapBase *base;
+	Py_ssize_t bitmap0,bitmap1;
+
+	map = ternary_map_new(gm);
+	
+	// Atribute values to the 6 dimensional array
+	for(Py_ssize_t i1 = 0; i1 < m1.size; i1++){
+		for(Py_ssize_t i2 = 0; i2 < m1.size; i2++){
+			for(Py_ssize_t i3 = 0; i3 < m1.size; i3++){
+				Py_ssize_t grade1 = gm.grade[i1];
+				Py_ssize_t grade2 = gm.grade[i2];
+				Py_ssize_t grade3 = gm.grade[i3];
+
+				Py_ssize_t position1 = gm.position[i1];
+				Py_ssize_t position2 = gm.position[i2];
+				Py_ssize_t position3 = gm.position[i3];
+
+				
+				bitmap0 = m1.bitmap[i1][i2];
+				bitmap1 = m2.bitmap[bitmap0][i3]; // The resulting bitmap after the ternary operation
+				
+				char sign = m1.sign[i1][i2]*m2.sign[bitmap0][i3];
+				Py_ssize_t grade = GRADE(bitmap1);
+				base = &map[grade1][grade2][grade3][position1][position2][position3];
+				base->grade = grade;
+				base->sign = sign;
+				base->position = gm.position[bitmap1];
+			}
+		}
+	}
+
+	self->ternary_product[ptype_left][ptype_right] = map; // saves the map for the specified products
+}
