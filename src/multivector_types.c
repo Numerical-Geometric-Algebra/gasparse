@@ -507,7 +507,7 @@ char *bitmap_to_string(int bitmap){
     return str;
 }
 
-
+/*
 static int sparse_copy(void* out, void* input){
     SparseMultivector *sparse = (SparseMultivector *)input;
     SparseMultivector *copy = (SparseMultivector *)out;// = {.size = -1, .bitmap = NULL, .value = NULL};
@@ -529,6 +529,7 @@ static int sparse_copy(void* out, void* input){
     memcpy(copy->value,sparse->value,sparse->size*sizeof(ga_float));
     return 1;
 }
+*/
 
 SparseMultivector sparse_new_(Py_ssize_t size){
     SparseMultivector sparse = {.size = -1};
@@ -716,6 +717,8 @@ static int ternary_scalar_product(void *out, void* data0, void* data1,void* data
     return 1;
 }
 
+/*
+
 static int ternary_sparse_product_nested(void *out, void *data0, void *data1, void *data2, PyAlgebraObject *ga, ProductType ptype){
     SparseMultivector *sparse0 = (SparseMultivector*)data0; 
     SparseMultivector *sparse1 = (SparseMultivector*)data1;
@@ -753,8 +756,8 @@ static int ternary_sparse_product_nested(void *out, void *data0, void *data1, vo
 
     sparse_free_(dense);
     return 1;
-
 }
+*/
 
 static int ternary_sparse_product(void *out, void *data0, void *data1, void *data2, PyAlgebraObject *ga, ProductType ptype){
     SparseMultivector *sparse0 = (SparseMultivector*)data0; 
@@ -1529,7 +1532,6 @@ static int atomic_sparse_add(void *out, void *data0, PyAlgebraObject *ga, Py_ssi
 
     SparseMultivector dense = init_sparse_empty(ga->asize);
     if(dense.size == -1) return 0;
-    Py_ssize_t size = 0;
 
     for(Py_ssize_t j = 0; j < dsize; j++){
         for(Py_ssize_t i = 0; i < data[j].size; i++){
@@ -1836,8 +1838,6 @@ static int atomic_mixed_add(void* out, PyMultivectorIter *iter, PyAlgebraObject 
     SparseMultivector dense = init_sparse_empty(ga->asize);
     if(dense.size == -1) return 0;
     
-
-    Py_ssize_t size = 0;
     for(Py_ssize_t j = 0; j < dsize; j++){
         while(iter->next(iter)){
             dense.bitmap[iter->bitmap] = iter->bitmap;

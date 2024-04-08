@@ -38,9 +38,9 @@ Signs for binary and ternary tables are expensive to compute and require memory 
      
     1. Create multilinear repository (pushing the latest changes to it)
     2. Remove multilinear and ternary operations from the main branch.
-	2. Create copy of the readme file as NOTES.md
-	2. Write a new readme file
-	3. Clean code. Remove unnecessary code. Compile with optimizations enabled.
+	  2. Create copy of the readme file as NOTES.md
+	  2. Write a new readme file
+	  3. Clean code. Remove unnecessary code. Compile with optimizations enabled.
     3. Create a git tag for the main branch
 
 
@@ -667,3 +667,4 @@ The type of multivector that will benifit the ternary products are the code gene
 
 - The scalar product (Run through the diagonal elements of the cayley table) efficient for dense and generated multivectors
 - `C` compiler arguments.
+- copying multivector arrays using memcopy

@@ -66,7 +66,7 @@ A simple example
 
 Operations between multivector arrays are dispatched to compiled `C` code
 
-.. doctest::
+.. code-block:: python
 
    >>> import gasparse
    >>> vga = gasparse.GA(3) # Intialize a 3D vanilla geometric algebra
@@ -112,7 +112,7 @@ We can convert between numpy arrays to multivector arrays and vice versa by usin
 To show an example where we convert a numpy array to a multivector array we generate a random numpy array and then convert it back to a multivector array. The user has to make sure that the innermost dimension has size compatible with the specified grade in ``ga.mvarray``. To get the sizes of the grades the user can use ``ga.size(grades)``, as is exemplified in the script bellow. 
 The following script generates ``5`` random multivectors of grade zero and two of the three dimensional vanilla geometric algebra.
 
-.. doctest::
+.. code-block:: python
 
    >>> import gasparse
    >>> import numpy as np
@@ -167,7 +167,7 @@ To get a list with the values of the multivectors use the function ``x.tolist(gr
 If no arguments are given then all grades are considered. **Attention: If multivectors have values in grades that are ommited in the arguments then information will be lost**. 
 Example of getting lists
 
-.. doctest::
+.. code-block:: python
 
 	>>> import gasparse
 	>>> ga = gasparse.GA(3)
@@ -193,7 +193,7 @@ Grade projections to the scalar grade
 When multivectors are grade projected to the scalar grade (grade zero) the resulting multivector is going to be of type ``'scalar'``. 
 This enables us to dispatch operations that are way more efficient e.g.
 
-.. doctest:: 
+.. code-block:: python
 
 	>>> import gasparse
 	>>> from gasparse import mvarray as mv
@@ -218,7 +218,7 @@ Similarly we can say that two geometric algebras are compatible if the metric te
 To illustrate a context where two algebras are imcompatible consider generating a 3D geometric algebra and an algebra of 4 dimensions where the first basis vector is negative and the other positives.
 The following scripts shows the error obtained after attempting an operation between multivectors of incompatible algebras
 
-.. doctest::
+.. code-block:: python
    
   >>> import gasparse
   >>> ga1 = gasparse.GA(metric=[1,1,1])

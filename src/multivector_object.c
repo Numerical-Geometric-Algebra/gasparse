@@ -36,8 +36,9 @@ static PyMvObject *init_multivector_array(PyAlgebraObject *GA, Py_ssize_t ndims,
         array_obj->strides = (Py_ssize_t*)PyMem_RawMalloc((ndims+1)*sizeof(Py_ssize_t));
         for(Py_ssize_t i = 0; i < ndims + 1; i++)
             array_obj->strides[i] = strides[i];
-    }else
+    }else{
         array_obj->strides = NULL;
+    }
 
 	array_obj->data = NULL;
 	array_obj->ns = ndims;
@@ -770,10 +771,9 @@ PyObject *multivector_repr(PyMvObject *self){
     if(self->ns > 0){
         PyMultipleArrayIter arr_iter = init_single_array_iter(self);
         out_size += RECTIFIER(self->ns);
-        // arr_iter.dflag = 1;
+        
         do{            
-            
-            Py_ssize_t index = 0;
+                
             Py_ssize_t n =  arr_iter.ns - arr_iter.dim - 1;
 
             PyMultivectorIter iter = iter_init(arr_iter.arrays->data,self->type);
@@ -1260,8 +1260,6 @@ static PyMvObject* multivector_scalar_product(PyMvObject *data, ga_float scalar,
 //Element wise multiplication by a scalar array
 static PyMvObject* multivector_scalar_array_product(PyMvObject *left, PyMvObject *right){
     PyMvObject *out = NULL;
-    PyMvObject *scalar_mv = NULL;
-    gaprodfunc product = NULL; 
     gascalarfunc scalar_product = NULL;
     PyMvObject *data = NULL;
     PyMvObject *scalar = NULL;
@@ -1726,7 +1724,6 @@ PyMvObject *multivector_scalar_grade_projection(PyMvObject *self){
 
 PyObject *multivector_grade_project(PyMultivectorObject *self, PyObject *args, PyObject *Py_UNUSED(ignored)){
     int *grades = NULL;
-    PyObject *grades_obj = NULL;
     Py_ssize_t size = -1;
     PyMultivectorObject *out = NULL;
 
@@ -2066,8 +2063,6 @@ PyObject *multivector_concat(PyObject *cls, PyObject *args){
 // Element wise division by a scalar array
 static PyMvObject* multivector_scalar_array_divide(PyMvObject *data, PyMvObject *scalar){
     PyMvObject *out = NULL;
-    PyMvObject *scalar_mv = NULL;
-    gaprodfunc product = NULL; 
     gascalarfunc scalar_product = NULL;
 
     out = new_mvarray_inherit_type(data->GA, data->ns, data->strides, data->shapes, data->type);
@@ -2092,9 +2087,6 @@ static PyMvObject* multivector_scalar_array_divide(PyMvObject *data, PyMvObject 
 // Division of a scalar array
 static PyMvObject* multivector_scalar_divide(PyMvObject *scalar_array, ga_float scalar){
     PyMvObject *out = NULL;
-    PyMvObject *scalar_mv = NULL;
-    gaprodfunc product = NULL; 
-    gascalarfunc scalar_product = NULL;
 
     out = new_mvarray_inherit_type(scalar_array->GA, scalar_array->ns, scalar_array->strides, scalar_array->shapes, scalar_array->type);
     ScalarMultivector *scalar_data = (ScalarMultivector*)scalar_array->data;
@@ -2111,7 +2103,6 @@ PyObject *multivector_divide(PyObject *left, PyObject *right){
     PyMvObject *out = NULL;
     ga_float value = 0;
     int scalar_left = -1;
-    int isleft_single = -1;
     
     if(get_scalar(right,&value)) // check if right is a scalar
         data0 = (PyMvObject*)left,scalar_left = 0; // Left is not a scalar
@@ -2173,7 +2164,6 @@ static int check_arguments(PyObject *cls, PyObject *args){
 // Apply an element wise operation to a scalar array
 static PyObject* multivector_scalar_array_operation(PyObject *self, scalarop op){
     PyMvObject *scalar_array = (PyMvObject*)self;
-    ga_float value;
     if(PyLong_Check(self))
         return (PyObject*)PyFloat_FromDouble(op(PyLong_AsDouble(self)));
     else if(PyFloat_Check(self))
@@ -2186,9 +2176,6 @@ static PyObject* multivector_scalar_array_operation(PyObject *self, scalarop op)
     }
 
     PyMvObject *out = NULL;
-    PyMvObject *scalar_mv = NULL;
-    gaprodfunc product = NULL; 
-    gascalarfunc scalar_product = NULL;
 
     out = new_mvarray_inherit_type(scalar_array->GA, scalar_array->ns, scalar_array->strides, scalar_array->shapes, scalar_array->type);
     ScalarMultivector *scalar_data = (ScalarMultivector*)scalar_array->data;
@@ -2687,7 +2674,8 @@ static int tuple_to_long_array(PyObject *key, Py_ssize_t **index, Py_ssize_t **p
             (*pos)[j] = i;
             j++;// only increment if it is an integer
         } else if(PySlice_Check(item)){
-            Py_ssize_t start, stop, step, slice_length, length;
+            Py_ssize_t start, stop, step;
+            // Py_ssize_t slice_length, length;
             if(PySlice_Unpack(item, &start, &stop, &step) < 0){
                 return 0;
             }
@@ -2791,11 +2779,11 @@ static PyNumberMethods PyMultivectorNumberMethods = {
 };
 
 
-PyDoc_STRVAR(add_doc, "adds a bunch of multivectors.");
+// PyDoc_STRVAR(add_doc, "adds a bunch of multivectors.");
 PyDoc_STRVAR(dual_doc, "dualizes the multivector.");
 PyDoc_STRVAR(undual_doc, "undualizes the multivector.");
-PyDoc_STRVAR(product_doc, "multiplies a bunch of multivectors.");
-PyDoc_STRVAR(exponential_doc, "takes the exponential of multivectors.");
+// PyDoc_STRVAR(product_doc, "multiplies a bunch of multivectors.");
+// PyDoc_STRVAR(exponential_doc, "takes the exponential of multivectors.");
 PyDoc_STRVAR(list_doc,"Returns a list with each coefficient of the multivector. The basis blades are multivectors");
 PyDoc_STRVAR(listasbitmap_doc,"Returns a list with each coefficient of the multivector. The basis blades are represented as bitmaps.");
 PyDoc_STRVAR(cast_doc, "Casts the multivector to the specified type");

@@ -251,20 +251,20 @@ static void grade_map_init(GradeMap *m, Py_ssize_t size) {
 	m->max_grade = max_grade;
 }
 
-static void grade_table_init(GradeMap gm, GradeTable *gt) {
-	Py_ssize_t size = gm.size;
-	gt->size = gm.max_grade + 1;
-	gt->grade_size = (Py_ssize_t *)PyMem_RawMalloc(gt->size * sizeof(Py_ssize_t));
-	gt->bitmaps = (Py_ssize_t **)PyMem_RawMalloc(gt->size * sizeof(Py_ssize_t *));
-	for (Py_ssize_t i = 0; i < gt->size; i++) {
-		gt->grade_size[i] = gm.grade_size[i];
-		gt->bitmaps[i] =
-				(Py_ssize_t *)PyMem_RawMalloc(gm.grade_size[i] * sizeof(Py_ssize_t));
-	}
-	for (Py_ssize_t i = 0; i < size; i++) {
-		gt->bitmaps[gm.grade[i]][gm.position[i]] = i;
-	}
-}
+// static void grade_table_init(GradeMap gm, GradeTable *gt) {
+// 	Py_ssize_t size = gm.size;
+// 	gt->size = gm.max_grade + 1;
+// 	gt->grade_size = (Py_ssize_t *)PyMem_RawMalloc(gt->size * sizeof(Py_ssize_t));
+// 	gt->bitmaps = (Py_ssize_t **)PyMem_RawMalloc(gt->size * sizeof(Py_ssize_t *));
+// 	for (Py_ssize_t i = 0; i < gt->size; i++) {
+// 		gt->grade_size[i] = gm.grade_size[i];
+// 		gt->bitmaps[i] =
+// 				(Py_ssize_t *)PyMem_RawMalloc(gm.grade_size[i] * sizeof(Py_ssize_t));
+// 	}
+// 	for (Py_ssize_t i = 0; i < size; i++) {
+// 		gt->bitmaps[gm.grade[i]][gm.position[i]] = i;
+// 	}
+// }
 
 static void inner_map_init(PyAlgebraObject *self) {
 	Py_ssize_t size = self->product[ProductType_geometric].size;
@@ -1040,9 +1040,7 @@ static PyObject *algebra_cayley_table(PyAlgebraObject *self, PyObject *args) {
 }
 
 static PyObject *algebra_set_precision(PyAlgebraObject *self, PyObject *args) {
-	// static char *kwlist[] = {"dtype", "precision", NULL};
-	char *dtype = NULL;
-	double precision = 1e-12;
+	
 	Py_ssize_t size = PyTuple_GET_SIZE(args);
 	if(size == 1){
 		PyObject *item = PyTuple_GetItem(args, 0);

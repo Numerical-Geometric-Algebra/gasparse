@@ -6,14 +6,15 @@ import sys
 name = "gasparse"
 macros = [("RELEASE_BUILD",None)]
 setup(  name=name, 
-        version="0.0.0a1", # Should have used git tag for the version
+        version="0.0.0a2", # Should have used git tag for the version
         packages=find_packages(exclude=("tests",)),
         ext_modules=[Extension(name,["src/gasparse.c","src/multivector_object.c","src/multivector_types.c","src/multivector_large.c","src/multivector_gen.c","src/common.c"],\
-        extra_compile_args = ["-O0", "-mpopcnt","-g3"],define_macros=macros)],
+        extra_compile_args = ["-O3", "-mpopcnt"],define_macros=macros)],
+        # extra_compile_args = ["-O0", "-mpopcnt","-g3"],define_macros=macros)], # comment this when debugging
         description="A python library written entirely in C for Geometric Algebras to deal with sparse multivector arrays",
-        long_description = open('README.md').read(),
+        long_description = open('docs/source/README.rst').read(),
         license='MIT',
-        author="Francisco Mendia",
-        author_email="francisco.mendia.99@gmail.com",
+        author="Francisco Vasconcelos",
+        author_email="f.xavier.vasconcelos@gmail.com",
         python_requires=">=3.7"
 )
