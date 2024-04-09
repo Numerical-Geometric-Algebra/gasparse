@@ -3,6 +3,19 @@
 #include "common.h"
 #include "multivector_types.h"
 
+// macro to append bitmap and values to the end of the graph
+#define GRAPH_APPEND_NEXT(bitmap_,graph,addr,value_,size) \
+    if(!addr[bitmap_]){        \
+        graph->next = (BasisElement*)PyMem_RawMalloc(sizeof(BasisElement));\
+        graph = graph->next;\
+        graph->bitmap = bitmap_;\
+        graph->value = (value_);\
+        addr[bitmap_] = graph;\
+        graph->next = NULL;\
+        (size)++;\
+    } else\
+        addr[bitmap_]->value += (value_);\
+
 static Py_ssize_t *init_grade_size(PyAlgebraObject *ga){
     Py_ssize_t *gsize = (Py_ssize_t*)PyMem_RawMalloc((MAX_GRADE(ga)+1)*sizeof(Py_ssize_t));
     if(!gsize){
@@ -107,12 +120,74 @@ static int cast_to_blades(PyMultivectorIter *from, void *to, PyAlgebraObject *GA
 }
 
 
+static SparseMultivector graph_to_sparse_multivector(BasisElement *graph, Py_ssize_t size){
+    SparseMultivector sparse = alloc_sparse(size);
+    BasisElement *prev;
+
+    Py_ssize_t i = 0;
+    while(graph){
+        sparse.value[i] = graph->value;
+        sparse.bitmap[i] = graph->bitmap;
+        i++;
+        prev = graph;
+        graph = graph->next;
+        PyMem_RawFree(prev);
+    }
+    return sparse;
+}
+
+static void graph_free(BasisElement *graph){
+    BasisElement *prev;
+
+    while(graph){
+        prev = graph;
+        graph = graph->next;
+        PyMem_RawFree(prev);
+    }
+}
+
+static BasisElement* graph_remove_rel_small(BasisElement *graph, Py_ssize_t *size, ga_float percentage){
+    ga_float max = 0;
+    BasisElement *head = graph;
+    BasisElement *prev = NULL;
+
+    while(graph){
+        if(max < fabs(graph->value))
+            max = fabs(graph->value);
+
+        graph = graph->next;
+    }
+    graph = head;
+
+    while(graph){
+        if(fabs(graph->value) < max*percentage){ // is the value relatively small
+            // the previous does not change prev <- prev
+            if(prev){
+                prev->next = graph->next; // skip the element
+                PyMem_RawFree(graph);
+                graph = prev->next;
+            } else{ // The head of the graph
+                head = graph->next;
+                PyMem_RawFree(graph);
+                graph = head;
+            }
+            
+            (*size)--;
+        }else{
+            prev = graph; // remember the previous
+            graph = graph->next; // next element in the graph
+        }
+        
+    }
+    return head;
+
+}
 
 {% macro COMP_GRADE_SPECIAL_INNER(grade0,grade1,grade) -%}
-if(abs((_grade0={{grade0}})-{{grade1}})!={{grade}}||!_grade0||!{{grade1}}) continue;
+if(labs((_grade0={{grade0}})-{{grade1}})!={{grade}}||!_grade0||!{{grade1}}) continue;
 {%- endmacro %}
 {% macro COMP_GRADE_INNER(grade0,grade1,grade) -%}
-if(abs({{grade0}}-{{grade1}})!={{grade}}||!{{grade0}}||!{{grade1}}) continue;
+if(labs({{grade0}}-{{grade1}})!={{grade}}||!{{grade0}}||!{{grade1}}) continue;
 {%- endmacro %}
 {% macro COMP_GRADE_OUTER(grade0,grade1,grade) -%}
 if({{grade0}}+{{grade1}}!={{grade}}) continue;
@@ -126,7 +201,7 @@ Py_ssize_t _grade0, _grade1;
 if(GRADE({{bitmap0}})+GRADE({{bitmap1}})!=GRADE({{bitmap}})) continue;
 {%- endmacro %}
 {% macro COMP_INNER(bitmap0,bitmap1,bitmap) -%}
-if(abs((_grade0=GRADE({{bitmap0}}))-(_grade1=GRADE({{bitmap1}})))!=GRADE({{bitmap}})||!_grade0||!_grade1) continue;
+if(labs((_grade0=GRADE({{bitmap0}}))-(_grade1=GRADE({{bitmap1}})))!=GRADE({{bitmap}})||!_grade0||!_grade1) continue;
 {%- endmacro %}
 {% macro COMP_GEOMETRIC(bitmap0,bitmap1,bitmap) -%}
 {%- endmacro %}
@@ -134,7 +209,7 @@ if(abs((_grade0=GRADE({{bitmap0}}))-(_grade1=GRADE({{bitmap1}})))!=GRADE({{bitma
 {% set comp_grade_array = [(COMP_GRADE_GEOMETRIC,"geometric"),(COMP_GRADE_OUTER,"outer"),(COMP_GRADE_INNER,"inner")] %}
 {% for comp,pname,declare in comp_array %}
 
-static SparseMultivector binary_sparse_{{pname}}product_(SparseMultivector sparse0, SparseMultivector sparse1, PyAlgebraObject *ga){
+static SparseMultivector binary_sparse_{{pname}}product0_(SparseMultivector sparse0, SparseMultivector sparse1, PyAlgebraObject *ga){
     CliffordMap m = *ga->product;
     SparseMultivector sparse = {.size = -1};
     SparseMultivector dense = init_sparse_empty(m.size);
@@ -160,7 +235,98 @@ static SparseMultivector binary_sparse_{{pname}}product_(SparseMultivector spars
     return sparse;
 }
 
+static SparseMultivector binary_sparse_{{pname}}product_(SparseMultivector sparse0, SparseMultivector sparse1, PyAlgebraObject *ga){
+    CliffordMap m = *ga->product;
+
+    SparseMultivector sparse = {.size = -1};
+
+    // initiallize the addresses to null: addr[i] <- NULL
+    BasisElement **addr = (BasisElement**)PyMem_RawCalloc(m.size,sizeof(BasisElement*)); // A list of addresses for all basis elements
+    BasisElement *head = (BasisElement*)PyMem_RawMalloc(sizeof(BasisElement)); // The head of the graph
+    BasisElement *graph = head;
+
+    graph->next = NULL;
+    graph->bitmap = -1;
+    graph->value = 0;
+
+    {{declare}}
+    Py_ssize_t size = 0;
+    Py_ssize_t bitmap;
+    int sign;
+
+    for(Py_ssize_t i = 0; i < sparse0.size; i++){
+        for(Py_ssize_t j = 0; j < sparse1.size; j++){
+            if(!(sign = m.sign[sparse0.bitmap[i]][sparse1.bitmap[j]])) continue;
+            bitmap = sparse0.bitmap[i] ^ sparse1.bitmap[j];
+            {{comp("sparse0.bitmap[i]","sparse1.bitmap[j]","bitmap")}}
+            GRAPH_APPEND_NEXT(bitmap,graph,addr,sparse0.value[i]*sparse1.value[j]*sign,size)
+        }
+    }
+    graph->next = NULL;
+    graph = graph_remove_rel_small(head->next,&size,ga->precision);
+    sparse = graph_to_sparse_multivector(graph,size); // also frees memory for the graph 
+    PyMem_RawFree(addr);
+    PyMem_RawFree(head);
+    return sparse;
+}
+
+
 static SparseMultivector ternary_sparse_{{pname}}product_(SparseMultivector sparse0, SparseMultivector sparse1, SparseMultivector sparse2, PyAlgebraObject *ga){
+    CliffordMap m = *ga->product;
+
+    SparseMultivector sparse = {.size = -1};
+
+    // initiallize the addresses to null: addr[i] <- NULL
+    BasisElement **addr = (BasisElement**)PyMem_RawCalloc(m.size,sizeof(BasisElement*)); // A list of addresses for all basis elements
+    BasisElement *head = (BasisElement*)PyMem_RawMalloc(sizeof(BasisElement)); // The head of the graph
+    BasisElement *graph = head;
+
+    BasisElement *head1 = (BasisElement*)PyMem_RawMalloc(sizeof(BasisElement)); // The head1 of the graph1
+    BasisElement *graph1 = head1;
+
+    graph->next = NULL;
+    graph->bitmap = -1;
+    graph->value = 0;
+    {{declare}}
+    Py_ssize_t size = 0;
+    Py_ssize_t bitmap;
+    int sign;
+
+    for(Py_ssize_t i = 0; i < sparse0.size; i++){
+        for(Py_ssize_t j = 0; j < sparse1.size; j++){
+            if(!(sign = m.sign[sparse0.bitmap[i]][sparse1.bitmap[j]])) continue;
+            bitmap = sparse0.bitmap[i] ^ sparse1.bitmap[j];
+            {{comp("sparse0.bitmap[i]","sparse1.bitmap[j]","bitmap")}}
+            GRAPH_APPEND_NEXT(bitmap,graph,addr,sparse0.value[i]*sparse1.value[j]*sign,size)
+        }
+    }
+
+    memset(addr,0,m.size*sizeof(BasisElement*));// reset the address array
+
+    graph = head->next;
+    while(graph){
+        for(Py_ssize_t i = 0; i < sparse2.size; i++){
+            if(!(sign = m.sign[graph->bitmap][sparse2.bitmap[i]])) continue;
+            bitmap = graph->bitmap ^ sparse2.bitmap[i];
+            {{comp("graph->bitmap","sparse2.bitmap[i]","bitmap")}}
+            GRAPH_APPEND_NEXT(bitmap,graph1,addr,graph->value*sparse2.value[i]*sign,size)
+        }
+
+        graph = graph->next;
+    }
+    
+
+    graph1->next = NULL;
+    graph1 = graph_remove_rel_small(head1->next,&size,ga->precision);
+    sparse = graph_to_sparse_multivector(graph1,size); // also frees memory for the graph
+    
+    graph_free(head);
+    PyMem_RawFree(addr);
+
+    return sparse;
+}
+
+static SparseMultivector ternary_sparse_{{pname}}product0_(SparseMultivector sparse0, SparseMultivector sparse1, SparseMultivector sparse2, PyAlgebraObject *ga){
     CliffordMap m = *ga->product;
     SparseMultivector sparse = {.size = -1};
     SparseMultivector dense0 = init_sparse_empty(m.size);
@@ -227,7 +393,7 @@ static SparseMultivector ternary_sparse_{{pname}}product_(SparseMultivector spar
 
 {% endfor %}
 
-static SparseMultivector binary_sparse_regressiveproduct_(SparseMultivector sparse0, SparseMultivector sparse1, PyAlgebraObject *ga){
+static SparseMultivector binary_sparse_regressiveproduct0_(SparseMultivector sparse0, SparseMultivector sparse1, PyAlgebraObject *ga){
     CliffordMap m = *ga->product;
     DualMap dm = ga->dm;
     SparseMultivector sparse = {.size = -1};
@@ -256,6 +422,48 @@ static SparseMultivector binary_sparse_regressiveproduct_(SparseMultivector spar
     sparse_remove_small(dense,ga->precision,&size);
     sparse = sparse_dense_to_sparse_sparse(dense,size);
     sparse_free_(dense);
+    return sparse;
+}
+
+static SparseMultivector binary_sparse_regressiveproduct_(SparseMultivector sparse0, SparseMultivector sparse1, PyAlgebraObject *ga){
+    CliffordMap m = *ga->product;
+    DualMap dm = ga->dm;
+    SparseMultivector sparse = {.size = -1};
+
+    // initiallize the addresses to null: addr[i] <- NULL
+    BasisElement **addr = (BasisElement**)PyMem_RawCalloc(m.size,sizeof(BasisElement*)); // A list of addresses for all basis elements
+    BasisElement *head = (BasisElement*)PyMem_RawMalloc(sizeof(BasisElement)); // The head of the graph
+    BasisElement *graph = head;
+
+    graph->next = NULL;
+    graph->bitmap = -1;
+    graph->value = 0;
+
+    Py_ssize_t _grade0;
+    Py_ssize_t size = 0;
+    Py_ssize_t bitmap,inner_bitmap;
+    int undualsign = MAX_GRADE(ga) & 2 ? -1 : 1; // sign of reversing the pseudoscalar
+    Py_ssize_t pss = ga->asize - 1;
+    Py_ssize_t l,r; int lsign,sign;
+
+    for(Py_ssize_t i = 0; i < sparse0.size; i++){
+        l = pss ^ sparse0.bitmap[i];
+        _grade0 = GRADE(l);
+        lsign = undualsign*dm.sign[sparse0.bitmap[i]];
+        for(Py_ssize_t j = 0; j < sparse1.size; j++){
+            r = pss ^ sparse1.bitmap[j];
+            if(!(sign = m.sign[l][r])) continue;
+            bitmap = pss^(inner_bitmap = l^r);
+            if(_grade0 + GRADE(r) != GRADE(inner_bitmap)) continue;
+            GRAPH_APPEND_NEXT(bitmap,graph,addr,sparse0.value[i]*sparse1.value[j]*sign*dm.sign[sparse1.bitmap[j]]*lsign,size)
+        }
+    }
+
+    graph->next = NULL;
+    graph = graph_remove_rel_small(head->next,&size,ga->precision);
+    sparse = graph_to_sparse_multivector(graph,size); // also frees memory for the graph
+    PyMem_RawFree(addr);
+    PyMem_RawFree(head);
     return sparse;
 }
 
@@ -349,6 +557,42 @@ static int unary_sparse_undual(void *out, void *data0, PyAlgebraObject *ga){
     return 1;
 }
 
+static int binary_sparse_add(void *out, void *data0, void *data1, PyAlgebraObject *ga, int sign){
+    SparseMultivector *sparse0 = (SparseMultivector*)data0; 
+    SparseMultivector *sparse1 = (SparseMultivector*)data1;
+    SparseMultivector *sparse = (SparseMultivector*)out;
+    
+    BasisElement **addr = (BasisElement**)PyMem_RawCalloc(ga->product->size,sizeof(BasisElement*)); // A list of addresses for all basis elements
+    BasisElement *head = (BasisElement*)PyMem_RawMalloc(sizeof(BasisElement)); // The head of the graph
+    BasisElement *graph = head;
+
+    graph->next = NULL;
+    graph->bitmap = -1;
+    graph->value = 0;
+
+    Py_ssize_t bitmap;
+    Py_ssize_t size = 0;
+
+
+
+    for(Py_ssize_t i = 0; i < sparse0->size; i++){
+        bitmap = sparse0->bitmap[i];
+        GRAPH_APPEND_NEXT(bitmap,graph,addr,sparse0->value[i],size)
+    }
+
+    for(Py_ssize_t i = 0; i < sparse1->size; i++){
+        bitmap = sparse1->bitmap[i];
+        GRAPH_APPEND_NEXT(bitmap,graph,addr,sparse1->value[i],size)
+    }
+
+    graph->next = NULL;
+    graph = graph_remove_rel_small(head->next,&size,ga->precision);
+    *sparse = graph_to_sparse_multivector(graph,size); // also frees memory for the graph 
+    PyMem_RawFree(addr);
+    PyMem_RawFree(head);
+
+    return 1;
+}
 
 static int binary_blades_add(void *out, void *data0, void *data1,  PyAlgebraObject *ga, int sign){
     BladesMultivector *blades0 = (BladesMultivector*)data0;
@@ -1332,9 +1576,10 @@ PyMultivectorMixedMath_Funcs largemultivector_mixed_fn = {
 };
 
 
-{% for j in range(2) %} {# iterate over types #}
-{% set type = type_list[j] %}
-{% set Type = Type_list[j] %}
+{# {% for j in range(2) %}  #}
+{# {% set type = type_list[j] %}#}
+{# {% set Type = Type_list[j] %}#}
+{% set type = 'dense' %}
 PyMultivectorMath_Funcs largemultivector_{{type}}_math_fn = {
     .product = binary_{{type}}_product,
     .atomic_product = atomic_{{type}}_product,
@@ -1348,7 +1593,22 @@ PyMultivectorMath_Funcs largemultivector_{{type}}_math_fn = {
     .dual = unary_{{type}}_dual,
     .undual = unary_{{type}}_undual,
 };
-{% endfor %}
+{# {% endfor %} #}
+
+{% set type = 'sparse' %}
+PyMultivectorMath_Funcs largemultivector_{{type}}_math_fn = {
+    .product = binary_{{type}}_product,
+    .atomic_product = atomic_{{type}}_product,
+    .ternary_product = ternary_{{type}}_product,
+    .grade_project = unary_{{type}}_gradeproject,
+    .reverse = unary_{{type}}_reverse,
+    .add = binary_sparse_add,
+    .atomic_add = NULL,
+    .scalar_product = NULL,
+    .scalar_add = NULL,
+    .dual = unary_{{type}}_dual,
+    .undual = unary_{{type}}_undual,
+};
 
 {% set type = type_list[2] %}
 PyMultivectorMath_Funcs largemultivector_{{type}}_math_fn = {

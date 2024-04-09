@@ -6,6 +6,7 @@
 //#include "common.h"
 
 SparseMultivector init_sparse_empty(Py_ssize_t size);
+SparseMultivector alloc_sparse(Py_ssize_t size);
 PyMultivectorIter *init_multivector_iter(PyMultivectorObject *data, Py_ssize_t size);
 void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size);
 

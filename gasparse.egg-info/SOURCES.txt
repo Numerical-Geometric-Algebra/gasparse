@@ -13,12 +13,13 @@ setup_dev.py
 valgrind-python.supp
 dist/gasparse-0.0.0a1-cp311-cp311-linux_x86_64.whl
 dist/gasparse-0.0.0a1.tar.gz
+dist/gasparse-0.0.0a2-cp311-cp311-linux_x86_64.whl
+dist/gasparse-0.0.0a2.tar.gz
 docs/Makefile
 docs/make.bat
 docs/source/README.rst
 docs/source/conf.py
 docs/source/index.rst
-docs/source/init_ga.rst
 gasparse.egg-info/PKG-INFO
 gasparse.egg-info/SOURCES.txt
 gasparse.egg-info/dependency_links.txt
@@ -47,6 +48,7 @@ tests/stack_smashing.py
 tests/test.py
 tests/test_diffalgebras.py
 tests/test_gradezeroproject.py
+tests/test_graph_product.py
 tests/test_nested_lists.py
 tests/test_simple.py
 tests/test_template.py

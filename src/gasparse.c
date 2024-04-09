@@ -1093,7 +1093,7 @@ static PyObject *algebra_size(PyAlgebraObject *self, PyObject *args) {
 		
 	if((size = parse_arguments_as_grades(self, args, &grade_array)) > 0){ 
 		Py_ssize_t grades_size = 0;
-		if(self->gm.size == 0){
+		if(self->gm.size <= 0){
 			Py_ssize_t *grade_bool = get_grade_bool(grade_array, size, MAX_GRADE(self) + 1);
 			
 			for(Py_ssize_t i = 0; i < self->asize; i++) {
@@ -1101,7 +1101,7 @@ static PyObject *algebra_size(PyAlgebraObject *self, PyObject *args) {
 					grades_size++;
 			}
 			PyMem_RawFree(grade_bool);
-		}else{// The grade map already has the computation of the grades builtin
+		}else{ // The grade map already has the computation of the grades builtin
 			for(Py_ssize_t i = 0; i < size; i++){
 				grades_size += self->gm.grade_size[grade_array[i]];
 			}

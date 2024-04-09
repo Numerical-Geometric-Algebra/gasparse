@@ -34,7 +34,7 @@ void free_multivector_iter(PyMultivectorIter *iter, Py_ssize_t size){
     free(iter);
 }
 
-static SparseMultivector alloc_sparse(Py_ssize_t size){
+SparseMultivector alloc_sparse(Py_ssize_t size){
     SparseMultivector sparse = {.size = -1};
     sparse.bitmap = (int*)PyMem_RawMalloc(size*sizeof(int));
     sparse.value = (ga_float*)PyMem_RawMalloc(size*sizeof(ga_float));
@@ -122,18 +122,18 @@ SparseMultivector sparse_dense_to_sparse_sparse(SparseMultivector dense, Py_ssiz
 }
 
 static Py_ssize_t sparse_remove_rel_small(SparseMultivector x, ga_float percentage){
-    ga_float x_max = 0;
+    ga_float max = 0;
     Py_ssize_t size = 0;
     // Find the maximum and the size of x
     for(Py_ssize_t i = 0; i < x.size; i++){
         if(x.bitmap[i] != -1) size++;
-        if(x_max < fabs(x.value[i]))
-            x_max = fabs(x.value[i]);
+        if(max < fabs(x.value[i]))
+            max = fabs(x.value[i]);
     }
 
     // Compare with the maximum
     for(Py_ssize_t i = 0; i < x.size; i++){
-        if(fabs(x.value[i]) < x_max*percentage && x.bitmap[i] != -1){
+        if(fabs(x.value[i]) < max*percentage && x.bitmap[i] != -1){
             x.bitmap[i] = -1; // remove basis element from the multivector
             size--;
         }
@@ -566,28 +566,7 @@ static int unary_sparse_scalaradd(void *out, void *data0, PyAlgebraObject *GA, g
         }
     }
 
-    if((scalarindex != -1 && ga_check_value_precision(GA,sign*sparse0->value[scalarindex] + value)) ||
-       (scalarindex == -1 && ga_check_value_precision(GA,value))){
-        Py_ssize_t size = sparse0->size;
-        if(scalarindex != -1)
-            size -= 1;
-
-        *sparse = init_sparse_empty(size);
-        if(sparse->size == -1)
-            return 0;
-
-        Py_ssize_t j = 0;
-        for(Py_ssize_t i = 0; i < sparse0->size; i++){
-            if(i == scalarindex) i++; // skip scalar index
-            sparse->value[j] = sign*sparse0->value[i];
-            sparse->bitmap[j] = sparse0->bitmap[i];
-            j++;
-        }
-        return  1;
-    }
-
-
-    if(scalarindex != -1){
+    if(scalarindex != -1){ // Already in the multivector 
         *sparse = init_sparse_empty(sparse0->size);
         if(sparse->size == -1)
             return -1;
@@ -598,7 +577,7 @@ static int unary_sparse_scalaradd(void *out, void *data0, PyAlgebraObject *GA, g
         }
         sparse->value[scalarindex] += value;
     }
-    else{
+    else{ // A new element
         *sparse = init_sparse_empty(sparse0->size + 1);
         if(sparse->size == -1)
             return -1;

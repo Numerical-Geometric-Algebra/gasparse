@@ -97,6 +97,14 @@ typedef struct SparseMap{// Map for the graded ternary products
     Py_ssize_t size;
 }SparseMap;
 
+// typedef struct _BasisElement BasisElement;
+
+typedef struct BasisElement{
+    int bitmap;
+    ga_float value;
+    struct BasisElement *next;
+}BasisElement;
+
 typedef SparseMap ****SparseTernaryMap;
 
 // Structure for the base of the ternary map

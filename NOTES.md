@@ -407,6 +407,12 @@ but printing `x[0]`, `x[1]` and `x[2]` yields correct results.
 	- $\checkmark$ Indexing multivector arrays `x[i]`
 	- $\checkmark$ Getting length and shape from multivector arrays `len(x)` and `x.shape()`
 	- setting values to items at some index `x[5] = y`
+  - indexing with slices `x[2:]`
+
+1. $\checkmark$ Solve segmentation fault when asking for size `ga.size(1)`
+
+1. the `unary_sparse_scalaradd` involves looking at the precision, need to review this function.
+
 
 <!-- 1. Scalar type multivectors are agnostic to the grade of the multivectors as such returning  -->
 
@@ -668,3 +674,21 @@ The type of multivector that will benifit the ternary products are the code gene
 - The scalar product (Run through the diagonal elements of the cayley table) efficient for dense and generated multivectors
 - `C` compiler arguments.
 - copying multivector arrays using memcopy
+- `'large'` multivector array type:
+  + signs in a trenary representation, each triac of a `long` or a `float` represents the sign
+  + Compute product while maintaning a sparse output. That is do not alloc memory for the entire multivector output. 
+  Use a graph or something like that and do a search. 
+- Using `memset` and `calloc` to atribute initial values to the values and bitmaps 
+  
+  ```c
+    dense->bitmap = calloc(size,sizeof(Py_ssize_t));
+    dense->value = calloc(size,sizeof(ga_float));
+    memset(dense->bitmap, -1, size * sizeof(Py_ssize_t));
+  ```
+
+
+
+To avoid iterating over the entire array of multivectors:
+  - Store the indices in the smallest data structure possible 
+  - Remove repeated indices
+  - Atribute the value and bitmap for each index

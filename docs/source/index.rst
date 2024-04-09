@@ -8,7 +8,9 @@
    :caption: Contents:
    
    README
-   init_ga
+   gasparse_ga
+   gasparse_mvarray
+   multivector_types
    
 
 ==================
