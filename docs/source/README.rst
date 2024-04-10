@@ -25,7 +25,7 @@ Installing ``gasparse`` from PyPI::
 
 The user can also install the latest development release from latest master::
 
-  pip install git+ssh://git@github.com/FranciscoVasconcelos/sparse-multivectors.git@master
+  pip install git+ssh://git@github.com/FranciscoVasconcelos/gasparse.git
 
 For usage of this package go to examples_. To understand about compatibility between geometric algebras see compatibility_. 
 An overview of the overloaded operators that implement the different operations in geometric algebras is presented in `Table of Operators`_. 
