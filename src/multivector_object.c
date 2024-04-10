@@ -1,6 +1,7 @@
 #include "multivector_object.h"
 #include "floatobject.h"
 #include "longobject.h"
+#include "methodobject.h"
 #include "modsupport.h"
 #include "multivector_types.h"
 #include "common.h"
@@ -298,7 +299,7 @@ static int check_arrays(Py_ssize_t *arr, Py_ssize_t item,Py_ssize_t size){
 
 // Given the index array initialize the iterator
 static PyMultipleArrayIter init_arrays_iter_index(PyMvObject *self, Py_ssize_t *pos, Py_ssize_t *index, Py_ssize_t size, PyMvObject **other){
-    PyMultipleArrayIter iter = {.index = NULL, .nm = 2, .dflag = 0};
+    PyMultipleArrayIter iter = {.arrays = NULL, .index = NULL, .nm = 2, .dflag = 0};
 
     // check if indices are valid
     for(Py_ssize_t i = 0; i < size; i++)
@@ -1320,6 +1321,62 @@ static int compare_shapes(PyObject *data0, PyObject *data1){
         if(mv0->shapes[i] != mv1->shapes[i]) return 0;
     }
     return 1;
+}
+
+static int compare_multivector_types(PyMvObject *arg0, PyMvObject *arg1){
+    return !strcmp(arg0->type->type_name,arg1->type->type_name);
+}
+
+
+
+static PyObject *multivector_tprod(PyObject *cls, PyObject *args, PyObject *kwds){
+    static char *kwlist[] = {"", "","","ptype", NULL};
+    PyObject *arg0 = NULL;
+    PyObject *arg1 = NULL;
+    PyObject *arg2 = NULL;
+    ProductType ptype = ProductType_geometric;
+
+    char *type = NULL, *basis = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OOO|s", kwlist, &arg0, &arg1, &arg2, &type))
+		return NULL;
+    
+    ptype = string_to_product_type(type);
+
+    if(!PyObject_IsInstance(arg0,cls) && !PyObject_IsInstance(arg1,cls) && !PyObject_IsInstance(arg2,cls)){
+        PyErr_SetString(PyExc_ValueError,"Arguments must be multivectors!");
+        return NULL;
+    }
+    if(!compare_multivector_types((PyMvObject*)arg0, (PyMvObject*)arg1) || !compare_multivector_types((PyMvObject*)arg0, (PyMvObject*)arg2)){
+        PyErr_SetString(PyExc_TypeError,"Multivector arrays must be of the same type!");
+        return NULL;
+    }
+
+    if(!compare_shapes(arg0, arg1) || !compare_shapes(arg0, arg2)){
+        PyErr_SetString(PyExc_TypeError,"Multivector arrays must have the same shape!");
+        return NULL;
+    }
+    
+    PyMvObject* mv0 = (PyMvObject*)arg0;
+    PyMvObject* mv1 = (PyMvObject*)arg1;
+    PyMvObject* mv2 = (PyMvObject*)arg2;
+
+    gaternaryprodfunc tprod = mv0->type->math_funcs->ternary_product;
+
+    if(!tprod){
+        PyErr_SetString(PyExc_TypeError,"Ternary products are not available for this type!");
+        return NULL;
+    }
+
+    PyMvObject *out = new_mvarray_from_mvarray(mv0);
+    for(Py_ssize_t i = 0; i < mv0->strides[0]; i++){
+        if(!tprod(INDEX_DATA(out, i),INDEX_DATA(mv0, i),INDEX_DATA(mv1, i),INDEX_DATA(mv2, i),mv0->GA,ptype)){
+            multivector_array_dealloc(out);
+            PyErr_SetString(PyExc_ValueError,"Error computing the ternary product!");
+            return NULL;
+        }
+    }
+    
+    return (PyObject*)out;
 }
 
 static PyObject *multivector_product(PyObject *left, PyObject *right, ProductType ptype){
@@ -2712,7 +2769,7 @@ PyObject *PyMultivector_getitem(PyMvObject *self, PyObject *key){
         iter = init_arrays_iter_index(self,pos,index,size,&new);
     }
 
-    if(iter.index == NULL){
+    if(iter.arrays == NULL){
         PyErr_SetString(PyExc_IndexError,"Index out of range.");
         PyMem_RawFree(index);
         PyMem_RawFree(pos);
@@ -2814,6 +2871,7 @@ PyDoc_STRVAR(sin_doc, "Element wise sine of scalar multivectors.");
 PyDoc_STRVAR(sqrt_doc, "Element wise square root of scalar multivectors.");
 PyDoc_STRVAR(sign_doc, "Element wise sign of scalar multivectors.");
 PyDoc_STRVAR(concat_doc, "Concatenates a list of multivectors.");
+PyDoc_STRVAR(tprod_doc, "Computes the product of three multivectors together.");
 
 PyMethodDef multivector_methods[] = {
         {"GA",(PyCFunction)multivector_algebra,METH_NOARGS,algebra_doc},
@@ -2842,6 +2900,7 @@ PyMethodDef multivector_methods[] = {
         {"sqrt",   (PyCFunction)multivector_sqrt, METH_VARARGS | METH_CLASS, sqrt_doc},
         {"sign",   (PyCFunction)multivector_signum, METH_VARARGS | METH_CLASS, sign_doc},
         {"concat", (PyCFunction)multivector_concat, METH_VARARGS | METH_CLASS, concat_doc},
+        {"tprod", (PyCFunction)multivector_tprod, METH_VARARGS | METH_CLASS | METH_KEYWORDS, tprod_doc},
 		{NULL},
 };
 

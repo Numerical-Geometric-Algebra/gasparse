@@ -1,5 +1,7 @@
 #include "common.h"
+#include "pytypedefs.h"
 #include "tupleobject.h"
+#include "types.h"
 
 
 Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades){
@@ -84,4 +86,29 @@ Py_ssize_t* get_grade_bool(int *grades, Py_ssize_t size, Py_ssize_t n_grades){
             g[grades[i]] = 1;
     }
     return g;
+}
+
+ProductType string_to_product_type(char *type_str){
+    if (type_str) {
+		if (!strcmp("geometric", type_str)) {
+			return ProductType_geometric;
+		} else if (!strcmp("inner", type_str)) {
+			return ProductType_inner;
+		} else if (!strcmp("outer", type_str)) {
+			return ProductType_outer;
+		} else if (!strcmp("regressive", type_str)) {
+			return ProductType_regressive;
+		} else if (!strcmp("geometricinverted", type_str)) {
+			return ProductType_geometricinverted;
+		} else if (!strcmp("innerinverted", type_str)) {
+			return ProductType_innerinverted;
+		} else if (!strcmp("outerinverted", type_str)) {
+			return ProductType_outerinverted;
+		} else if (!strcmp("regressiveinverted", type_str)) {
+			return ProductType_regressiveinverted;
+		}else {
+            return ProductType_geometric;
+        }
+	}
+    return ProductType_geometric;
 }

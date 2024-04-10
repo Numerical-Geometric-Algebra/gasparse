@@ -494,16 +494,28 @@ typedef struct dense{
 
 **Vector Types**
 ```c
-typedef struct dense_vectors{
+typedef struct dense_vector{
     float *value;
-    unsigned int size;
-}dense_vectors;
+}dense_vector;
 
 typedef struct sparse_vectors{
     float *value;
     unsigned int size;
 }dense_vectors;
 ```
+
+Data structures for multivectors that are expressed as the product of vectors:
+```c
+typedef struct product_multivector{
+  vector *vectors;
+  unsigned int size; // How many vectors
+  ProductType ptype; // The type of product (usually geometric product and outer product)
+}
+```
+
+Blades can be allways written as $A = a_1\wedge a_2\wedge \cdots \wedge a_r$ and if the $a_i$ are orthogonal then we can drop the wedge and simply write $A = a_1 a_2 \cdots  a_r$. Operations under this representation are harder to employ but some simplifications might appear and we might also have some numerical benefits. Blades are guaranteed to be blades, the space that it takes to store can be smaller then if using the geometric algebra basis. Versors $A$ can allways be written as the geometric product of not nececerily orthogonal vectors $a_i$ as $A = a_1 a_2 \cdots  a_r$.
+
+Using this representation we for each sandwich with a vector $axa^{-1} = 2x\cdot aa^{-1} - x$ yields $4n$ operations $n$ for the inner product $n$ more for the product of the scalar $x\cdot a^{-1}$ with the vector and $2n$ more for the subtraction.  
 
 ```c
 typedef struct versor{
