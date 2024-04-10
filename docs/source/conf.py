@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.abspath('..'))
 project = 'gasparse'
 copyright = '2024, Francisco Vasconcelos'
 author = 'Francisco Vasconcelos'
-release = '0.0.2a'
+release = '0.0.3a'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

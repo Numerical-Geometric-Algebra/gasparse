@@ -3,9 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-**************************************************************
-`gasparse <https://franciscovasconcelos.github.io/gasparse/>`_
-**************************************************************
+*************************************************************************
+`gasparse <https://franciscovasconcelos.github.io/gasparse/README.html>`_
+*************************************************************************
 
 A python library to do computations on compiled ``C`` code using sparse representation of multivector arrays.
 
@@ -27,9 +27,13 @@ The user can also install the latest development release from latest master::
 
   pip install git+ssh://git@github.com/FranciscoVasconcelos/gasparse.git
 
-For usage of this package go to examples_. To understand about compatibility between geometric algebras see compatibility_. 
-An overview of the overloaded operators that implement the different operations in geometric algebras is presented in `Table of Operators`_. 
-The documentation is available at `Documentation <https://franciscovasconcelos.github.io/gasparse/>`_.
+|
+
+- For usage of this package go to examples_
+- To understand about compatibility between geometric algebras see compatibility_
+- An overview of the overloaded operators for geometric algebras is presented in `Table of Operators`_
+- The documentation is available at `Documentation <https://franciscovasconcelos.github.io/gasparse/README.html>`_. 
+- The source code is available at `gasparse source code <https://github.com/FranciscoVasconcelos/gasparse>`_
 
 =================
 Why this package?
