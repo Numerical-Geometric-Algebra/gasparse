@@ -69,8 +69,9 @@ The key features of this package are
  * Very fast computation of cayley tables.
  * Can efficiently deal with big geometric algebras without big overhead.
  * Can easily scale for other types of data structures (`multivector type`).
+ * In futures iterations improve performance by leveraging knowlegde of the ``C`` language. (vector calls, assembly)
 
-Another cool feature of this package is that for someone who is already familiar with programming with `kingdon <https://github.com/tBuLi/kingdon/tree/master>`_ and `Clifford <https://github.com/pygae/clifford/tree/master>`_ 
+Another cool feature of this package is that for someone who is already familiar with programming with `kingdon <https://github.com/tBuLi/kingdon/tree/master>`_ `Clifford <https://github.com/pygae/clifford/tree/master>`_ and `numba <https://github.com/EelcoHoogendoorn/numga>`_
 is going to easily adapt to this package's "`syntax`", since most of the python operators are similar.
 
 .. _examples:
@@ -293,6 +294,32 @@ difference in performance
 
 Note that however mixed algebras operations are still using old technology similar to what is done with ``'generic'``, 
 so don't expect any performance benefits for mixed algebras operations.
+
+Here are how computation time increases when we construct bigger geometric algebras:
+
+.. code-block:: python
+  
+  >>> import gasparse
+  >>> import timeit
+  >>> arr = [0]*15
+  >>> for i in range(1,16):
+  >>>     arr[i-1] = timeit.timeit(lambda: gasparse.GA(i,compute_mode='large'), number=5)/5
+  >>> print(arr)
+  [2.722999852267094e-06,
+   1.558800067869015e-06,
+   1.9256000086897985e-06,
+   2.8394002583809198e-06,
+   7.089399878168478e-06,
+   1.9103799786535092e-05,
+   6.513800035463646e-05,
+   0.00023918759980006142,
+   0.0009205148002365604,
+   0.0036732804001076147,
+   0.01586245879989292,
+   0.06812388460020884,
+   0.22016883979995328,
+   0.8322477006000554,
+   3.5297154857998976]
 
 ========================================
 Compatibility between Geometric Algebras

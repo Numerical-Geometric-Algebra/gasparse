@@ -330,7 +330,19 @@ pip install . # Installs the contents of the current directory
 ### Note
 When creating specific function types if we want that the compiler warns incompantible function pointers do not cast a function pointer otherwise if the function is not as specified in the typedef we will probably have segmentation faults.
 
-## TODO
+## BIG TODO
+
+- `DenseMultivector` operations using position and sign tables.
+- `GradedDenseMultivector` operations using position and sign tables, for each grade of the multivector 
+  + binary `table[grade_left][grade_right][grade_out]`
+  + ternary ``table[grade_left][grade_center][grade_right][grade_out]``
+  + Only create tables when needed
+  + Use a flyweight pattern to decrease memory consumption
+- Faster Scalar products `(a*b)(0)` -> `mv.sp(a,b)` `mv.sp` dispatches the scalar product
+- Change the name of `BladesMultivector` to `GradedSparseMultivector`
+- Implement the graph/linked list strategy for the `BladesMultivector` in the `"large"` computation mode
+
+## SMALL TODO
 1. `ga.multivector`: 
 	- $\checkmark$ Check the size of the innermost dimension. It must have the same size as the specified basis or grades.
 	- $\checkmark$ Check if the specified grades are valid.
