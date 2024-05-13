@@ -32,6 +32,11 @@ typedef struct GradedDenseMultivector{// Use GradeMap to determine the size for 
 Signs for binary and ternary tables are expensive to compute and require memory storage accessing needed when computing products. In future work we want to construct an hash function which can determine signs in a very fast way. Improving on the binary and ternary maps approach by not needing to store big tables. Another improvement that can also be made is to compress signs to a single integer, thus a single integer would represent multiple signs. Using a trinary representation of the integers where `0` would represent `-1`, the value `1` would represent `0` and `2` would represent `1`. The n-th trit would represent the $n$-th sign.
 
 ### Repository TODO
+
+
+## VERY IMPORTANT
+**upload tar.gz to PyPI**
+
 1. Create branch for multilinear algebra and for ternary operators.
 1. Remove all content related with multilinear algebra from this branch
 

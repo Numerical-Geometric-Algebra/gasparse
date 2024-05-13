@@ -152,15 +152,15 @@ static BasisElement* graph_remove_rel_small(BasisElement *graph, Py_ssize_t *siz
     BasisElement *prev = NULL;
 
     while(graph){
-        if(max < fabs(graph->value))
-            max = fabs(graph->value);
+        if(max < fabsl(graph->value))
+            max = fabsl(graph->value);
 
         graph = graph->next;
     }
     graph = head;
 
     while(graph){
-        if(fabs(graph->value) < max*percentage){ // is the value relatively small
+        if(fabsl(graph->value) < max*percentage){ // is the value relatively small
             // the previous does not change prev <- prev
             if(prev){
                 prev->next = graph->next; // skip the element
@@ -2006,7 +2006,7 @@ static SparseMultivector atomic_sparse_innerproduct_(SparseMultivector *data, Py
     Py_ssize_t _grade0, _grade1;
 
 
-    int sign; Py_ssize_t bitmap,size;
+    int sign; Py_ssize_t bitmap,size=0;
     for(Py_ssize_t i = 0; i < dsize; i++){ // iterate over multivectors
         size = 0;
         while(graph){

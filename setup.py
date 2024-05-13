@@ -6,7 +6,7 @@ import sys
 name = "gasparse"
 macros = [("RELEASE_BUILD",None)]
 setup(  name=name, 
-        version="0.0.3a", # Should have used git tag for the version
+        version="0.0.5a", # Should have used git tag for the version
         packages=find_packages(exclude=("tests",)),
         ext_modules=[Extension(name,["src/gasparse.c","src/multivector_object.c","src/multivector_types.c","src/multivector_large.c","src/multivector_gen.c","src/common.c"],\
         extra_compile_args = ["-O3", "-mpopcnt"],define_macros=macros)],

@@ -10,7 +10,14 @@ install.sh
 setup.cfg
 setup.py
 setup_dev.py
+upload.sh
 valgrind-python.supp
+.github/workflows/documentation.yml
+.github/workflows/hardware.yml
+dist/gasparse-0.0.2a0-cp311-cp311-linux_x86_64.whl
+dist/gasparse-0.0.2a0.tar.gz
+dist/gasparse-0.0.3a0-cp311-cp311-linux_x86_64.whl
+dist/gasparse-0.0.3a0.tar.gz
 docs/Makefile
 docs/make.bat
 docs/source/README.rst
@@ -38,6 +45,7 @@ src/multivector_object.h
 src/multivector_types.c
 src/multivector_types.h
 src/types.h
+tests/atomic_large.py
 tests/grade_error.py
 tests/grade_zero_test.py
 tests/leak_check_script.py

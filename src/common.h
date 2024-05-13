@@ -3,7 +3,7 @@
 #include "types.h"
 
 #define GRADE(value) (__builtin_popcountll(value))
-typedef double ga_float;
+
 
 Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades);
 Py_ssize_t parse_arguments_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades);
