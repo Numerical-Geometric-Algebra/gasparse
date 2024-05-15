@@ -14,6 +14,6 @@ typedef enum {
   gen_MultivectorTypeMAX} gen_MultivectorType;
 
 // code generate the size of this array
-extern PyMultivectorSubType gen_subtypes_array[N_GEN_SUBTYPES];
+extern const PyMultivectorSubType gen_subtypes_array[N_GEN_SUBTYPES];
 
 #endif // MULTIVECTOR_GEN_H_

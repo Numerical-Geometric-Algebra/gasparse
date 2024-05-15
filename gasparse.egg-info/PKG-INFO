@@ -2,11 +2,9 @@ Metadata-Version: 2.1
 Name: gasparse
 Version: 0.0.0a1
 Summary: A python library written entirely in C for Geometric Algebras to deal with sparse multivector arrays
-Home-page: UNKNOWN
 Author: Francisco Mendia
 Author-email: francisco.mendia.99@gmail.com
 License: MIT
-Platform: UNKNOWN
 Requires-Python: >=3.7
 License-File: LICENSE.txt
 
@@ -263,8 +261,10 @@ python3 setup.py build --genalgebras # generates the algebra
 
 Compiling and building the package to install with pip
 ```shell
+cd sparse-multivectors
 python3 setup.py build
 python3 setup.py sdist bdist_wheels
+pip install . # Installs the contents of the current directory
 ```
 
 
@@ -279,15 +279,20 @@ python3 setup.py sdist bdist_wheels
 When creating specific function types if we want that the compiler warns incompantible function pointer do not cast a function pointer otherwise if the function is not as specified in the typedef we will have probably segmentation faults
 
 ## TODO
+1. Grade projection also as `a(1,2,3)` and `a([1,2,3])` (read the tuple directly)
+1. Get sizes with `ga.size(1,2)` and `ga.size([1,2])`
+1. Change code for `x.list()` and `ga.size()` making it accept variable number of arguments like `x.list(1,2)` instead of a list like `x.list([1,2])`
 1. Indexing and masking multivector arrays. I want to be able to eliminate some multivectors that do not satisfy some requirements.
+1. Grade Einsum
 1. Grade projection should accept the grade bool array instead of the grades 
+
  
 1. Add option to print multivectors with `*` instead of `^` to be able to copy it's value and declare it as variable in python, otherwise because of the operator precedence the output would not result in what is expected, that is these are not equivalent
     ```python
     x = 1.234*e1 + 5.342*e4 + 5.678*e12
     x = 1.234^e1 + 5.342^e4 + 5.678^e12
     ```
-    to be equivalent we would need to put parenthesis around each operation as
+    to be equivalent we would need to put parenthesis around each operation as (or just add parenthesis)
     ```python
     x = (1.234^e1) + (5.342^e4) + (5.678^e12)
     ```
@@ -303,7 +308,7 @@ When creating specific function types if we want that the compiler warns incompa
 1. Ignore multivector elements via relative difference, instead of just small absolute value (make that as an option for the user, consider elements of the same grade)
 4. Change the value for which multivectors get converted to zero. Should be an option when generating the algebra (epsilon)
 8. Give the option to compile the code without the zero value checking (checking if it is close to zero)
-1. Change code for `x.list()` and `ga.size()` making it accept variable number of arguments like `x.list(1,2)` instead of a list like `x.list([1,2])`
+
 1. Implement cast to some algebra (Add the option to project to that algebra)
 10. Implement grade involution (Important for reflection)
 11. Implement integer powers of multivectors
@@ -380,8 +385,116 @@ typedef struct blades{
 typedef struct dense{
     float *value;
     unsigned int size;
-}sparse;
+}dense;
 ```
 
 
 
+
+### 2.4 Pseudo Versors
+
+**Vector Types**
+```c
+typedef struct dense_vectors{
+    float *value;
+    unsigned int size;
+}dense_vectors;
+
+typedef struct sparse_vectors{
+    float *value;
+    unsigned int size;
+}dense_vectors;
+```
+
+```c
+typedef struct versor{
+    vector *vectors; // Array of vectors (sparse or dense vectors)
+    void *multivector; // A general multivector
+    unsigned int size;
+    VersorSubType Type; // SubType of versor: blade, ortho blade, prod gen vectors, multivector
+    VersorDataRepr Repr; // Type of representation: sparse, blades (only for multivector), dense
+}versor;
+```
+
+This type of representation is used to express linear transformations $f:\mathcal{A}_{p,q}\mapsto \mathcal{A}_{p,q}$
+Multivectors for which $AA^\dagger$ is a scalar and that $AxA^\dagger$ is grade preserving.
+
+Subtypes:
+- Outer product of vectors $A = a_1\wedge a_2\wedge\cdots\wedge a_r$
+- Product of orthogonal vectors $a_ia_j = a_i\wedge a_j$, for $j\neq i$. $A = a_1\wedge a_2\wedge\cdots\wedge a_r$
+- Product of general vectors $A = a_1\wedge a_2\wedge\cdots\wedge a_r$. Where $a_ia_j\neq 0$ for $i\neq j$.
+- Multivector $A: AA^\dagger = \langle AA^\dagger\rangle$ 
+
+In all of the above subtypes we can have that $AA^\dagger=0$. That is, $A$ can be a null vector.
+
+## Representation of Linear Transformations
+Let $f:\mathcal{A}_{p,q}\mapsto \mathcal{A}_{p,q}$ and let $x\in\mathcal{A}_{p,q}$
+
+- Matrix representation $f(x) = \sum_{ij}f_{ij} x\cdot e^ie_j $
+- Multivector representation: $f(x) = \langle F(x)\rangle_1$
+  1. Geometric Product: $F(x) = \sum_{ij} A_kxB_k$
+  1. Inner Product: $F(x) = \sum_{ij} x\cdot A_kB_k$
+  1. Outer Product: $F(x) = \sum_{ij} x\wedge A_kB_k$
+
+When $B_k = \alpha_k A_k^\dagger$ simplifications arise: Specifically When the multivectors $A_k$ are certain types of multivectors then we can drop the grade projection, particularly if $A_k$ is a blade in 1.,  2. or 3. or when the $A_k$ are Pseudo Versors in 1. we have $F(x) =  \langle F(x)\rangle_1$. Note that representations 2. and 3. can be expressed with 1. by relating inner and outer products with geometric products.
+
+### Computing Transposes of Linear and Multilinear Transformations
+
+$\bar{F}(X) = \partial_{Y}^\dagger X^\dagger*F(Y)$ implies that $F(X)*Y^\dagger = X^\dagger * \bar{F}(Y)$
+
+### Computing inverses of Linear Functions
+$f^{-1}(A') = \bar{f}(A'I')[\bar{f}(I')]^{-1}$
+
+### Comuting Outermorphisms of linear Functions
+$\underline{f}(X_r) = X_r*\partial_{(r)}f_{(r)}$
+
+$\bar{f}(X_r) = \partial_{(r)}X_r*f_{(r)}$
+
+
+
+**Implementing the Linear and Multilinear Operators/Functions**
+
+Operations on vectors can be simplified greatly. Specifically the product $\langle AxB\rangle_1$ can be computed as a ternary operation.
+
+## Linear and Multilinear Functions/Operators
+Defining functions(MultiLinear Operators):
+```python
+F = gasparse.multilinear.operator(A,B,grade_preserving=True,grade=3) # Create a grade preserving multilinear operator. F(X) = sum_i (A[i]*X(3)*B[i])(3)
+F = gasparse.multilinear.operator(F_array,grades=(1,2)) # Create a multilinear operator for grades 1 and 2 from an array F(X) = sum_ij F_ij (X|fi)*fj
+F = gasparse.multilinear.operator(A,B) # Create a general multilinear operator F(X) = sum_i A[i]*X*B[i]
+F = gasparse.multilinear.operator(A,B,linear=True) # An operator from vectors to vectors: F(X) = sum_i (A[i]*X(1)*B[i])(1)
+```
+
+
+## Grade Preserving Operations and outermorphisms of scaled orthogonal Functions
+
+When $f(x) \equiv \mu UxU^\dagger$ with $UU^\dagger=1$ then the outermorphism of $f$ takes the form: $\underline{f}(X_r) = \mu^r UX_rU^\dagger$
+
+$\boxed{F(X) = \langle A\langle X\rangle_r B\rangle_r}$
+
+Calls to specific operations: (Generate the ternary operation tables)
+
+- $aX_ra$
+- $axa$
+- $AX_rA$
+- $a_1a_2\cdots a_rXa_ra_{r-1}\cdots a_1$
+- $AXA$ where $A$ is a versor
+
+
+The most generic ternary operation on $X$ is $\langle A\langle X\rangle_{r_1,r_2,...,r_\ell} B\rangle_{s_1,s_2,...,s_t}$
+
+**TODO (MultiLinear Operators)**
+All the operations done inside of the operator must be hidden from the end user.
+
+- I want to be able to apply an operator to a multivector array.
+- I want to be able to define multiple operators simultaneously from a multidimensional array of multivectors.
+- The multilinear operator can have a decomposition `gasparse.multilinear.eig(F)` (the eigendecomposition of the operator F, returns eigenvalues and eigenblades) 
+- Decompositions for normal and orthogonal transformations
+
+1. Linear Operators -- grade one preserving Operators: Generate the ternary operator table for $axa$, $AxA^\dagger$ and $\langle AxA^\dagger \rangle_1$
+1. Overload calls to the operator Object `F(X)` applies the linear operator `F` to the multivector `X`.
+
+
+
+## Questions
+What is the outermorphism of $f(x) = UxU^\dagger$ when $UU^\dagger=0$. Is it zero? $f(x)\wedge f(y) = (UxU^\dagger)\wedge(UyU^\dagger) = \tfrac{1}{2} \left( UxU^\dagger UyU^\dagger -  UyU^\dagger UxU^\dagger \right) = 0 $

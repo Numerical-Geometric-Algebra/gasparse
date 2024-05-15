@@ -12907,9 +12907,9 @@ static const PyMultivectorSubType blades1_subtype = {
 };
 
 
-PyMultivectorSubType gen_subtypes_array[4] = {dense0_subtype,blades0_subtype,dense1_subtype,blades1_subtype,};
+const PyMultivectorSubType gen_subtypes_array[4] = {dense0_subtype,blades0_subtype,dense1_subtype,blades1_subtype,};
 
-PyMultivectorMixedMath_Funcs gen_multivector_mixed_fn = {
+const PyMultivectorMixedMath_Funcs gen_multivector_mixed_fn = {
   .add = NULL,
   .product = NULL,
   .atomic_add = NULL,

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-import snippets.gasparse as gasparse
+# import snippets.gasparse as gasparse
+import gasparse
 import jinja2
 class algebra:
     def __init__(self,ga,name):

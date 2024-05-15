@@ -6,7 +6,6 @@
 #include "object.h"
 #include "pyerrors.h"
 #include "pyport.h"
-#include "pytypedefs.h"
 #include "types.h"
 #include <string.h>
 #include <math.h>

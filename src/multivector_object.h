@@ -1,6 +1,5 @@
 #ifndef MULTIVECTOR_OBJECT_H_
 #define MULTIVECTOR_OBJECT_H_
-#include "pytypedefs.h"
 #define PY_SSIZE_T_CLEAN
 #include "types.h" 
 #include <Python.h>

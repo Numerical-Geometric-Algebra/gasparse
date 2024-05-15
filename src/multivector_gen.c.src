@@ -876,14 +876,14 @@ static const PyMultivectorSubType {{type}}{{i}}_subtype = {
 {% endfor %}
 {% endfor %}
 
-PyMultivectorSubType gen_subtypes_array[{{nalgebras*2}}] = {{"{"}}
+const PyMultivectorSubType gen_subtypes_array[{{nalgebras*2}}] = {{"{"}}
 {%- for i in range(nalgebras) -%}
 {%- for type in types -%}
   {{type}}{{i}}_subtype,
 {%- endfor -%}
 {%- endfor -%}{{"}"}};
 
-PyMultivectorMixedMath_Funcs gen_multivector_mixed_fn = {
+const PyMultivectorMixedMath_Funcs gen_multivector_mixed_fn = {
   .add = NULL,
   .product = NULL,
   .atomic_add = NULL,
