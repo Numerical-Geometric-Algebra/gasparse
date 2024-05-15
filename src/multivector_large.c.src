@@ -1390,7 +1390,7 @@ PyMultivectorData_Funcs largemultivector_blades_data_fn = {
 {% for j in range(3)%} {# iterate over types #}
 {% set type = type_list[j] %}
 {% set Type = Type_list[j] %}
-const PyMultivectorSubType large{{type}}_subtype = {
+PyMultivectorSubType large{{type}}_subtype = {
     .math_funcs = &largemultivector_{{type}}_math_fn,
     .data_funcs = &largemultivector_{{type}}_data_fn,
     .name = "",
@@ -1403,7 +1403,23 @@ const PyMultivectorSubType large{{type}}_subtype = {
 };
 {% endfor %}
 
-PyMultivectorSubType largemultivector_subtypes_array[3] = {largesparse_subtype,largedense_subtype,largeblades_subtype};
+PyMultivectorSubType largemultivector_subtypes_array[3] = {
+    {% for j in range(3)%} {# iterate over types #}
+{% set type = type_list[j] %}
+{% set Type = Type_list[j] %}
+ {
+    .math_funcs = &largemultivector_{{type}}_math_fn,
+    .data_funcs = &largemultivector_{{type}}_data_fn,
+    .name = "",
+    .type_name = "{{type}}large", 
+    .generated = 0,
+    .metric = {-2},
+    .msize = -1,
+    .ntype = MultivectorType_{{type}},
+    .basic_size = sizeof({{Type}}Multivector),
+},
+{% endfor %}
+};
 
 {% set dnames = ["free","init","iter_next","iter_init","cast"] %}
 {% set mnames = ["product","atomic_product","ternary_product","grade_project","reverse","add","atomic_add","scalar_product","scalar_add","dual","undual"] %}
