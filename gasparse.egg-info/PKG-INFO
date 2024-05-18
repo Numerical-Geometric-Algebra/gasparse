@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: gasparse
-Version: 0.0.0a1
+Version: 0.0.5a0
 Summary: A python library written entirely in C for Geometric Algebras to deal with sparse multivector arrays
 Author: Francisco Mendia
 Author-email: francisco.mendia.99@gmail.com
