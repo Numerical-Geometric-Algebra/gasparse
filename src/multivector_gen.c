@@ -12907,7 +12907,58 @@ static const PyMultivectorSubType blades1_subtype = {
 };
 
 
-PyMultivectorSubType gen_subtypes_array[4] = {dense0_subtype,blades0_subtype,dense1_subtype,blades1_subtype,};
+// PyMultivectorSubType gen_subtypes_array[4] = {
+//////   dense0_subtype,
+////   blades0_subtype,
+////////   dense1_subtype,
+////   blades1_subtype,
+////};
+
+ PyMultivectorSubType gen_subtypes_array[4] = {  {
+    .math_funcs = &dense0_math_funcs,
+    .data_funcs = &dense0_data_funcs,
+    .name = "3DVGA",
+    .type_name = "dense0",
+    .generated = 1,
+    .metric = {1,1,1,},
+    .msize = 3,
+    .ntype = 3,
+    .asize = 8,
+    .basic_size = sizeof(gen0_DenseMultivector),
+},  {
+    .math_funcs = &blades0_math_funcs,
+    .data_funcs = &blades0_data_funcs,
+    .name = "3DVGA",
+    .type_name = "blades0",
+    .generated = 1,
+    .metric = {1,1,1,},
+    .msize = 3,
+    .ntype = 4,
+    .asize = 8,
+    .basic_size = sizeof(gen0_BladesMultivector),
+},  {
+    .math_funcs = &dense1_math_funcs,
+    .data_funcs = &dense1_data_funcs,
+    .name = "3DCGA",
+    .type_name = "dense1",
+    .generated = 1,
+    .metric = {1,1,1,1,-1,},
+    .msize = 5,
+    .ntype = 5,
+    .asize = 32,
+    .basic_size = sizeof(gen1_DenseMultivector),
+},  {
+    .math_funcs = &blades1_math_funcs,
+    .data_funcs = &blades1_data_funcs,
+    .name = "3DCGA",
+    .type_name = "blades1",
+    .generated = 1,
+    .metric = {1,1,1,1,-1,},
+    .msize = 5,
+    .ntype = 6,
+    .asize = 32,
+    .basic_size = sizeof(gen1_BladesMultivector),
+},};
 
 PyMultivectorMixedMath_Funcs gen_multivector_mixed_fn = {
   .add = NULL,

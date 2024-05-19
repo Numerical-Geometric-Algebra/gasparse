@@ -876,10 +876,30 @@ static const PyMultivectorSubType {{type}}{{i}}_subtype = {
 {% endfor %}
 {% endfor %}
 
-PyMultivectorSubType gen_subtypes_array[{{nalgebras*2}}] = {{"{"}}
+// PyMultivectorSubType gen_subtypes_array[{{nalgebras*2}}] = {{"{"}}
+// {%- for i in range(nalgebras) -%}
+// {%- for type in types -%}
+//   {{type}}{{i}}_subtype,
+// {%- endfor -%}
+// {%- endfor -%}{{"}"}};
+
+ PyMultivectorSubType gen_subtypes_array[{{nalgebras*2}}] = {{"{"}}
 {%- for i in range(nalgebras) -%}
+{% set algebra = algebras[i] %}
 {%- for type in types -%}
-  {{type}}{{i}}_subtype,
+{% set Type = Types[loop.index0] %}
+  {
+    .math_funcs = &{{type}}{{i}}_math_funcs,
+    .data_funcs = &{{type}}{{i}}_data_funcs,
+    .name = "{{algebra.name}}",
+    .type_name = "{{type}}{{i}}",
+    .generated = 1,
+    .metric = {{"{"}}{% for v in algebra.metric -%}{{v}},{%- endfor %}{{"}"}},
+    .msize = {{algebra.metric_size}},
+    .ntype = {{typemin + 1 + i*2 + loop.index0}},
+    .asize = {{algebra.size}},
+    .basic_size = sizeof(gen{{i}}_{{Type}}Multivector),
+},
 {%- endfor -%}
 {%- endfor -%}{{"}"}};
 

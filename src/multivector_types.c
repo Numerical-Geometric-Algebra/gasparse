@@ -2039,4 +2039,46 @@ PyMultivectorMixedMath_Funcs multivector_mixed_fn = {
 };
 
 
-PyMultivectorSubType multivector_subtypes_array[4] = {sparse_subtype,dense_subtype,blades_subtype,scalar_subtype};
+// PyMultivectorSubType multivector_subtypes_array[4] = {sparse_subtype,dense_subtype,blades_subtype,scalar_subtype};
+
+PyMultivectorSubType multivector_subtypes_array[4] = {{
+    .math_funcs = &multivector_sparse_math_fn,
+    .data_funcs = &multivector_sparse_data_fn,
+    .name = "",
+    .type_name = "sparse",
+    .generated = 0,
+    .metric = {-2},
+    .msize = -1,
+    .ntype = MultivectorType_sparse,
+    .basic_size = sizeof(SparseMultivector),
+},{
+    .math_funcs = &multivector_dense_math_fn,
+    .data_funcs = &multivector_dense_data_fn,
+    .name = "",
+    .type_name = "dense",
+    .generated = 0,
+    .metric = {-2},
+    .msize = -1,
+    .ntype = MultivectorType_dense,
+    .basic_size = sizeof(DenseMultivector),
+},{
+    .math_funcs = &multivector_blades_math_fn,
+    .data_funcs = &multivector_blades_data_fn,
+    .name = "",
+    .type_name = "blades",
+    .generated = 0,
+    .metric = {-2},
+    .msize = -1,
+    .ntype = MultivectorType_blades,
+    .basic_size = sizeof(BladesMultivector),
+},{
+    .math_funcs = &multivector_scalar_math_fn,
+    .data_funcs = &multivector_scalar_data_fn,
+    .name = "",
+    .type_name = "scalar",
+    .generated = 0,
+    .metric = {-2},
+    .msize = -1,
+    .ntype = MultivectorType_scalar,
+    .basic_size = sizeof(ScalarMultivector),
+}};

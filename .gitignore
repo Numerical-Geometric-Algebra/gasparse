@@ -9,3 +9,4 @@ testing
 tests/gasparse.cpython-311-x86_64-linux-gnu.so
 tests/gasparsegen.cpython-311-x86_64-linux-gnu.so
 docs/build
+wheelhouse

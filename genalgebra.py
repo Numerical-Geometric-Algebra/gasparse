@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
-import snippets.gasparse as gasparse
+# import snippets.gasparse as gasparse
+import gasparse_dev as gasparse
+
+# import build/lib.linux-x86_64-cpython-311/gasparse_dev.cpython-311-x86_64-linux-gnu.so
+
 import jinja2
 class algebra:
     def __init__(self,ga,name):

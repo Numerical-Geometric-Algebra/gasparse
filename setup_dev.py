@@ -3,7 +3,7 @@
 from setuptools import Extension, setup
 #from setuptools.command.build_ext import build_ext as _build_ext
 import sys
-name = "gasparse"
+name = "gasparse_dev"
 
 macros = []
 if "--genalgebras" in sys.argv:

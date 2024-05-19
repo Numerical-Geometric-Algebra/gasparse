@@ -1,7 +1,5 @@
 #include "common.h"
-#include "pytypedefs.h"
-#include "tupleobject.h"
-#include "types.h"
+
 
 
 Py_ssize_t parse_list_as_grades(PyAlgebraObject *ga, PyObject *grades_obj, int **grades){

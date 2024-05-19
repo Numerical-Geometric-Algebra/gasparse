@@ -1775,7 +1775,7 @@ static SparseMultivector atomic_sparse_geometricproduct_(SparseMultivector *data
     graph_out->value = 0;
     
 
-    int sign; Py_ssize_t bitmap,size;
+    int sign; Py_ssize_t bitmap,size=0;
     for(Py_ssize_t i = 0; i < dsize; i++){ // iterate over multivectors
         size = 0;
         while(graph){
@@ -1890,7 +1890,7 @@ static SparseMultivector atomic_sparse_outerproduct_(SparseMultivector *data, Py
     graph_out->value = 0;
     
 
-    int sign; Py_ssize_t bitmap,size;
+    int sign; Py_ssize_t bitmap,size=0;
     for(Py_ssize_t i = 0; i < dsize; i++){ // iterate over multivectors
         size = 0;
         while(graph){
@@ -3231,7 +3231,44 @@ PyMultivectorData_Funcs largemultivector_blades_data_fn = {
     .basic_size = sizeof(BladesMultivector),
 };
 
-PyMultivectorSubType largemultivector_subtypes_array[3] = {largesparse_subtype,largedense_subtype,largeblades_subtype};
+
+PyMultivectorSubType largemultivector_subtypes_array[3] = {
+  {
+    .math_funcs = &largemultivector_sparse_math_fn,
+    .data_funcs = &largemultivector_sparse_data_fn,
+    .name = "",
+    .type_name = "sparselarge", 
+    .generated = 0,
+    .metric = {-2},
+    .msize = -1,
+    .ntype = MultivectorType_sparse,
+    .basic_size = sizeof(SparseMultivector),
+},
+  {
+    .math_funcs = &largemultivector_dense_math_fn,
+    .data_funcs = &largemultivector_dense_data_fn,
+    .name = "",
+    .type_name = "denselarge", 
+    .generated = 0,
+    .metric = {-2},
+    .msize = -1,
+    .ntype = MultivectorType_dense,
+    .basic_size = sizeof(DenseMultivector),
+},
+  {
+    .math_funcs = &largemultivector_blades_math_fn,
+    .data_funcs = &largemultivector_blades_data_fn,
+    .name = "",
+    .type_name = "bladeslarge", 
+    .generated = 0,
+    .metric = {-2},
+    .msize = -1,
+    .ntype = MultivectorType_blades,
+    .basic_size = sizeof(BladesMultivector),
+},
+};
+
+// PyMultivectorSubType largemultivector_subtypes_array[3] = {largesparse_subtype,largedense_subtype,largeblades_subtype};
 
 
 void fill_missing_funcs(void){
