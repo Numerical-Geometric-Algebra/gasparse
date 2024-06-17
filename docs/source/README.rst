@@ -3,9 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-*************************************************************************
-`gasparse <https://franciscovasconcelos.github.io/gasparse/README.html>`_
-*************************************************************************
+********************************************************************************
+`gasparse <https://numerical-geometric-algebra.github.io/gasparse/README.html>`_
+********************************************************************************
 
 A python library to do computations on compiled ``C`` code using sparse representation of multivector arrays.
 
