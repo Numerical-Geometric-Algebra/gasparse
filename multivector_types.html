@@ -1,0 +1,539 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Multivector Types &#8212; gasparse 0.0.3a documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=3ee479438cf8b5e0d341" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=3ee479438cf8b5e0d341" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=3ee479438cf8b5e0d341"></script>
+
+    <script src="_static/documentation_options.js?v=c7f888af"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'multivector_types';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="gasparse.mvarray" href="gasparse_mvarray.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">gasparse 0.0.3a documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="README.html">gasparse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasparse_ga.html">gasparse.GA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasparse_mvarray.html">gasparse.mvarray</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Multivector Types</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/multivector_types.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Multivector Types</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#bitmaps">Bitmaps</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-c-types">The <code class="docutils literal notranslate"><span class="pre">C</span></code> types</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#computation-modes">Computation Modes</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-bitmap-map">The bitmap Map</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-table-of-positions-and-signs">The Table of positions and signs</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#linked-lists">Linked Lists</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="multivector-types">
+<h1>Multivector Types<a class="headerlink" href="#multivector-types" title="Link to this heading">#</a></h1>
+<p>One of the main goals of this project is being able to define new data structures for multivectors (the type of multivector) for which specialized operations can be dispatched for better performance.
+Different approaches to represent multivectors in a data structure can result in better or worse performance and can also enable different types of optimizations.
+There are multiple ways to represent multivectors, for example we can allways represent multivector using duality <span class="math notranslate nohighlight">\(x=a+bI\)</span>,
+or a two blade as the wedge product of two vectors <span class="math notranslate nohighlight">\(x = a\wedge b\)</span>. For <span class="math notranslate nohighlight">\(x=a+bI\)</span> we would store <span class="math notranslate nohighlight">\(a\)</span> and <span class="math notranslate nohighlight">\(b\)</span> in direct space
+which can reduce the size of the cayley table making computations more efficient. For <span class="math notranslate nohighlight">\(x = a\wedge b\)</span> we would store the vectors <span class="math notranslate nohighlight">\(a\)</span> and <span class="math notranslate nohighlight">\(b\)</span> in the data structure,
+in an <cite>n</cite> dimensional algebra the bivector basis yields <span class="math notranslate nohighlight">\({n\choose 2}\)</span> coefficients while two vectors need <span class="math notranslate nohighlight">\(2n\)</span> basis elements. Note that <span class="math notranslate nohighlight">\({n\choose 2}\geqslant 2n\)</span> for <span class="math notranslate nohighlight">\(n\geqslant 5\)</span>.</p>
+<p>The class where multivector arrays reside is <code class="docutils literal notranslate"><span class="pre">gasparse.mvarray</span></code> but instances of this class can be of a subtype. The available subtypes are</p>
+<ul class="simple">
+<li><p>sparse (<code class="docutils literal notranslate"><span class="pre">SparseMultivector</span></code>)</p></li>
+<li><p>dense (<code class="docutils literal notranslate"><span class="pre">DenseMultivector</span></code>)</p></li>
+<li><p>graded sparse (<code class="docutils literal notranslate"><span class="pre">BladesMultivector</span></code>)</p></li>
+<li><p>graded dense <strong>NOT IMPLEMENTED YET</strong></p></li>
+<li><p>scalar (<code class="docutils literal notranslate"><span class="pre">ga_float</span></code>)</p></li>
+</ul>
+<section id="bitmaps">
+<h2>Bitmaps<a class="headerlink" href="#bitmaps" title="Link to this heading">#</a></h2>
+<p>Bitmaps are integer values that are used to represent basis blades. We consider that the bitmaps represent basis blades in canonical order, that is increasing order from left to right.
+Each bit in a bitmap represents a basis vector, if the bit is zero then that basis vector is not present in the basis blade, if the bit is zero then it is present.
+A simple example is shown: the bitmap <code class="docutils literal notranslate"><span class="pre">0b101101</span></code> the corresponding basis blade is <span class="math notranslate nohighlight">\(e_{1346} = e_1\wedge e_3\wedge e_4\wedge e_6\)</span>.</p>
+<p>Using this representation for bitmaps makes it very easy to compute bitmaps resultant from the geometric product as <code class="docutils literal notranslate"><span class="pre">bitmap_left</span> <span class="pre">^</span> <span class="pre">bitmap_right</span></code> where <code class="docutils literal notranslate"><span class="pre">^</span></code> is the bitwise xor operator.
+Yet signs are much more difficult to compute since it involves determining how many times we need to swap basis vectors to get to the canonical order and determining the signs resulted from squaring vectors.</p>
+</section>
+<section id="the-c-types">
+<h2>The <code class="docutils literal notranslate"><span class="pre">C</span></code> types<a class="headerlink" href="#the-c-types" title="Link to this heading">#</a></h2>
+<p>Depending on the algebra or on the data that is going to be handled we can chose from three different multivector types. The available multivector types are:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// Use dtype=&#39;sparse&#39; to chose this type</span>
+<span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">SparseMultivector</span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">bitmap</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ga_float</span><span class="w"> </span><span class="o">*</span><span class="n">value</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Py_ssize_t</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+<span class="p">}</span><span class="n">SparseMultivector</span><span class="p">;</span>
+
+<span class="c1">// Use dtype=&#39;blades&#39; to chose this type</span>
+<span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">BladesMultivector</span><span class="p">{</span>
+<span class="w">    </span><span class="n">SparseMultivector</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Py_ssize_t</span><span class="w"> </span><span class="o">*</span><span class="n">grade</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Py_ssize_t</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+<span class="p">}</span><span class="n">BladesMultivector</span><span class="p">;</span>
+
+<span class="c1">// Use dtype=&#39;dense&#39; to chose this type</span>
+<span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">DenseMultivector</span><span class="p">{</span>
+<span class="w">    </span><span class="n">ga_float</span><span class="w"> </span><span class="o">*</span><span class="n">value</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Py_ssize_t</span><span class="w"> </span><span class="n">size</span><span class="p">;</span>
+<span class="p">}</span><span class="n">DenseMultivector</span><span class="p">;</span>
+
+<span class="c1">// NOT IMPLEMENTED YET</span>
+<span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">GradedDenseMultivector</span><span class="p">{</span>
+<span class="w">    </span><span class="n">ga_float</span><span class="w"> </span><span class="o">**</span><span class="n">values</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Py_ssize_t</span><span class="w"> </span><span class="o">*</span><span class="n">grades</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Py_ssize_t</span><span class="w"> </span><span class="n">size</span><span class="p">;</span><span class="w"> </span><span class="c1">// The number of different grades</span>
+<span class="p">}</span><span class="n">GradedDenseMultivector</span><span class="p">;</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">DenseMultivector</span></code> are indexed by bitmaps. The <code class="docutils literal notranslate"><span class="pre">BladesMultivector</span></code> are indexed by grades where for each grade we have a <code class="docutils literal notranslate"><span class="pre">SparseMultivector</span></code> structure.
+The <code class="docutils literal notranslate"><span class="pre">SparseMultivector</span></code> represent multivectors by <code class="docutils literal notranslate"><span class="pre">value</span></code> and by its corresponding <code class="docutils literal notranslate"><span class="pre">bitmap</span></code>,
+For the sparse multivectors we used an approach that allocates memory for the entire basis of the multivector and uses the indices as bitmaps. Thus when we get a bitmap as the result of an operation we
+simply take that as an index e.g. <code class="docutils literal notranslate"><span class="pre">dense.bitmap[dense0-&gt;bitmap[i]]</span> <span class="pre">=</span> <span class="pre">dense0.bitmap[i]</span></code>. Then we ignore all the unvisited indices by iterating over the entire multivector and checking if the bitmap
+is equal to <code class="docutils literal notranslate"><span class="pre">-1</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Iterating over the entire geometric algebra is expensive. For an <cite>n</cite> dimensional geometric algebra we have to loop over <span class="math notranslate nohighlight">\(2^n\)</span> values and bitmaps.</p>
+</div>
+</section>
+<section id="computation-modes">
+<h2>Computation Modes<a class="headerlink" href="#computation-modes" title="Link to this heading">#</a></h2>
+<p>One of the main motivations for writting this package is that after describing the general “algorithm” to compute the different operations we can allways find new ways to improve the performance
+of said “algorithms”. There are several ways to implement operations between multivectors, several data structures where defined in order to store the operations <cite>“information”</cite>, included data structures are</p>
+<ul class="simple">
+<li><p>Table of positions and signs (only for <code class="docutils literal notranslate"><span class="pre">DenseMultivector</span></code> and <code class="docutils literal notranslate"><span class="pre">GradedDenseMultivector</span></code>   <strong>NOT IMPLEMENTED YET</strong>)  <a class="reference internal" href="#the-table-of-positions-and-signs">The Table of positions and signs</a></p></li>
+<li><p>A two dimensional array that maps bitmaps to signs and bitmaps (for <code class="docutils literal notranslate"><span class="pre">SparseMultivector</span></code>) <a class="reference internal" href="#the-bitmap-map">The Bitmap Map</a></p></li>
+</ul>
+<p>As for the different computation strategies we have</p>
+<ul class="simple">
+<li><p>Linked lists strategy. The output of operations is stored in a linked list. Pointers to nodes are stored in an array indexed by bitmaps. (<code class="docutils literal notranslate"><span class="pre">compute_mode='large'</span></code>) <a class="reference internal" href="#linked-lists">Linked Lists</a>.</p></li>
+<li><p>Entire algebra basis alocation. The output is directly stored on an array indexed by bitmaps. The output is then compressed to a sparse data structure. (<code class="docutils literal notranslate"><span class="pre">compute_mode='generic'</span></code>).</p></li>
+<li><p>Code generated strategy. Using the table of positions and signs code generate the different operations (<code class="docutils literal notranslate"><span class="pre">compute_mode='generated'</span></code>).</p></li>
+</ul>
+<section id="the-bitmap-map">
+<span id="id1"></span><h3>The bitmap Map<a class="headerlink" href="#the-bitmap-map" title="Link to this heading">#</a></h3>
+<p>Signs and bitmaps of products are determined by indexing the sign array and the bitmap array of the map.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">sign_out</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">map</span><span class="p">.</span><span class="n">sign</span><span class="p">[</span><span class="n">bitmap_left</span><span class="p">][</span><span class="n">bitmap_right</span><span class="p">];</span>
+<span class="n">bitmap_out</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">map</span><span class="p">.</span><span class="n">bitmap</span><span class="p">[</span><span class="n">bitmap_left</span><span class="p">][</span><span class="n">bitmap_right</span><span class="p">];</span>
+<span class="n">value_out</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sign_out</span><span class="o">*</span><span class="n">value_left</span><span class="o">*</span><span class="n">value_right</span><span class="p">;</span>
+</pre></div>
+</div>
+</section>
+<section id="the-table-of-positions-and-signs">
+<span id="id2"></span><h3>The Table of positions and signs<a class="headerlink" href="#the-table-of-positions-and-signs" title="Link to this heading">#</a></h3>
+<p>An array of a data structure containing positions and signs is created then the product is computed as a loop of the following</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">value_out</span><span class="p">[</span><span class="n">table</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">position</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">table</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">sign</span><span class="o">*</span><span class="n">value_left</span><span class="p">[</span><span class="n">table</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+<span class="w">                                  </span><span class="o">*</span><span class="n">value_right</span><span class="p">[</span><span class="n">table</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">]];</span>
+</pre></div>
+</div>
+<p>By defining different values for the positions and signs of the table we can define the different types of products in this way.</p>
+</section>
+<section id="linked-lists">
+<span id="id3"></span><h3>Linked Lists<a class="headerlink" href="#linked-lists" title="Link to this heading">#</a></h3>
+<p>For the <code class="docutils literal notranslate"><span class="pre">&quot;large&quot;</span></code> computation mode we consider using linked lists for storing the resulting output of the product between basis elements.
+We also define an array of pointers to items of the linked list, indexed by bitmaps. That is, when the result of taking the product between two basis elements is some bitmap <code class="docutils literal notranslate"><span class="pre">bitmap</span></code>
+we store the item <code class="docutils literal notranslate"><span class="pre">item</span></code> of the linked list at position <code class="docutils literal notranslate"><span class="pre">bitmap</span></code> in the array <code class="docutils literal notranslate"><span class="pre">addr</span></code> thus</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="p">(</span><span class="n">is_item_new</span><span class="p">(</span><span class="n">addr</span><span class="p">,</span><span class="n">bitmap</span><span class="p">)){</span>
+<span class="w">    </span><span class="n">item</span><span class="o">-&gt;</span><span class="n">next</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item_alloc_memory</span><span class="p">();</span>
+<span class="w">    </span><span class="n">item</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="o">-&gt;</span><span class="n">next</span><span class="p">;</span>
+<span class="w">    </span><span class="n">item</span><span class="o">-&gt;</span><span class="n">bitmap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bitmap</span><span class="p">;</span>
+<span class="w">    </span><span class="n">item</span><span class="o">-&gt;</span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value_out</span><span class="p">;</span>
+<span class="w">    </span><span class="n">addr</span><span class="p">[</span><span class="n">bitmap</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">;</span>
+<span class="p">}</span><span class="k">else</span>
+<span class="w">    </span><span class="n">addr</span><span class="p">[</span><span class="n">bitmap</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">value_out</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>the <code class="docutils literal notranslate"><span class="pre">is_item_new</span></code> function is simply <code class="docutils literal notranslate"><span class="pre">!addr[bitmap]</span></code>. If at position bitmap <code class="docutils literal notranslate"><span class="pre">addr</span></code> points to null then it means that this item never apperead before.</p>
+<p>By the extra cost of allocating memory, assigning the item in the adress array and checking if the item is new, this strategy avoids iterating over all the basis elements of a geometric algebra.
+Which large geometric algebras take huge benifits from.</p>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="gasparse_mvarray.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">gasparse.mvarray</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#bitmaps">Bitmaps</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-c-types">The <code class="docutils literal notranslate"><span class="pre">C</span></code> types</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#computation-modes">Computation Modes</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-bitmap-map">The bitmap Map</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-table-of-positions-and-signs">The Table of positions and signs</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#linked-lists">Linked Lists</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Francisco Vasconcelos
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2024, Francisco Vasconcelos.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=3ee479438cf8b5e0d341"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=3ee479438cf8b5e0d341"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

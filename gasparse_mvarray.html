@@ -1,0 +1,675 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>gasparse.mvarray &#8212; gasparse 0.0.3a documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=3ee479438cf8b5e0d341" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=3ee479438cf8b5e0d341" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=3ee479438cf8b5e0d341"></script>
+
+    <script src="_static/documentation_options.js?v=c7f888af"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'gasparse_mvarray';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Multivector Types" href="multivector_types.html" />
+    <link rel="prev" title="gasparse.GA" href="gasparse_ga.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">gasparse 0.0.3a documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="README.html">gasparse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasparse_ga.html">gasparse.GA</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">gasparse.mvarray</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multivector_types.html">Multivector Types</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/gasparse_mvarray.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>gasparse.mvarray</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__add__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__add__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__sub__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__sub__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__mul__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__mul__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__xor__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__xor__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__or__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__or__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__and__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__and__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__truediv__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__truediv__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__invert__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__invert__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.grade"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.grade()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.dual"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.dual()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.undual"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.undual()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.sum"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.sum()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.prod"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.prod()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.outer_prod"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.outer_prod()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.inner_prod"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.inner_prod()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.regressive_prod"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.regressive_prod()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.GA"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.GA()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.type"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.type()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.tolist"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.tolist()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.cast"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.cast()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.concat"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.concat()</span></code></a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="gasparse-mvarray">
+<h1>gasparse.mvarray<a class="headerlink" href="#gasparse-mvarray" title="Link to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="gasparse.mvarray">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gasparse.</span></span><span class="sig-name descname"><span class="pre">mvarray</span></span><a class="headerlink" href="#gasparse.mvarray" title="Link to this definition">#</a></dt>
+<dd><p>The class where multivector arrays are instanciated. This class does not provide object creation. To initialize a multivector array use the method
+<code class="docutils literal notranslate"><span class="pre">gasparse.GA.mvarray</span></code> in <a class="reference internal" href="gasparse_ga.html"><span class="doc">gasparse.GA</span></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.__add__">
+<span class="sig-name descname"><span class="pre">__add__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.__add__" title="Link to this definition">#</a></dt>
+<dd><p>Adds the multivector array self with the multivector array other element wise. This function overloads the <code class="docutils literal notranslate"><span class="pre">+</span></code> operator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A multivector array</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#gasparse.mvarray" title="gasparse.mvarray">gasparse.mvarray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.__sub__">
+<span class="sig-name descname"><span class="pre">__sub__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.__sub__" title="Link to this definition">#</a></dt>
+<dd><p>Subtracts other from self. Overloads the <code class="docutils literal notranslate"><span class="pre">-</span></code> operator.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.__mul__">
+<span class="sig-name descname"><span class="pre">__mul__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.__mul__" title="Link to this definition">#</a></dt>
+<dd><p>Computes the geometric product between two multivector arrays. Overloads the <code class="docutils literal notranslate"><span class="pre">*</span></code> operator.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.__xor__">
+<span class="sig-name descname"><span class="pre">__xor__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.__xor__" title="Link to this definition">#</a></dt>
+<dd><p>Computes the outer product between self and other. Overloads the <code class="docutils literal notranslate"><span class="pre">^</span></code> operator.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.__or__">
+<span class="sig-name descname"><span class="pre">__or__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.__or__" title="Link to this definition">#</a></dt>
+<dd><p>Computes the inner product between self and other. Overloads the <code class="docutils literal notranslate"><span class="pre">|</span></code> operator.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.__and__">
+<span class="sig-name descname"><span class="pre">__and__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.__and__" title="Link to this definition">#</a></dt>
+<dd><p>Computes the regressive product between self and other. Overloads the <code class="docutils literal notranslate"><span class="pre">&amp;</span></code> operator.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.__truediv__">
+<span class="sig-name descname"><span class="pre">__truediv__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.__truediv__" title="Link to this definition">#</a></dt>
+<dd><p>Divides <code class="docutils literal notranslate"><span class="pre">self</span></code> by <code class="docutils literal notranslate"><span class="pre">other</span></code>. <code class="docutils literal notranslate"><span class="pre">other</span></code> must be of scalar type, float or int.  Overloads the <code class="docutils literal notranslate"><span class="pre">/</span></code> operator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>other</strong> (<a class="reference internal" href="#gasparse.mvarray" title="gasparse.mvarray"><em>gasparse.mvarray</em></a><em> or </em><em>float</em>) – A scalar type multivector array.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.__invert__">
+<span class="sig-name descname"><span class="pre">__invert__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.__invert__" title="Link to this definition">#</a></dt>
+<dd><p>Applies grade reversion to the multivector array. Overloads the <code class="docutils literal notranslate"><span class="pre">~</span></code> operator.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.grade">
+<span class="sig-name descname"><span class="pre">grade</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.grade" title="Link to this definition">#</a></dt>
+<dd><p>Returns the grade of the multivector, up to some floating point precision. Returns an integer between <code class="docutils literal notranslate"><span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">p+q+r</span></code> if it is of unique grade, otherwise returns <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.dual">
+<span class="sig-name descname"><span class="pre">dual</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.dual" title="Link to this definition">#</a></dt>
+<dd><p>Return the dualized multivectors.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.undual">
+<span class="sig-name descname"><span class="pre">undual</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.undual" title="Link to this definition">#</a></dt>
+<dd><p>Return the undualized multivectors.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.sum">
+<span class="sig-name descname"><span class="pre">sum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.sum" title="Link to this definition">#</a></dt>
+<dd><p>Adds all the elements of the multivector array. Returns a 0-dimensional multivector array (aka multivector).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.prod">
+<span class="sig-name descname"><span class="pre">prod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.prod" title="Link to this definition">#</a></dt>
+<dd><p>Takes the geometric product of all the elements of the multivector array. Returns a 0-dimensional multivector array.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.outer_prod">
+<span class="sig-name descname"><span class="pre">outer_prod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.outer_prod" title="Link to this definition">#</a></dt>
+<dd><p>Takes the outer product of all the elements of the multivector array. Returns a 0-dimensional multivector array.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.inner_prod">
+<span class="sig-name descname"><span class="pre">inner_prod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.inner_prod" title="Link to this definition">#</a></dt>
+<dd><p>Takes the inner product of all the elements of the multivector array. Returns a 0-dimensional multivector array.
+<strong>Carefull with precedence:</strong> The product is taken by small indices first and the lower indices on the left.
+e.g the inner product of an array of three multivectors computes <code class="docutils literal notranslate"><span class="pre">((self[1]|self[2])|self[3])</span></code></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.regressive_prod">
+<span class="sig-name descname"><span class="pre">regressive_prod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.regressive_prod" title="Link to this definition">#</a></dt>
+<dd><p>Takes the regressive product of all the elements of the multivector array. Returns a 0-dimensional multivector array.
+<strong>Carefull with precedence:</strong> The product is taken by small indices first and the lower indices on the left.
+e.g the regressive product of an array of three multivectors computes <code class="docutils literal notranslate"><span class="pre">((self[1]&amp;self[2])&amp;self[3])</span></code></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.GA">
+<span class="sig-name descname"><span class="pre">GA</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.GA" title="Link to this definition">#</a></dt>
+<dd><p>Returns the algebra of a multivector array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The algebra associated with the multivector array.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="gasparse_ga.html#gasparse.GA" title="gasparse.GA">gasparse.GA</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.type">
+<span class="sig-name descname"><span class="pre">type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.type" title="Link to this definition">#</a></dt>
+<dd><p>Returns a string indicating the type of multivector array and the associated Geometric Algebra.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.tolist">
+<span class="sig-name descname"><span class="pre">tolist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.tolist" title="Link to this definition">#</a></dt>
+<dd><p>Returns the multivector array as a list of floats and basis multivectors as <code class="docutils literal notranslate"><span class="pre">gasparse.mvarray</span></code> objects.
+Grades can be passed as an argument to only output the values for those grades.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>grades</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – A list of grades. Non-negative list of integers <code class="code docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">p+q+r</span></code></p></li>
+<li><p><strong>args</strong> (<em>tuple</em><em>[</em><em>int</em><em>]</em>) – A tuple of grades. Non-negative list of integers <code class="code docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">p+q+r</span></code></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A tuple with a nested list of values and a list of basis blades.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple(list[float], list[<a class="reference internal" href="#gasparse.mvarray" title="gasparse.mvarray">gasparse.mvarray</a>])</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.cast">
+<span class="sig-name descname"><span class="pre">cast</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.cast" title="Link to this definition">#</a></dt>
+<dd><p>Casts the multivector array to the type <code class="docutils literal notranslate"><span class="pre">dtype</span></code>. Can also be used to copy multivector arrays.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dtype</strong> (<em>string</em>) – <code class="docutils literal notranslate"><span class="pre">{'sparse','dense','blades'}</span></code> A string indicating the type.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#gasparse.mvarray" title="gasparse.mvarray">gasparse.mvarray</a></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A multivector array of type <code class="docutils literal notranslate"><span class="pre">dtype</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gasparse.mvarray.concat">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">concat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gasparse.mvarray.concat" title="Link to this definition">#</a></dt>
+<dd><p>Concatenates a list of multivectors. The shapes must agree otherwise it raises an error.
+Returns a multivector array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>list</strong> (<em>list</em><em>[</em><a class="reference internal" href="#gasparse.mvarray" title="gasparse.mvarray"><em>gasparse.mvarray</em></a><em>]</em>) – A list of multivector arrays.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#gasparse.mvarray" title="gasparse.mvarray">gasparse.mvarray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<p>The multivector array object <code class="docutils literal notranslate"><span class="pre">gasparse.mvarray</span></code> is described by understanding the core operations that can be done and what is dispatched when invoking operators like <code class="docutils literal notranslate"><span class="pre">*</span></code>, <code class="docutils literal notranslate"><span class="pre">+</span></code> and <code class="docutils literal notranslate"><span class="pre">^</span></code>.
+The operators invoke element wise operations on the multivectors of each argument. There are some restrictions on the use of these element wise operators.
+The multivector arrays must have compatible metrics and their shape must be equal. For the metric to be compatible the metric arrays must overlap.
+Multivector arrays of different types or of different geometric algebras can also be added together, where they are cast to the biggest algebra.
+To make implementation easier we do not make any distinction between multivectors and multivector arrays, other then the shape of the multivector arrays.
+In fact multivectors are 0-dimensional multivector arrays.</p>
+<p>Some operations are available only for multivector arrays of the <code class="docutils literal notranslate"><span class="pre">scalar</span></code> type. Those operations are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mvarray.cos(self)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mvarray.sin(self)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mvarray.cosh(self)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mvarray.sinh(self)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mvarray.exp(self)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mvarray.sqrt(self)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mvarray.sign(self)</span></code></p></li>
+</ul>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">mvarray.sign</span></code> returns <code class="docutils literal notranslate"><span class="pre">1</span></code> when the input is <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="gasparse_ga.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">gasparse.GA</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="multivector_types.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Multivector Types</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__add__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__add__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__sub__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__sub__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__mul__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__mul__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__xor__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__xor__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__or__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__or__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__and__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__and__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__truediv__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__truediv__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.__invert__"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.__invert__()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.grade"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.grade()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.dual"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.dual()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.undual"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.undual()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.sum"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.sum()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.prod"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.prod()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.outer_prod"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.outer_prod()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.inner_prod"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.inner_prod()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.regressive_prod"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.regressive_prod()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.GA"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.GA()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.type"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.type()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.tolist"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.tolist()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.cast"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.cast()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gasparse.mvarray.concat"><code class="docutils literal notranslate"><span class="pre">gasparse.mvarray.concat()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Francisco Vasconcelos
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2024, Francisco Vasconcelos.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=3ee479438cf8b5e0d341"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=3ee479438cf8b5e0d341"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

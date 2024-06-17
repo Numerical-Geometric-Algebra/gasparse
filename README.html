@@ -1,0 +1,801 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>gasparse &#8212; gasparse 0.0.3a documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=3ee479438cf8b5e0d341" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=3ee479438cf8b5e0d341" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=3ee479438cf8b5e0d341" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=3ee479438cf8b5e0d341"></script>
+
+    <script src="_static/documentation_options.js?v=c7f888af"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'README';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="gasparse.GA" href="gasparse_ga.html" />
+    <link rel="prev" title="Indices and tables" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">gasparse 0.0.3a documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">gasparse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasparse_ga.html">gasparse.GA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gasparse_mvarray.html">gasparse.mvarray</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multivector_types.html">Multivector Types</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/README.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>gasparse</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-this-package">Why this package?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-simple-example">A simple example</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-geometric-algebras">Creating geometric algebras:</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-multivector-arrays">Creating multivector arrays:</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-numpy-to-generate-random-multivector-arrays">Using numpy to generate random multivector arrays</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#converting-gasparse-mvarray-to-lists">Converting <code class="docutils literal notranslate"><span class="pre">gasparse.mvarray</span></code> to lists</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#grade-projections-to-the-scalar-grade">Grade projections to the scalar grade</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#generating-large-geometric-algebras">Generating Large Geometric Algebras</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#compatibility-between-geometric-algebras">Compatibility between Geometric Algebras</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#overloaded-operators">Overloaded Operators</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="id1">
+<h1><a class="reference external" href="https://numerical-geometric-algebra.github.io/gasparse/README.html">gasparse</a><a class="headerlink" href="#id1" title="Link to this heading">#</a></h1>
+<p>A python library to do computations on compiled <code class="docutils literal notranslate"><span class="pre">C</span></code> code using sparse representation of multivector arrays.</p>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
+<p>Installing <code class="docutils literal notranslate"><span class="pre">gasparse</span></code> from PyPI:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">gasparse</span>
+</pre></div>
+</div>
+<p>The user can also install the latest development release from latest master:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">git</span><span class="o">+</span><span class="n">ssh</span><span class="p">:</span><span class="o">//</span><span class="n">git</span><span class="nd">@github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">FranciscoVasconcelos</span><span class="o">/</span><span class="n">gasparse</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<ul class="simple">
+<li><p>For usage of this package go to <a class="reference internal" href="#examples">examples</a></p></li>
+<li><p>To understand about compatibility between geometric algebras see <a class="reference internal" href="#compatibility">compatibility</a></p></li>
+<li><p>An overview of the overloaded operators for geometric algebras is presented in <a class="reference internal" href="#table-of-operators">Table of Operators</a></p></li>
+<li><p>The documentation is available at <a class="reference external" href="https://franciscovasconcelos.github.io/gasparse/README.html">Documentation</a>.</p></li>
+<li><p>The source code is available at <a class="reference external" href="https://github.com/FranciscoVasconcelos/gasparse">gasparse source code</a></p></li>
+</ul>
+</section>
+<section id="why-this-package">
+<h2>Why this package?<a class="headerlink" href="#why-this-package" title="Link to this heading">#</a></h2>
+<p>gasparse is a Geometric Algebra (GA) library which combines low level code evaluation with
+the python <code class="docutils literal notranslate"><span class="pre">C</span> <span class="pre">API</span></code> to deploy very efficient operations on multivector arrays, operations such that are easily expressed using the python syntax.</p>
+<p>This package implements Geometric Algebras. Implements operations between multivector arrays.
+The fundamental principle behind this package is the use of overloaded operators that call optimized <code class="docutils literal notranslate"><span class="pre">C</span></code> functions on multivector arrays.
+The entire algebras are generated by computing the signs and bitmaps maps (the cayley table) for the binary operations.
+On calling <code class="docutils literal notranslate"><span class="pre">gasparse.GA(p,q,r)</span></code> the specified algebra <span class="math notranslate nohighlight">\(\mathcal{G}_{p,q,r}\)</span> is generated.</p>
+<p>There are three alternatives for dealing with Geometric Algebra <a class="reference external" href="https://github.com/tBuLi/kingdon/tree/master">kingdon</a>, <a class="reference external" href="https://github.com/pygae/clifford/tree/master">Clifford</a> and <a class="reference external" href="https://github.com/EelcoHoogendoorn/numga">numba</a> they are implemented fully in python.
+Unlike this package they can implement symbolic computations. Because <cite>they are lazy or something</cite>, they use numba or JIT compilers and symbolic computations to do the heavy lifting for them.</p>
+<dl class="simple">
+<dt>List of some of the disadvantages of the packages <a class="reference external" href="https://github.com/tBuLi/kingdon/tree/master">kingdon</a>, <a class="reference external" href="https://github.com/pygae/clifford/tree/master">Clifford</a> and <a class="reference external" href="https://github.com/EelcoHoogendoorn/numga">numba</a>:</dt><dd><ul class="simple">
+<li><p>Overhead. Because generating code is expensive. Because JIT compiling is also expensive.</p></li>
+<li><p>Code cannot be optimized further (limited by the JIT compilers, JIT compiling only gets you so far…)</p></li>
+<li><p>Compare my approach with theirs… (show when my approach is better/worse, benchmarking)</p></li>
+</ul>
+</dd>
+</dl>
+<p>Our approach however is able to compute the entire cayley table for big algebras very efficiently, reducing the single overhead that usually condemns code generation.
+Our approach leverages the relationship between subalgebras to very efficiently compute signs for the cayley table. Having this option makes the use of bigger geometric algebras more appealing.
+For this purpose we wrote specialized software that computes operations for this type of multivectors. See <a class="reference internal" href="#large-algebras">Large Algebras</a> to take real advantage of the different available computation modes.</p>
+<dl class="simple">
+<dt>The key features of this package are</dt><dd><ul class="simple">
+<li><p>Do not need to optimize code symbolically since operations are implemented in a low level language.</p></li>
+<li><p>Leverage sparseness of the multivectors.</p></li>
+<li><p>Do not need to use numba or other JIT compilers to speed-up numerical computations.</p></li>
+<li><p>Numerical computations on multivector arrays are computed in compiled <code class="docutils literal notranslate"><span class="pre">C</span></code> code.</p></li>
+<li><p>Multiple multivector types for which operations can be dispatched the most efficiently way possible.</p></li>
+<li><p>There is compatibility between geometric algebras (can do computations between multivectors of different algebras)</p></li>
+<li><p>Very fast computation of cayley tables.</p></li>
+<li><p>Can efficiently deal with big geometric algebras without big overhead.</p></li>
+<li><p>Can easily scale for other types of data structures (<cite>multivector type</cite>).</p></li>
+<li><p>In futures iterations improve performance by leveraging knowlegde of the <code class="docutils literal notranslate"><span class="pre">C</span></code> language. (vector calls, assembly)</p></li>
+</ul>
+</dd>
+</dl>
+<p>Another cool feature of this package is that for someone who is already familiar with programming with <a class="reference external" href="https://github.com/tBuLi/kingdon/tree/master">kingdon</a> <a class="reference external" href="https://github.com/pygae/clifford/tree/master">Clifford</a> and <a class="reference external" href="https://github.com/EelcoHoogendoorn/numga">numba</a>
+is going to easily adapt to this package’s “<cite>syntax</cite>”, since most of the python operators are similar.</p>
+</section>
+<section id="examples">
+<span id="id8"></span><h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">#</a></h2>
+<section id="a-simple-example">
+<h3>A simple example<a class="headerlink" href="#a-simple-example" title="Link to this heading">#</a></h3>
+<p>Operations between multivector arrays are dispatched to compiled <cite>C</cite> code</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">vga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="c1"># Intialize a 3D vanilla geometric algebra</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">vga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span><span class="n">grades</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">vga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span><span class="n">grades</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">y</span><span class="p">)</span> <span class="c1"># The product is executed in low level C code</span>
+<span class="go">32 + -3*e12 + -6*e13 + -3*e23</span>
+</pre></div>
+</div>
+</section>
+<section id="creating-geometric-algebras">
+<h3>Creating geometric algebras:<a class="headerlink" href="#creating-geometric-algebras" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="n">vga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">cga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">cga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">ga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">r</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="creating-multivector-arrays">
+<h3>Creating multivector arrays:<a class="headerlink" href="#creating-multivector-arrays" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="n">vga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="nb">locals</span><span class="p">()</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">vga</span><span class="o">.</span><span class="n">basis</span><span class="p">())</span> <span class="c1"># Update the global variables e, e1, e2, e3, e12, e13, e23, e123.</span>
+<span class="n">values</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">0.1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mf">0.4</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]]</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">vga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">(</span><span class="n">values</span><span class="p">,</span><span class="n">grades</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">vga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">(</span><span class="n">values</span><span class="p">,</span><span class="n">basis</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;e1&#39;</span><span class="p">,</span><span class="s1">&#39;e3&#39;</span><span class="p">,</span><span class="s1">&#39;e123&#39;</span><span class="p">,</span><span class="s1">&#39;e12&#39;</span><span class="p">])</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">vga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">8</span><span class="p">])</span> <span class="c1"># Consider all basis elements</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">vga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">(</span><span class="n">values</span><span class="p">,</span><span class="n">basis</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">e2</span><span class="p">,</span> <span class="n">e123</span><span class="p">,</span> <span class="n">e23</span><span class="p">])</span> <span class="c1"># Use the variables to create the multivector</span>
+</pre></div>
+</div>
+<p>Note that for the last line the basis can be any list of <code class="docutils literal notranslate"><span class="pre">gasparse.mvarray</span></code> with the restriction that the multivector array must be 0-dimensional.</p>
+</section>
+<section id="using-numpy-to-generate-random-multivector-arrays">
+<h3>Using numpy to generate random multivector arrays<a class="headerlink" href="#using-numpy-to-generate-random-multivector-arrays" title="Link to this heading">#</a></h3>
+<p>We can convert between numpy arrays to multivector arrays and vice versa by using lists as intermidiate data structures.
+To show an example where we convert a numpy array to a multivector array we generate a random numpy array and then convert it back to a multivector array. The user has to make sure that the innermost dimension has size compatible with the specified grade in <code class="docutils literal notranslate"><span class="pre">ga.mvarray</span></code>. To get the sizes of the grades the user can use <code class="docutils literal notranslate"><span class="pre">ga.size(grades)</span></code>, as is exemplified in the script bellow.
+The following script generates <code class="docutils literal notranslate"><span class="pre">5</span></code> random multivectors of grade zero and two of the three dimensional vanilla geometric algebra.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="n">ga</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span> <span class="c1"># innermost dimension must be the the size of grades 1 and 2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+<span class="go">[[0.90962674 0.84695676 0.62962863 0.69754318 0.32404308 0.66473111]</span>
+<span class="go"> [0.66384851 0.74067395 0.62313971 0.40263883 0.85645313 0.06053186]</span>
+<span class="go"> [0.62515404 0.33892925 0.92988035 0.26066636 0.51058016 0.52560483]</span>
+<span class="go"> [0.71055042 0.68262854 0.40054357 0.62849844 0.56987662 0.60513613]</span>
+<span class="go"> [0.5360391  0.88132078 0.55923661 0.45492674 0.67648109 0.52545563]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span><span class="n">grades</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span> <span class="c1"># only accepts lists as input</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">[[0.90962674*e1 + 0.84695676*e2 + 0.62962863*e12 + 0.69754318*e3 + 0.32404308*e13 + 0.66473111*e23],</span>
+<span class="go"> [0.66384851*e1 + 0.74067395*e2 + 0.62313971*e12 + 0.40263883*e3 + 0.85645313*e13 + 0.060531857*e23],</span>
+<span class="go"> [0.62515404*e1 + 0.33892925*e2 + 0.92988035*e12 + 0.26066636*e3 + 0.51058016*e13 + 0.52560483*e23],</span>
+<span class="go"> [0.71055042*e1 + 0.68262854*e2 + 0.40054357*e12 + 0.62849844*e3 + 0.56987662*e13 + 0.60513613*e23],</span>
+<span class="go"> [0.5360391*e1 + 0.88132078*e2 + 0.55923661*e12 + 0.45492674*e3 + 0.67648109*e13 + 0.52545563*e23]]</span>
+</pre></div>
+</div>
+<p>Note that in the above example the basis elements of the multivectors are ordered by bitmaps. In the context of generating random multivectors this is irrelevant.
+But in other situations it may not be helpfull to have this mapping between lists/numpy arrays and multivector arrays as such we advise to either separate the lists into
+values of grade one and values of grade two.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="n">ga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">arr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="n">ga</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="n">arr2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="n">ga</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">(</span><span class="n">arr1</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span><span class="n">grades</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">ga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">(</span><span class="n">arr1</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span><span class="n">grades</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>or using <cite>ga.basis()</cite></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="n">ga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="n">ga</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+<span class="n">basis1</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ga</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="n">grades</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+<span class="n">basis2</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ga</span><span class="o">.</span><span class="n">basis</span><span class="p">(</span><span class="n">grades</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span><span class="n">basis</span><span class="o">=</span><span class="n">basis1</span><span class="o">+</span><span class="n">basis2</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="converting-gasparse-mvarray-to-lists">
+<span id="compatibility"></span><h3>Converting <code class="docutils literal notranslate"><span class="pre">gasparse.mvarray</span></code> to lists<a class="headerlink" href="#converting-gasparse-mvarray-to-lists" title="Link to this heading">#</a></h3>
+<p>To get a list with the values of the multivectors use the function <code class="docutils literal notranslate"><span class="pre">x.tolist(grades)</span></code> where grades can be an integer or a list of integers <code class="docutils literal notranslate"><span class="pre">&lt;=p+q+r</span></code>.
+If no arguments are given then all grades are considered. <strong>Attention: If multivectors have values in grades that are ommited in the arguments then information will be lost</strong>.
+Example of getting lists</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span><span class="n">grades</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="go">[[1 + 1*e12 + 2*e13 + 3*e23],</span>
+<span class="go"> [1 + 4*e12 + 5*e13 + 6*e23]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">values</span><span class="p">,</span><span class="n">basis</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">tolist</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># returns only grades zero and two</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">values</span><span class="p">,</span><span class="n">basis</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">tolist</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span> <span class="c1"># returns only grades zero and two</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">values</span><span class="p">,</span><span class="n">basis</span><span class="p">,</span><span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">[[1.0, 1.0, 2.0, 3.0], [1.0, 4.0, 5.0, 6.0]]</span>
+<span class="go">[1, 1*e12, 1*e13, 1*e23]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">values</span><span class="p">,</span><span class="n">basis</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># returns a list for all grades</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">values</span><span class="p">,</span><span class="n">basis</span><span class="p">,</span><span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">[[1.0, 1.0, 2.0, 3.0], [1.0, 4.0, 5.0, 6.0]]</span>
+<span class="go">[1, 1*e12, 1*e13, 1*e23]</span>
+</pre></div>
+</div>
+</section>
+<section id="grade-projections-to-the-scalar-grade">
+<h3>Grade projections to the scalar grade<a class="headerlink" href="#grade-projections-to-the-scalar-grade" title="Link to this heading">#</a></h3>
+<p>When multivectors are grade projected to the scalar grade (grade zero) the resulting multivector is going to be of type <code class="docutils literal notranslate"><span class="pre">'scalar'</span></code>.
+This enables us to dispatch operations that are way more efficient e.g.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">gasparse</span> <span class="kn">import</span> <span class="n">mvarray</span> <span class="k">as</span> <span class="n">mv</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">]],</span><span class="n">grades</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="o">/</span><span class="n">mv</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">((</span><span class="n">x</span><span class="o">*~</span><span class="n">x</span><span class="p">)(</span><span class="mi">0</span><span class="p">)))</span>  <span class="c1"># normalize the mvarray</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="o">~</span><span class="n">x</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">*~</span><span class="n">x</span><span class="p">)(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># Take the inverse of the mvarray</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">norm_sq</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">*~</span><span class="n">x</span><span class="p">)(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># Compute the norm square of the mvarray</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">norm_sq</span><span class="o">.</span><span class="n">type</span><span class="p">())</span>
+<span class="go">GA(3).mvarray.scalar</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">norm_sq</span><span class="o">.</span><span class="n">tolist</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="c1"># print the values as a list</span>
+<span class="go">[[15.0], [78.0]]</span>
+</pre></div>
+</div>
+</section>
+<section id="generating-large-geometric-algebras">
+<span id="large-algebras"></span><h3>Generating Large Geometric Algebras<a class="headerlink" href="#generating-large-geometric-algebras" title="Link to this heading">#</a></h3>
+<p>For large geometric algebras we recomend the user to chose the computation mode <code class="docutils literal notranslate"><span class="pre">'large'</span></code>. This computation mode disable the computation of bitmaps (this is done <cite>online</cite>) and only generate the cayley table for the geometric product,
+the other products use bitmap comparison to discard certain products. Another reason to use the <code class="docutils literal notranslate"><span class="pre">'large'</span></code> computation mode is that computing cayley tables for big algebras while using the default computation mode (<code class="docutils literal notranslate"><span class="pre">'generic'</span></code>) will result in the process to be killed.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">timeit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="n">compute_mode</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">),</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="go">0.001923231399996439</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="go">0.03866826760004187</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="n">compute_mode</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">),</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="go">0.03538742340006138</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">12</span><span class="p">),</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="go">0.47024899120006014</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="n">compute_mode</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">),</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="go">2.3766122478000398</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">15</span><span class="p">),</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="go">Killed</span>
+</pre></div>
+</div>
+<p><strong>NOTE:</strong> For algebras with <code class="docutils literal notranslate"><span class="pre">n&gt;=10</span></code> the subscripts that correspond to the basis vectors of <cite>index</cite> <code class="docutils literal notranslate"><span class="pre">10</span></code> and above are represented by symbols rather than numbers. This happens because bitmaps get converted to characters via <code class="docutils literal notranslate"><span class="pre">(char)value</span> <span class="pre">+</span> <span class="pre">'1'</span></code>.
+Thus for indices bigger than <code class="docutils literal notranslate"><span class="pre">9</span></code> the corresponding symbols are the ones followed by <code class="docutils literal notranslate"><span class="pre">9</span></code> in the <cite>ASCII</cite> table. Concretely <code class="docutils literal notranslate"><span class="pre">10</span></code>, <code class="docutils literal notranslate"><span class="pre">11</span></code>, <code class="docutils literal notranslate"><span class="pre">12</span></code>, <code class="docutils literal notranslate"><span class="pre">13</span></code>, <code class="docutils literal notranslate"><span class="pre">14</span></code> and <code class="docutils literal notranslate"><span class="pre">15</span></code> are  represented by the symbols <code class="docutils literal notranslate"><span class="pre">':'</span></code>, <code class="docutils literal notranslate"><span class="pre">';'</span></code>, <code class="docutils literal notranslate"><span class="pre">'&lt;'</span></code>, <code class="docutils literal notranslate"><span class="pre">'='</span></code>, <code class="docutils literal notranslate"><span class="pre">'&gt;'</span></code> and <code class="docutils literal notranslate"><span class="pre">'?'</span></code> respectively.
+In a subsquent revision we might consider printing multivectors differently. Also note that the representation in this form makes it impossible to define elements via their basis since <code class="docutils literal notranslate"><span class="pre">e=&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">e2:</span></code> is not valid sintax for variables.
+However we can use <code class="docutils literal notranslate"><span class="pre">ga.mvarray([1],basis='e=&gt;')</span></code> and <code class="docutils literal notranslate"><span class="pre">ga.mvarray([1],basis='e2:')</span></code> to create valid variables for the basis bivectors <span class="math notranslate nohighlight">\(e_{12}\wedge e_{13}\)</span> and <span class="math notranslate nohighlight">\(e_2\wedge e_{10}\)</span> respectively.</p>
+<p>Computing with big geometric algebras using <code class="docutils literal notranslate"><span class="pre">compute_mode='large'</span></code> gives us huge performance benefits with respect to the <code class="docutils literal notranslate"><span class="pre">'generic'</span></code> mode concretely we show the
+difference in performance</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">timeit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gal</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="n">compute_mode</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ga</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="n">compute_mode</span><span class="o">=</span><span class="s1">&#39;generic&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="n">ga</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="n">ga</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xl1</span> <span class="o">=</span> <span class="n">gal</span><span class="o">.</span><span class="n">mvarray</span><span class="p">(</span><span class="n">arr1</span><span class="p">,</span><span class="n">grades</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;sparse&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x1</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">(</span><span class="n">arr1</span><span class="p">,</span><span class="n">grades</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;sparse&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xl2</span> <span class="o">=</span> <span class="n">gal</span><span class="o">.</span><span class="n">mvarray</span><span class="p">(</span><span class="n">arr2</span><span class="p">,</span><span class="n">grades</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;sparse&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x2</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">mvarray</span><span class="p">(</span><span class="n">arr2</span><span class="p">,</span><span class="n">grades</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;sparse&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_generic</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">x1</span><span class="o">*</span><span class="n">x2</span><span class="p">,</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_large</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">xl1</span><span class="o">*</span><span class="n">xl2</span><span class="p">,</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;generic is &quot;</span><span class="p">,</span> <span class="n">time_generic</span><span class="o">/</span><span class="n">time_large</span><span class="p">,</span> <span class="s2">&quot; times slower then large&quot;</span><span class="p">,</span><span class="n">sep</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="go">generic is 5.6724215181259625 times slower then large</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_generic</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">x1</span><span class="o">+</span><span class="n">x2</span><span class="p">,</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_large</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">xl1</span><span class="o">+</span><span class="n">xl2</span><span class="p">,</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;generic is &quot;</span><span class="p">,</span> <span class="n">time_generic</span><span class="o">/</span><span class="n">time_large</span><span class="p">,</span> <span class="s2">&quot; times slower then large&quot;</span><span class="p">,</span><span class="n">sep</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="go">generic is 23.555375285590276 times slower then large</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_generic</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">x1</span><span class="o">.</span><span class="n">prod</span><span class="p">(),</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_large</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">xl1</span><span class="o">.</span><span class="n">prod</span><span class="p">(),</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;generic is &quot;</span><span class="p">,</span> <span class="n">time_generic</span><span class="o">/</span><span class="n">time_large</span><span class="p">,</span> <span class="s2">&quot; times slower then large&quot;</span><span class="p">,</span><span class="n">sep</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="go">generic is 2.2492217006908293 times slower then large</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_generic</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">x1</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">time_large</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">xl1</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;generic is &quot;</span><span class="p">,</span> <span class="n">time_generic</span><span class="o">/</span><span class="n">time_large</span><span class="p">,</span> <span class="s2">&quot; times slower then large&quot;</span><span class="p">,</span><span class="n">sep</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="go">generic is 12.2753188093821 times slower then large</span>
+</pre></div>
+</div>
+<p>Note that however mixed algebras operations are still using old technology similar to what is done with <code class="docutils literal notranslate"><span class="pre">'generic'</span></code>,
+so don’t expect any performance benefits for mixed algebras operations.</p>
+<p>Here are how computation time increases when we construct bigger geometric algebras:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">timeit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">arr</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">15</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">16</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">compute_mode</span><span class="o">=</span><span class="s1">&#39;large&#39;</span><span class="p">),</span> <span class="n">number</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">/</span><span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+<span class="go">[2.722999852267094e-06,</span>
+<span class="go"> 1.558800067869015e-06,</span>
+<span class="go"> 1.9256000086897985e-06,</span>
+<span class="go"> 2.8394002583809198e-06,</span>
+<span class="go"> 7.089399878168478e-06,</span>
+<span class="go"> 1.9103799786535092e-05,</span>
+<span class="go"> 6.513800035463646e-05,</span>
+<span class="go"> 0.00023918759980006142,</span>
+<span class="go"> 0.0009205148002365604,</span>
+<span class="go"> 0.0036732804001076147,</span>
+<span class="go"> 0.01586245879989292,</span>
+<span class="go"> 0.06812388460020884,</span>
+<span class="go"> 0.22016883979995328,</span>
+<span class="go"> 0.8322477006000554,</span>
+<span class="go"> 3.5297154857998976]</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="compatibility-between-geometric-algebras">
+<h2>Compatibility between Geometric Algebras<a class="headerlink" href="#compatibility-between-geometric-algebras" title="Link to this heading">#</a></h2>
+<p>The user has to be carefull when computing operations between multivectors of different algebras. Two algebras of <span class="math notranslate nohighlight">\(n\)</span> and <span class="math notranslate nohighlight">\(m\)</span> dimension <span class="math notranslate nohighlight">\(n&lt;m\)</span> are compatible if the first <span class="math notranslate nohighlight">\(n\)</span> elements of the metric array/tensor are equal.
+Similarly we can say that two geometric algebras are compatible if the metric tensors of both geometric algebras fully overlap with one another.
+To illustrate a context where two algebras are imcompatible consider generating a 3D geometric algebra and an algebra of 4 dimensions where the first basis vector is negative and the other positives.
+The following scripts shows the error obtained after attempting an operation between multivectors of incompatible algebras</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">gasparse</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ga1</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ga2</span> <span class="o">=</span> <span class="n">gasparse</span><span class="o">.</span><span class="n">GA</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">ga1</span><span class="o">.</span><span class="n">mvarray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">],</span><span class="n">grades</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">y</span> <span class="o">=</span> <span class="n">ga2</span><span class="o">.</span><span class="n">mvarray</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span><span class="n">grades</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x</span><span class="o">+</span><span class="n">y</span>
+<span class="gt">Traceback (most recent call last):</span>
+  File <span class="nb">&quot;&lt;stdin&gt;&quot;</span>, line <span class="m">1</span>, in <span class="n">&lt;module&gt;</span>
+<span class="gr">TypeError</span>: <span class="n">Probably Incompatible Algebras!</span>
+</pre></div>
+</div>
+</section>
+<section id="overloaded-operators">
+<h2>Overloaded Operators<a class="headerlink" href="#overloaded-operators" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><span id="table-of-operators"></span><table class="table table-center" id="id9">
+<caption><span class="caption-text">Table of Operators</span><a class="headerlink" href="#id9" title="Link to this table">#</a></caption>
+<colgroup>
+<col style="width: 33.3%" />
+<col style="width: 33.3%" />
+<col style="width: 33.3%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Operation</p></th>
+<th class="head"><p>Expression</p></th>
+<th class="head"><p>Python</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Geometric product</p></td>
+<td><p><span class="math notranslate nohighlight">\(ab\)</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">a*b</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Inner product</p></td>
+<td><p><span class="math notranslate nohighlight">\(a \cdot b\)</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">a|b</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Outer product</p></td>
+<td><p><span class="math notranslate nohighlight">\(a \wedge b\)</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">a^b</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Regressive product</p></td>
+<td><p><span class="math notranslate nohighlight">\(a \vee b\)</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">a&amp;b</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Divide <code class="code docutils literal notranslate"><span class="pre">a</span></code> by <code class="code docutils literal notranslate"><span class="pre">b</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(a/b\)</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">a/b</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Sum <code class="code docutils literal notranslate"><span class="pre">a</span></code> with <code class="code docutils literal notranslate"><span class="pre">b</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(a+b\)</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">a+b</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Subtract <code class="code docutils literal notranslate"><span class="pre">b</span></code> from <code class="code docutils literal notranslate"><span class="pre">a</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(a-b\)</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">a-b</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Reverse of <code class="code docutils literal notranslate"><span class="pre">a</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(a^\dagger\)</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">~a</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Grade projections</p></td>
+<td><p><span class="math notranslate nohighlight">\(\langle a\rangle_{1,3}\)</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">a(1,3)</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Dual of <code class="code docutils literal notranslate"><span class="pre">a</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(a^* = aI\)</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">a.dual()</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Undual of <code class="code docutils literal notranslate"><span class="pre">a</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(a^{-*} = aI^{-1}\)</span></p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">a.undual()</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Division is only available when the second argument is either a ‘scalar’ type multivector array, ‘float’ or ‘int’. The scalar product can be computed using the inner or gemetric product and projection to scalars <span class="math notranslate nohighlight">\(a*b=\langle ab\rangle=\langle a\cdot b \rangle\rightarrow\)</span> <code class="code docutils literal notranslate"><span class="pre">(a|b)(0)</span></code> or <code class="code docutils literal notranslate"><span class="pre">(a*b)(0)</span></code>.
+We can also use lists to project to specified grades <code class="code docutils literal notranslate"><span class="pre">a([1,3])</span></code>.
+Note that dualization when the pseudoscalar is null, that is <span class="math notranslate nohighlight">\(I^2=0\)</span>, is defined via the relationship between the basis vectors as <span class="math notranslate nohighlight">\(e_J^\dagger e_J^* = I\)</span>
+where <span class="math notranslate nohighlight">\(e_J\)</span> are basis multivectors that span all the geometric algebra. The undual operation is defined as the operation that gives back the initial multivector <span class="math notranslate nohighlight">\((a^*)^{-*} = a\)</span>.</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Indices and tables</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="gasparse_ga.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">gasparse.GA</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-this-package">Why this package?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-simple-example">A simple example</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-geometric-algebras">Creating geometric algebras:</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-multivector-arrays">Creating multivector arrays:</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-numpy-to-generate-random-multivector-arrays">Using numpy to generate random multivector arrays</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#converting-gasparse-mvarray-to-lists">Converting <code class="docutils literal notranslate"><span class="pre">gasparse.mvarray</span></code> to lists</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#grade-projections-to-the-scalar-grade">Grade projections to the scalar grade</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#generating-large-geometric-algebras">Generating Large Geometric Algebras</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#compatibility-between-geometric-algebras">Compatibility between Geometric Algebras</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#overloaded-operators">Overloaded Operators</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Francisco Vasconcelos
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2024, Francisco Vasconcelos.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=3ee479438cf8b5e0d341"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=3ee479438cf8b5e0d341"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
